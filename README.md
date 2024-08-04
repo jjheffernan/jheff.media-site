@@ -19,7 +19,7 @@ If you want to support my work please consider donating at [Patreon](https://www
 The following software should be installed on your development machine:
 
 - Rust, of course, alongside your favourite IDE (or not if you really like to suffer)
-- The latest version of [Node.js](https://nodejs.org/en/download/) ([Deno](https://deno.land/) is not yet tested with this project.)
+- The latest version of [Node.js](https://npm nodejs.org/en/download/) ([Deno](https://deno.land/) is not yet tested with this project.)
 - The latest version of [Yarn](https://yarnpkg.com/) (installable via `npm install -g yarn` after you installed Node.js)
 - The latest version of the [Docker engine](https://www.docker.com/)
 - The latest version of [docker-compose](https://docs.docker.com/compose/) (on MacOS it is shipped with the Docker Engine, for usage on Linux please consult the [installation manual](https://docs.docker.com/compose/install/))
