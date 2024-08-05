@@ -1,5 +1,5 @@
 [package]
-name = "jheff.media-site"
+name = "jheff.media-site-backend"
 version = "0.0.1"
 authors = ["JJ Heffernan <jjcodes@me.com>"]
 edition = "2024"
