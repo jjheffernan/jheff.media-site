@@ -1,27 +1,27 @@
 [package]
-name = "jheff.media-site-backend"
+name = "jheffmedia-site-backend"
 version = "0.0.1"
 authors = ["JJ Heffernan <jjcodes@me.com>"]
-edition = "2024"
+edition = "2018"
 publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-rt = "1.1.0"
-actix-web = "2.0.0"
-actix-cors = "0.2.0"
+actix-rt = "2.10.0"
+actix-web = "4.8.0"
+actix-cors = "0.7.0"
 log = "0.4.8"
-env_logger = "0.7.1"
+env_logger = "0.11.5"
 url = "2.1.1"
 serde = {version = "1.0.106", features = ["derive"]}
 serde_json = "1.0.52"
-bson = "0.14.1"
-mongodb = "0.9.2"
-jsonwebtoken = "7.1.0"
-bcrypt = "0.7.0"
+bson = "2.11.0"
+mongodb = "3.0.1"
+jsonwebtoken = "9.3.0"
+bcrypt = "0.15.1"
 chrono = "0.4.11"
-uuid = {version = "0.8.1", features = ["serde", "v4"]}
+uuid = {version = "1.10.0", features = ["serde", "v4"]}
 
 # [target.'cfg(not(feature = "forward-frontend"))'.dependencies]
 mime_guess = "2.0.3"
