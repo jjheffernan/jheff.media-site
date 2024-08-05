@@ -1,6 +1,8 @@
 # jheff.media-site
 Basic landing Page to Showcase Automotive Socials
 
+Made with Yew Fullstack
+
 # Yew Fullstack Boilerplate
 
 This boilerplate was created in order to have a place for sharing efforts in creating full stack applications using Rust. It is supposed to give creators of rust frameworks a notion of how people use their technologies.
@@ -11,8 +13,6 @@ It has been created to easily get up to speed with projects that might profit fr
 - Rust is fast. The libraries used in this project are fast.
 - Rust is safe. At least it's way safer than other languages. Hint: borrow checker.
 - Especially large applications in JS or Typescript take more effort to maintain the larger they get. With Rust your application is way less likely to crash once it has been built. At least if you stuck to a few paradigms.
-
-If you want to support my work please consider donating at [Patreon](https://www.patreon.com/lukaswagner).
 
 ## Prerequisites
 
@@ -52,6 +52,4 @@ Feel free to clone this project and build on top anything you like. If there are
 
 For custimizing the name of the project use your favorite search and replace tool and search for the the terms `yew-fullstack`, `YEW_FULLSTACK`, `Yew Fullstack Boilerplate` and `Yew Fullstack` (in that order) and replace them with whatever you like.
 
-## Showcase
 
-Projects built on top of this boilerplate will have names and links put here. Just tell me or open a PR and I will put them here.
