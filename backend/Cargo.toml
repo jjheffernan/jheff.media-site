@@ -2,7 +2,7 @@
 name = "jheffmedia-site-backend"
 version = "0.0.1"
 authors = ["JJ Heffernan <jjcodes@me.com>"]
-edition = "2018"
+edition = "2021"
 publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
