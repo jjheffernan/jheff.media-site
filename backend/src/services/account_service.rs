@@ -18,8 +18,8 @@ pub struct TokenBodyResponse {
     pub user: PublicUserDTO,
 }
 
-pub fn signup(user: User, db: &web::Data<Database>) -> Result<String, ServiceError> {
-    match User::signup(user, db) {
+pub async fn signup(user: User, db: &web::Data<Database>) -> Result<String, ServiceError> {
+    match User::signup(user, db).await {
         Ok(id) => Ok(id.to_hex()),
         Err(err) => match err.as_str() {
             "USER_ALREADY_EXISTS" => Err(ServiceError::new(StatusCode::BAD_REQUEST, err)),
@@ -28,11 +28,11 @@ pub fn signup(user: User, db: &web::Data<Database>) -> Result<String, ServiceErr
     }
 }
 
-pub fn login(
+pub async fn login(
     login: &LoginDTO,
     db: &web::Data<Database>,
 ) -> Result<TokenBodyResponse, ServiceError> {
-    let logged_user = User::login(&login, db)?;
+    let logged_user = User::login(&login, db).await?;
     let public_user: PublicUserDTO = logged_user.clone().into();
     match serde_json::from_value(
         json!({ "token": UserToken::generate_token(logged_user), "token_type": "bearer", "user": public_user }),
@@ -45,14 +45,16 @@ pub fn login(
     }
 }
 
-pub fn logout(authen_header: &HeaderValue, db: &web::Data<Database>) -> Result<(), ServiceError> {
+pub async fn logout(authen_header: &HeaderValue, db: &web::Data<Database>) -> Result<(), ServiceError> {
     if let Ok(authen_str) = authen_header.to_str() {
         if authen_str.starts_with("bearer") {
             let token = authen_str[6..authen_str.len()].trim();
             if let Ok(token_data) = token_utils::decode_token(token.to_string()) {
-                if let Ok(username) = token_utils::verify_token(&token_data, &db) {
-                    if let Some(user) = User::find_by_email_or_username(&username, &db) {
-                        User::logout(user.id.unwrap(), db);
+                if let Ok(username) = token_utils::verify_token(&token_data, db).await {
+                    if let Some(user) =
+                        User::find_by_email_or_username(&username, db).await
+                    {
+                        User::logout(user.id.unwrap(), db).await;
                         return Ok(());
                     }
                 }

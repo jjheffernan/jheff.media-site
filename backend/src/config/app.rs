@@ -17,17 +17,16 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                 ),
         ),
     );
-    config_frontend(cfg);
-}
 
-#[cfg(feature = "forward-frontend")]
-fn config_frontend(cfg: &mut web::ServiceConfig) {
-    info!("Configurating frontend reverse proxy...");
-    cfg.service(web::scope("/").default_service(web::route().to(forward)));
-}
+    #[cfg(feature = "forward-frontend")]
+    {
+        info!("Configurating frontend reverse proxy...");
+        cfg.default_service(web::route().to(forward));
+    }
 
-#[cfg(not(feature = "forward-frontend"))]
-fn config_frontend(cfg: &mut web::ServiceConfig) {
-    info!("Configurating static frontend...");
-    cfg.service(web::scope("/").default_service(web::route().to(serve_static)));
+    #[cfg(not(feature = "forward-frontend"))]
+    {
+        info!("Configurating static frontend...");
+        cfg.default_service(web::route().to(serve_static));
+    }
 }

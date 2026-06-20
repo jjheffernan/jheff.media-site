@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-WORKDIR="$( cd "$(dirname "$0")"/.. ; pwd -P )" # get the project dir
-
-#export RUST_LOG="actix_web=debug"
-export RUST_LOG="debug"
-cargo watch -x "run --features \"forward-frontend\""
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$ROOT"
+export RUST_LOG="${RUST_LOG:-info}"
+cargo watch -x "run -p jheffmedia-site-backend --features forward-frontend"

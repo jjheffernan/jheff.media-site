@@ -1,14 +1,32 @@
 # Backend
 
-This is the backend crate. It is built using [actix-web](https://crates.io/crates/actix-web). The backend operates in two modes:
+Actix Web crate (`jheffmedia-site-backend`).
 
-- it can forward the output of the webpack server for development purposes enabled by the `forward-frontend` feature
-- it can serve up the staticly built frontend files, which is its normal mode of operation.
+**Full reference:** [docs/backend.md](../docs/backend.md) · API: [docs/api.md](../docs/api.md) · auth: [docs/authentication.md](../docs/authentication.md)
 
-## Environment Variables
+## Modes
 
-- `YEW_FULLSTACK_HOST` the host to listen on. `127.0.0.1` by default. Overwritten in Dockerfile by `0.0.0.0` in order to allow access from the docker host.
-- `YEW_FULLSTACK_PORT` the port to listen on. `3000` by default. Overwritten in Dockerfile by `8080`.
-- `YEW_FULLSTACK_STATIC` the directory the content to statically serve (the web client) resides in. `/usr/local/share/yew-fullstack/www` by default.
-- `YEW_FULLSTACK_DB_CONNSTR` the [MongoDB connection string](https://docs.mongodb.com/manual/reference/connection-string/) for connecting to the database server. Defaults to `mongodb://localhost:27017`.
-- `YEW_FULLSTACK_DB_NAME` the database name on the database server. Defaults to `yew-fullstack`.
+- **Dev:** `--features forward-frontend` — proxies UI to webpack
+- **Prod:** default — serves static files from `YEW_FULLSTACK_STATIC`
+
+## Quick commands
+
+```bash
+openssl rand -out src/secret.key 32   # first-time, from backend/
+
+cargo build --features forward-frontend
+cargo watch -x "run --features forward-frontend"
+```
+
+## Environment variables
+
+| Variable | Default |
+|----------|---------|
+| `YEW_FULLSTACK_HOST` | `127.0.0.1` |
+| `YEW_FULLSTACK_PORT` | `3000` (8080 in Docker) |
+| `YEW_FULLSTACK_STATIC` | `/usr/local/share/yew-fullstack/www` |
+| `YEW_FULLSTACK_FORWARD_FRONTEND_URL` | `http://localhost:8080` (dev proxy target) |
+| `YEW_FULLSTACK_DB_CONNSTR` | `mongodb://localhost:27017` |
+| `YEW_FULLSTACK_DB_NAME` | `yew-fullstack` |
+
+See [docs/backend.md](../docs/backend.md) for module layout and MongoDB notes.

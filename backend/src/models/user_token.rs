@@ -3,7 +3,7 @@ use chrono::Utc;
 use jsonwebtoken::{EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 
-pub static KEY: [u8; 30] = *include_bytes!("../secret.key");
+pub static KEY: [u8; 32] = *include_bytes!("../secret.key");
 static ONE_WEEK: i64 = 60 * 60 * 24 * 7; // in seconds
 
 #[derive(Serialize, Deserialize)]
@@ -19,7 +19,7 @@ pub struct UserToken {
 
 impl UserToken {
     pub fn generate_token(login: LoginInfoDTO) -> String {
-        let now = Utc::now().timestamp_nanos() / 1_000_000_000; // nanosecond -> second
+        let now = Utc::now().timestamp();
         let payload = UserToken {
             iat: now,
             exp: now + ONE_WEEK,
@@ -33,5 +33,26 @@ impl UserToken {
             &EncodingKey::from_secret(&KEY),
         )
         .unwrap()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::user::LoginInfoDTO;
+    use crate::utils::token::decode_token;
+
+    #[test]
+    fn generate_token_roundtrip_decodes_claims() {
+        let login = LoginInfoDTO {
+            email: "a@example.com".into(),
+            username: "alice".into(),
+            login_session: "session-abc".into(),
+        };
+        let token = UserToken::generate_token(login.clone());
+        let decoded = decode_token(token).expect("token should decode");
+        assert_eq!(decoded.claims.user, login.username);
+        assert_eq!(decoded.claims.login_session, login.login_session);
+        assert!(decoded.claims.exp > decoded.claims.iat);
     }
 }

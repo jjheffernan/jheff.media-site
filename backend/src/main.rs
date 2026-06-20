@@ -1,3 +1,6 @@
+use actix_cors::Cors;
+use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+
 #[macro_use()]
 extern crate actix_rt;
 extern crate actix_cors;
@@ -25,9 +28,8 @@ pub mod error;
 pub mod models;
 pub mod services;
 pub mod utils;
-
-use actix_cors::Cors;
-use actix_web::{client::Client, http, App, HttpResponse, HttpServer, Responder};
+use actix_web::http;
+use awc::Client;
 use config::{db::config_db, server::ServerConfig};
 use std::{env, io};
 
@@ -47,30 +49,26 @@ async fn main() -> io::Result<()> {
     let http_host = env::var("YEW_FULLSTACK_HOST").unwrap_or(default_http_host);
     let http_port = env::var("YEW_FULLSTACK_PORT").unwrap_or(default_http_port);
     let http_host_port = format!("{}:{}", http_host, http_port);
-    // let http_host_port_cors = http_host_port.clone();
 
     let db_name = env::var("YEW_FULLSTACK_DB_NAME").unwrap_or(String::from("yew-fullstack"));
-    let db_client = config_db();
+    let db_client = config_db().await;
 
     HttpServer::new(move || {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .wrap(
-                Cors::new()
-                    // .allowed_origin(http_host_port_cors.as_str())
+                Cors::default()
                     .send_wildcard()
                     .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
                     .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
                     .allowed_header(http::header::CONTENT_TYPE)
-                    .max_age(3600)
-                    .finish(),
+                    .max_age(3600),
             )
-            .data(Client::new())
-            .data(ServerConfig {
+            .app_data(web::Data::new(Client::default()))
+            .app_data(web::Data::new(ServerConfig {
                 http_serve_static: serve_static.clone(),
-            })
-            .data(db_client.database(db_name.as_str()))
-            // .route("/", web::get().to(index))
+            }))
+            .app_data(web::Data::new(db_client.database(db_name.as_str())))
             .configure(config::app::config_services)
     })
     .bind(http_host_port.clone())?

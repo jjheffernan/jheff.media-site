@@ -62,42 +62,45 @@ impl From<LoginInfoDTO> for PublicUserDTO {
 }
 
 impl User {
-    pub fn signup(user: User, db: &Database) -> Result<ObjectId, String> {
-        // TODO replace by count_documents()
-        if Self::find_by_email_or_username(user.username.as_str(), db).is_some() {
+    pub async fn signup(user: User, db: &Database) -> Result<ObjectId, String> {
+        if Self::find_by_email_or_username(user.username.as_str(), db)
+            .await
+            .is_some()
+        {
             return Err("USER_ALREADY_EXISTS".to_string());
         }
-        // TODO replace by count_documents()
-        if Self::find_by_email_or_username(user.email.as_str(), db).is_some() {
+        if Self::find_by_email_or_username(user.email.as_str(), db)
+            .await
+            .is_some()
+        {
             return Err("USER_ALREADY_EXISTS".to_string());
         }
-        let coll = db.collection(USERS_COLLECTION);
+        let coll = db.collection::<User>(USERS_COLLECTION);
         let hashed_pwd = hash(&user.password, DEFAULT_COST).unwrap();
         let user = Self {
             password: hashed_pwd,
             ..user
         };
-        let doc_user = bson::to_bson(&user).unwrap().as_document().unwrap().clone();
-        match coll.insert_one(doc_user, None) {
+        match coll.insert_one(user).await {
             Ok(res) => Ok(res.inserted_id.as_object_id().unwrap().clone()),
             Err(_err) => Err("MONGO_ERROR".to_string()),
         }
     }
 
-    // TODO provide more info to user by using result
-    pub fn login(login: &LoginDTO, db: &Database) -> ServiceResult<LoginInfoDTO> {
-        match User::find_by_email_or_username(login.email_or_username.as_str(), db) {
+    pub async fn login(login: &LoginDTO, db: &Database) -> ServiceResult<LoginInfoDTO> {
+        match User::find_by_email_or_username(login.email_or_username.as_str(), db).await {
             Some(user_to_verify) => {
                 if !user_to_verify.password.is_empty()
                     && verify(&login.password, &user_to_verify.password).unwrap()
                 {
-                    // TODO save some login history
                     let login_session_str = User::generate_login_session();
                     if User::update_login_session(
                         &user_to_verify.id.unwrap(),
                         &login_session_str,
                         db,
-                    ) {
+                    )
+                    .await
+                    {
                         return Ok(LoginInfoDTO {
                             email: user_to_verify.email,
                             username: user_to_verify.username,
@@ -111,13 +114,15 @@ impl User {
         }
     }
 
-    pub fn logout(user_id: ObjectId, db: &Database) {
-        let coll = db.collection(USERS_COLLECTION);
-        match coll.find_one_and_update(
-            doc! {"_id": user_id},
-            doc! {"$unset": {"loginSession": ""}},
-            None,
-        ) {
+    pub async fn logout(user_id: ObjectId, db: &Database) {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        match coll
+            .find_one_and_update(
+                doc! {"_id": user_id},
+                doc! {"$unset": {"loginSession": ""}},
+            )
+            .await
+        {
             Ok(_doc) => (),
             Err(err) => {
                 warn!("An error occured while unsetting session: {}", err);
@@ -125,19 +130,16 @@ impl User {
         }
     }
 
-    pub fn is_valid_login_session(user_token: &UserToken, db: &Database) -> bool {
-        let coll = db.collection(USERS_COLLECTION);
-        match coll.count_documents(
-            Some(doc! { "username": &user_token.user, "loginSession": &user_token.login_session }),
-            None,
-        ) {
-            Ok(num) => {
-                if num == 1 {
-                    true
-                } else {
-                    false
-                }
-            }
+    pub async fn is_valid_login_session(user_token: &UserToken, db: &Database) -> bool {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        match coll
+            .count_documents(doc! {
+                "username": &user_token.user,
+                "loginSession": &user_token.login_session
+            })
+            .await
+        {
+            Ok(num) => num == 1,
             Err(err) => {
                 warn!(
                     "An error occured while checking validity of user session: {}",
@@ -148,25 +150,13 @@ impl User {
         }
     }
 
-    pub fn find_by_email_or_username(eou: &str, db: &Database) -> Option<Self> {
-        let coll = db.collection(USERS_COLLECTION);
-        match coll.find_one(
-            Some(doc! {"$or": vec![doc!{"username": eou}, doc!{"email": eou}] }),
-            None,
-        ) {
-            Ok(opt_user) => match opt_user {
-                Some(user_doc) => match bson::from_bson(bson::Bson::Document(user_doc)) {
-                    Ok(user) => Some(user),
-                    Err(err) => {
-                        warn!(
-                            "An error occured while deserializing a user document: {}",
-                            err
-                        );
-                        None
-                    }
-                },
-                None => None,
-            },
+    pub async fn find_by_email_or_username(eou: &str, db: &Database) -> Option<Self> {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        match coll
+            .find_one(doc! {"$or": [{"username": eou}, {"email": eou}]})
+            .await
+        {
+            Ok(opt_user) => opt_user,
             Err(err) => {
                 warn!("An error occured while finding a user by username: {}", err);
                 None
@@ -175,21 +165,59 @@ impl User {
     }
 
     pub fn generate_login_session() -> String {
-        Uuid::new_v4().to_simple().to_string()
+        Uuid::new_v4().to_string()
     }
 
-    pub fn update_login_session(user_id: &ObjectId, login_session: &str, db: &Database) -> bool {
-        let coll = db.collection(USERS_COLLECTION);
-        match coll.find_one_and_update(
-            doc! {"_id": user_id},
-            doc! {"$set": {"loginSession": login_session}},
-            None,
-        ) {
+    pub async fn update_login_session(
+        user_id: &ObjectId,
+        login_session: &str,
+        db: &Database,
+    ) -> bool {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        match coll
+            .find_one_and_update(
+                doc! {"_id": user_id},
+                doc! {"$set": {"loginSession": login_session}},
+            )
+            .await
+        {
             Ok(_doc) => true,
             Err(err) => {
                 warn!("An error occured while unsetting session: {}", err);
                 false
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn login_dto_deserializes_camel_case_json() {
+        let dto: LoginDTO =
+            serde_json::from_str(r#"{"emailOrUsername":"alice","password":"secret"}"#).unwrap();
+        assert_eq!(dto.email_or_username, "alice");
+        assert_eq!(dto.password, "secret");
+    }
+
+    #[test]
+    fn public_user_from_login_info_drops_session() {
+        let info = LoginInfoDTO {
+            email: "a@b.com".into(),
+            username: "bob".into(),
+            login_session: "sess".into(),
+        };
+        let public = PublicUserDTO::from(info);
+        assert_eq!(public.email, "a@b.com");
+        assert_eq!(public.username, "bob");
+    }
+
+    #[test]
+    fn generate_login_session_is_non_empty_uuid() {
+        let session = User::generate_login_session();
+        assert!(!session.is_empty());
+        assert!(session.contains('-'));
     }
 }
