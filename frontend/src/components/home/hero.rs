@@ -26,10 +26,10 @@ pub fn hero() -> Html {
                         { "Explore content" }
                     </Link<AppRoutes>>
                     <Link<AppRoutes>
-                        to={AppRoutes::Booking}
+                        to={AppRoutes::Social}
                         classes="inline-flex items-center rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
                     >
-                        { "Book a session" }
+                        { "Social feed" }
                     </Link<AppRoutes>>
                 </div>
             </div>

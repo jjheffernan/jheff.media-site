@@ -1,6 +1,9 @@
 use super::post_card::PostCard;
 use crate::{
-    components::ui::{Grid, Heading, HeadingLevel, Spinner, Text, TextTone},
+    components::{
+        home::InstagramFeaturedCard,
+        ui::{Grid, Heading, HeadingLevel, Spinner, Text, TextTone},
+    },
     model::SocialHubResponse,
 };
 use gloo_net::http::Request;
@@ -44,7 +47,7 @@ pub fn social_hub() -> Html {
         });
     }
 
-  {
+    {
         let state = state.clone();
         use_effect_with(state, move |state| {
             if let LoadState::Ready(hub) = &**state {
@@ -66,8 +69,8 @@ pub fn social_hub() -> Html {
         });
     }
 
-    let content = match &*state {
-        LoadState::Loading => html! { <Spinner label="Loading Instagram feed…" /> },
+    let feed_content = match &*state {
+        LoadState::Loading => html! { <Spinner label="Loading social feed…" /> },
         LoadState::Error(msg) => html! {
             <p class="text-sm text-muted">{ format!("Social feed unavailable: {}", msg) }</p>
         },
@@ -84,49 +87,63 @@ pub fn social_hub() -> Html {
             </div>
         },
         LoadState::Ready(hub) => {
-            let source_note = match hub.source.as_str() {
-                "instagram" => "Live from Instagram @jheffmedia",
-                "config" => "From configured Instagram samples",
-                _ => "Instagram @jheffmedia",
-            };
+            let instagram_posts: Vec<_> = hub
+                .posts
+                .iter()
+                .filter(|p| p.platform == "instagram")
+                .cloned()
+                .collect();
+            let youtube_posts: Vec<_> = hub
+                .posts
+                .iter()
+                .filter(|p| p.platform == "youtube")
+                .cloned()
+                .collect();
 
             html! {
-                <div class="space-y-6">
-                    <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface-elevated px-5 py-4">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+                <div class="space-y-10">
+                    if !instagram_posts.is_empty() {
+                        <section class="space-y-4">
+                            <Heading level={HeadingLevel::H2} subtitle="Recent posts from @jheffmedia on Instagram.">
                                 { "Instagram" }
-                            </p>
-                            <a
-                                class="text-lg font-semibold text-foreground hover:text-accent"
-                                href={INSTAGRAM_PROFILE}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                { "@jheffmedia" }
-                            </a>
-                        </div>
-                        <p class="text-xs text-muted">{ source_note }</p>
-                    </div>
-                    <Grid cols_sm={1} cols_lg={3}>
-                        { for hub.posts.iter().map(|post| html! {
-                            <PostCard key={post.id.clone()} post={post.clone()} />
-                        }) }
-                    </Grid>
+                            </Heading>
+                            <Grid cols_sm={1} cols_lg={3}>
+                                { for instagram_posts.iter().map(|post| html! {
+                                    <PostCard key={post.id.clone()} post={post.clone()} />
+                                }) }
+                            </Grid>
+                        </section>
+                    }
+
+                    if !youtube_posts.is_empty() {
+                        <section class="space-y-4">
+                            <Heading level={HeadingLevel::H2} subtitle="Latest videos from @jheffmedia on YouTube.">
+                                { "YouTube" }
+                            </Heading>
+                            <Grid cols_sm={1} cols_lg={3}>
+                                { for youtube_posts.iter().map(|post| html! {
+                                    <PostCard key={post.id.clone()} post={post.clone()} />
+                                }) }
+                            </Grid>
+                        </section>
+                    }
                 </div>
             }
         },
     };
 
     html! {
-        <div class="space-y-6">
+        <div class="space-y-8">
             <Heading
                 level={HeadingLevel::H1}
-                subtitle="Recent posts from @jheffmedia on Instagram — pulled automatically when an access token is configured."
+                subtitle="Instagram, YouTube, and cross-platform posts from @jheffmedia."
             >
                 { "Social" }
             </Heading>
-            { content }
+
+            <InstagramFeaturedCard />
+
+            { feed_content }
         </div>
     }
 }

@@ -1,4 +1,4 @@
-use crate::components::{Hero, Grid, LinkCard, PhotoFeed, Stack, Text, TextTone};
+use crate::components::{Hero, Grid, InstagramFeaturedCard, LinkCard, MediaFeedScroll, Stack, Text, TextTone};
 use crate::routes::AppRoutes;
 use yew::prelude::*;
 
@@ -18,7 +18,9 @@ impl Component for Home {
             <Stack>
                 <Hero />
 
-                <PhotoFeed title="Recent media" limit={12} />
+                <InstagramFeaturedCard />
+
+                <MediaFeedScroll title="Feed" limit={24} />
 
                 <Grid cols_sm={1} cols_lg={3}>
                     <LinkCard route={AppRoutes::Content} title="Content hub">
