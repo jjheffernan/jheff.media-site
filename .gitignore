@@ -1,3 +1,20 @@
+# Secrets and credentials (never commit)
+backend/src/secret.key
+**/secret.key
+.env
+.env.*
+!.env.example
+!.env.*.example
+credentials.json
+*credentials*.json
+.secrets/
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+*.keystore
+
 .sass-cache/
 *.css.map
 *.sass.map
@@ -15,6 +32,11 @@
 target
 **/*.rs.bk
 Cargo.lock
+
+# Node / frontend build output
+node_modules/
+frontend/dist/
+frontend/pkg/
 
 # MacOS
 
@@ -44,6 +66,3 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-
-## keys
-backend/src/secret.key
