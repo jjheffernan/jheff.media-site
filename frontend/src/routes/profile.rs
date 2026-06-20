@@ -34,6 +34,8 @@ pub fn profile() -> Html {
                     <h2 class="text-lg font-semibold text-foreground">{ "Quick links" }</h2>
                     <div class="flex flex-wrap gap-2">
                         <NavLink route={AppRoutes::Content} label="Content" />
+                        <NavLink route={AppRoutes::Account} label="Account" />
+                        <NavLink route={AppRoutes::Profile} label="Profile" />
                         <NavLink route={AppRoutes::Booking} label="Booking" />
                         <NavLink route={AppRoutes::Contact} label="Contact" />
                         <NavLink route={AppRoutes::Galleries} label="Galleries" />
