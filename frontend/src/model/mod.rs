@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 mod auth;
 mod content;
 mod feed;
+mod media;
 mod social;
 
 pub use auth::Auth;
@@ -14,6 +15,10 @@ pub use content::{
     ContentListResponse, MediaItem, OtherSite, OtherSitesResponse,
 };
 pub use feed::{FeedItem, FeedResponse};
+pub use media::{
+    ChangePassword, EmailChange, InstagramFeatured, MediaFeedItem, MediaFeedResponse,
+    PrintSelection, PrintSelectionInput, TotpEnrollResponse, TotpVerify,
+};
 pub use social::{SocialAccount, SocialHubResponse, SocialPost};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
