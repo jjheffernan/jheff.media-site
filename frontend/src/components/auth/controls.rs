@@ -58,11 +58,18 @@ impl Component for Controls {
             Msg::Logout
         });
         html! {
-            <div class="auth-controls">
-                <span class="username">{ format!("Hi, {}!", ctx.props().auth.user.username) }</span>
-                <a onclick={onclick_logout} class={if self.submitting { "disabled" } else { "" }}>
+            <div class="rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-sm">
+                <span class="font-medium text-zinc-200">
+                    { format!("Hi, {}!", ctx.props().auth.user.username) }
+                </span>
+                <button
+                    type="button"
+                    onclick={onclick_logout}
+                    disabled={self.submitting}
+                    class="mt-2 text-cyan-400 transition hover:text-cyan-300 disabled:opacity-50"
+                >
                     { "Logout" }
-                </a>
+                </button>
             </div>
         }
     }

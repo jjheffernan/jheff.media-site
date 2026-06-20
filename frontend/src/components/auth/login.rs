@@ -17,6 +17,8 @@ pub struct Login {
 pub struct Props {
     #[prop_or_default]
     pub class: String,
+    #[prop_or_default]
+    pub embedded: bool,
     pub on_login: Callback<AuthModel>,
 }
 
@@ -133,20 +135,28 @@ impl Component for Login {
             Msg::UpdatePassword(value)
         });
         let username_class = if self.username_error.is_some() {
-            "invalid"
+            "rounded-lg border border-red-500 bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-red-500/30"
         } else {
-            ""
+            "rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         };
         let password_class = if self.password_error.is_some() {
-            "invalid"
+            "rounded-lg border border-red-500 bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-red-500/30"
         } else {
-            ""
+            "rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+        };
+        let wrapper_class = if ctx.props().embedded {
+            format!("p-0 {}", ctx.props().class)
+        } else {
+            format!("rounded-xl border border-border bg-surface-elevated p-4 {}", ctx.props().class)
         };
         html! {
-            <div class={classes!("login", ctx.props().class.clone())}>
-                <form id={self.id.clone()} class="login" onsubmit={onsubmit}>
-                    <label for={format!("{}-email-or-userame", self.id)}>
-                        {"Email or Username"}
+            <div class={wrapper_class}>
+                <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                    { "Log in" }
+                </p>
+                <form id={self.id.clone()} class="space-y-3" onsubmit={onsubmit}>
+                    <label class="block text-xs font-medium text-muted" for={format!("{}-email-or-userame", self.id)}>
+                        { "Email or Username" }
                     </label>
                     <input
                         id={format!("{}-email-or-userame", self.id)}
@@ -156,8 +166,8 @@ impl Component for Login {
                         oninput={oninput_email_or_username}
                         placeholder="Email or Username"
                         spellcheck="false" />
-                    <label for={format!("{}-password", self.id)}>
-                        {"Password"}
+                    <label class="block text-xs font-medium text-muted" for={format!("{}-password", self.id)}>
+                        { "Password" }
                     </label>
                     <input
                         id={format!("{}-password", self.id)}
@@ -167,7 +177,11 @@ impl Component for Login {
                         oninput={oninput_password}
                         placeholder="Password"
                         spellcheck="false" />
-                    <button type="submit" disabled={self.submitting}>
+                    <button
+                        type="submit"
+                        disabled={self.submitting}
+                        class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-accent-hover disabled:opacity-50"
+                    >
                         { "Log in" }
                     </button>
                 </form>
