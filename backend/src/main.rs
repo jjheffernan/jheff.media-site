@@ -1,5 +1,6 @@
 use actix_cors::Cors;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use actix_web::http::header;
 
 #[macro_use()]
 extern crate actix_rt;
@@ -33,6 +34,30 @@ use awc::Client;
 use config::{db::config_db, server::ServerConfig};
 use std::{env, io};
 
+fn cors_from_env() -> Cors {
+    let default_origin = env::var("YEW_FULLSTACK_FORWARD_FRONTEND_URL")
+        .unwrap_or_else(|_| String::from("http://localhost:8000"));
+    let origins = env::var("YEW_FULLSTACK_CORS_ORIGINS").unwrap_or(default_origin);
+
+    let mut cors = Cors::default()
+        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+        .allowed_headers(vec![
+            http::header::AUTHORIZATION,
+            http::header::ACCEPT,
+            http::header::CONTENT_TYPE,
+        ])
+        .max_age(3600);
+
+    for origin in origins.split(',') {
+        let origin = origin.trim();
+        if !origin.is_empty() {
+            cors = cors.allowed_origin(origin);
+        }
+    }
+
+    cors
+}
+
 #[allow(dead_code)]
 async fn index() -> impl Responder {
     HttpResponse::Ok().body("Hello world!")
@@ -57,13 +82,12 @@ async fn main() -> io::Result<()> {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
             .wrap(
-                Cors::default()
-                    .send_wildcard()
-                    .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
-                    .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-                    .allowed_header(http::header::CONTENT_TYPE)
-                    .max_age(3600),
+                actix_web::middleware::DefaultHeaders::new()
+                    .add((header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
+                    .add((header::X_FRAME_OPTIONS, "DENY"))
+                    .add((header::REFERRER_POLICY, "strict-origin-when-cross-origin")),
             )
+            .wrap(cors_from_env())
             .app_data(web::Data::new(Client::default()))
             .app_data(web::Data::new(ServerConfig {
                 http_serve_static: serve_static.clone(),

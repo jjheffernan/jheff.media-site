@@ -6,10 +6,14 @@ use jsonwebtoken::{DecodingKey, TokenData, Validation};
 use mongodb::Database;
 
 pub fn decode_token(token: String) -> jsonwebtoken::errors::Result<TokenData<UserToken>> {
+    let mut validation = Validation::default();
+    validation.validate_exp = true;
+    validation.leeway = 0;
+
     jsonwebtoken::decode::<UserToken>(
         &token,
         &DecodingKey::from_secret(&KEY),
-        &Validation::default(),
+        &validation,
     )
 }
 

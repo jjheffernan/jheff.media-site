@@ -72,10 +72,24 @@ Signup does **not** log the user in automatically—the header still shows login
 
 ## Security notes
 
-- Replace `secret.key` per deployment; never commit it.
-- JWT expiry is one week; session invalidation on logout is server-side.
-- CORS allows wildcard origins in dev—tighten for production if exposing API cross-origin.
-- Passwords never returned in API responses (`PublicUserDTO` only has email/username).
+- Replace `secret.key` per deployment; never commit it (gitignored).
+- JWT expiry is one week; `exp` is validated on every decode; session invalidation on logout is server-side.
+- CORS allows only origins listed in `YEW_FULLSTACK_CORS_ORIGINS` (comma-separated), defaulting to `YEW_FULLSTACK_FORWARD_FRONTEND_URL` or `http://localhost:8000` — not wildcard.
+- Response headers include `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy`.
+- Passwords never returned in API responses (`PublicUserDTO` only has email, username, role, totpEnabled).
+- Signup and password change require at least 8 characters; passwords stored as bcrypt hashes.
+- Protected routes use `Authorization: bearer <jwt>` with server-side session validation.
+- Email-change tokens are not logged; wire a mailer before enabling email change in production.
+- Client stores JWT in **session storage** (tab-scoped). Any XSS in the WASM app could exfiltrate tokens — keep dependencies patched and avoid inline third-party scripts.
+- TOTP disable requires a valid code when 2FA is enabled.
+- Admin role is assigned at signup via `YEW_FULLSTACK_ADMIN_EMAILS`; review admin list carefully.
+
+### Hardening backlog
+
+- Rate limiting on `/api/auth/*` (brute-force protection).
+- Require TOTP on login when `totp_enabled` (enrollment exists; login step not yet enforced).
+- Content-Security-Policy header tuned for WASM + any embeds (Instagram/YouTube).
+- HTTPS termination and HSTS at the reverse proxy (Caddy/nginx).
 
 ## Code map
 

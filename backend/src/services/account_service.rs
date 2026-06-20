@@ -19,6 +19,12 @@ pub struct TokenBodyResponse {
 }
 
 pub async fn signup(user: User, db: &web::Data<Database>) -> Result<String, ServiceError> {
+    if user.password.len() < 8 {
+        return Err(ServiceError::new(
+            StatusCode::BAD_REQUEST,
+            "Password must be at least 8 characters.",
+        ));
+    }
     match User::signup(user, db).await {
         Ok(id) => Ok(id.to_hex()),
         Err(err) => match err.as_str() {
@@ -47,13 +53,18 @@ pub async fn login(
 
 pub async fn logout(authen_header: &HeaderValue, db: &web::Data<Database>) -> Result<(), ServiceError> {
     if let Ok(authen_str) = authen_header.to_str() {
-        if authen_str.starts_with("bearer") {
-            let token = authen_str[6..authen_str.len()].trim();
+        let authen_str = authen_str.trim();
+        if authen_str.len() > 7 && authen_str[..7].eq_ignore_ascii_case("bearer ") {
+            let token = authen_str[7..].trim();
+            if token.is_empty() {
+                return Err(ServiceError::new(
+                    StatusCode::BAD_REQUEST,
+                    "MISSING_TOKEN".to_string(),
+                ));
+            }
             if let Ok(token_data) = token_utils::decode_token(token.to_string()) {
                 if let Ok(username) = token_utils::verify_token(&token_data, &**db).await {
-                    if let Some(user) =
-                        User::find_by_email_or_username(&username, db).await
-                    {
+                    if let Some(user) = User::find_by_email_or_username(&username, db).await {
                         User::logout(user.id.unwrap(), db).await;
                         return Ok(());
                     }
@@ -63,7 +74,7 @@ pub async fn logout(authen_header: &HeaderValue, db: &web::Data<Database>) -> Re
     }
 
     Err(ServiceError::new(
-        StatusCode::INTERNAL_SERVER_ERROR,
-        "TOKEN_PROCESSING_ERROR".to_string(),
+        StatusCode::UNAUTHORIZED,
+        "INVALID_TOKEN".to_string(),
     ))
 }

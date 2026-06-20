@@ -9,7 +9,6 @@ use data_encoding::BASE32;
 use mongodb::Database;
 use rand::RngCore;
 use totp_lite::{totp_custom, Sha1, DEFAULT_STEP};
-use uuid::Uuid;
 
 pub async fn me(auth: &AuthUser, db: &Database) -> PublicUserDTO {
     if let Some(user) = User::find_by_id(&auth.id, db).await {
@@ -77,10 +76,9 @@ pub async fn request_email_change(
         ));
     }
 
-    let token = Uuid::new_v4().to_string();
     info!(
-        "Email change requested for {} → {} (token {} — wire to mailer in production)",
-        auth.email, new_email, token
+        "Email change requested for {} → {} (delivery not configured)",
+        auth.email, new_email
     );
 
     Ok(format!(
