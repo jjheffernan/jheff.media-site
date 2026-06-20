@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 
-WORKDIR="$( cd "$(dirname "$0")"/.. ; pwd -P )" # get the project dir
-
-cd "$WORKDIR/frontend"
-
-yarn install
+WORKDIR="$( cd "$(dirname "$0")"/.. ; pwd -P )"
+COMPOSE="$WORKDIR/scripts/docker-compose.sh"
 
 cd "$WORKDIR/scripts"
 
-docker-compose \
+"$COMPOSE" \
     -f "$WORKDIR/scripts/docker-compose.dev.yml" \
     -p yew-fullstack-dev \
     up \

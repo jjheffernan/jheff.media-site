@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 WORKDIR="$( cd "$(dirname "$0")"/.. ; pwd -P )" # get the project dir
+COMPOSE="$WORKDIR/scripts/docker-compose.sh"
 
 cd "$WORKDIR/frontend"
 
@@ -10,10 +11,9 @@ yarn install
 
 cd "$WORKDIR/scripts"
 
-# Only if building got messed up
-docker-compose \
+"$COMPOSE" \
     -f "$WORKDIR/scripts/docker-compose.dev.yml" \
-    -p yew-fullstack \
+    -p yew-fullstack-dev \
     up \
     --force-recreate --remove-orphans --build \
     --exit-code-from backend
