@@ -7,9 +7,14 @@ pub struct Auth {
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Debug)]
+#[serde(rename_all = "camelCase", default)]
 pub struct User {
     pub email: String,
     pub username: String,
+    #[serde(default)]
+    pub role: String,
+    #[serde(default)]
+    pub totp_enabled: bool,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, PartialEq, Debug)]

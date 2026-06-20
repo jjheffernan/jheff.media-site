@@ -6,6 +6,7 @@ mod context;
 mod model;
 mod router;
 mod routes;
+mod services;
 mod utils;
 
 use wasm_bindgen::prelude::*;

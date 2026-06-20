@@ -1,3 +1,4 @@
+mod account;
 mod booking;
 mod contact;
 mod content;
@@ -15,6 +16,7 @@ mod social;
 use yew::prelude::*;
 use yew_router::prelude::*;
 
+pub use account::Account;
 pub use booking::Booking;
 pub use contact::Contact;
 pub use content::Content;
@@ -57,6 +59,8 @@ pub enum AppRoutes {
     Privacy,
     #[at("/other-sites")]
     OtherSites,
+    #[at("/account")]
+    Account,
     #[at("/profile")]
     Profile,
     #[at("/404")]
@@ -79,6 +83,7 @@ pub fn switch(routes: AppRoutes) -> Html {
         AppRoutes::Terms => html! { <Terms /> },
         AppRoutes::Privacy => html! { <Privacy /> },
         AppRoutes::OtherSites => html! { <OtherSites /> },
+        AppRoutes::Account => html! { <Account /> },
         AppRoutes::Profile => html! { <Profile /> },
         AppRoutes::NotFound => html! {
             <p class="text-sm text-muted">{ "Page not found" }</p>

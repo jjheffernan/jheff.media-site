@@ -75,11 +75,11 @@ pub fn profile_menu() -> Html {
 
     let navigator = use_navigator().unwrap();
 
-    let go_profile = {
+    let go_account = {
         let navigator = navigator.clone();
         let close_all = close_all.clone();
         Callback::from(move |_| {
-            navigator.push(&AppRoutes::Profile);
+            navigator.push(&AppRoutes::Account);
             close_all.emit(());
         })
     };
@@ -94,7 +94,21 @@ pub fn profile_menu() -> Html {
                     <button
                         type="button"
                         class="block w-full px-3 py-2 text-left text-sm text-foreground transition hover:bg-surface"
-                        onclick={go_profile}
+                        onclick={go_account}
+                    >
+                        { "Account" }
+                    </button>
+                    <button
+                        type="button"
+                        class="block w-full px-3 py-2 text-left text-sm text-foreground transition hover:bg-surface"
+                        onclick={{
+                            let navigator = navigator.clone();
+                            let close_all = close_all.clone();
+                            Callback::from(move |_| {
+                                navigator.push(&AppRoutes::Profile);
+                                close_all.emit(());
+                            })
+                        }}
                     >
                         { "Profile" }
                     </button>
