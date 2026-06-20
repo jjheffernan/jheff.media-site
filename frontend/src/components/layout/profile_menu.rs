@@ -73,6 +73,15 @@ pub fn profile_menu() -> Html {
         })
     };
 
+    let close_menu = {
+        let panel = panel.clone();
+        Callback::from(move |_| {
+            if *panel == OpenPanel::Menu {
+                panel.set(OpenPanel::None);
+            }
+        })
+    };
+
     let navigator = use_navigator().unwrap();
 
     let go_account = {
@@ -145,7 +154,10 @@ pub fn profile_menu() -> Html {
     };
 
     html! {
-        <div class="relative">
+        <div
+            class="relative"
+            onmouseleave={close_menu}
+        >
             <button
                 type="button"
                 class="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-elevated text-foreground transition hover:border-accent hover:text-accent"

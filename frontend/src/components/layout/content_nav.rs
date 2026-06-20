@@ -35,19 +35,19 @@ pub fn content_nav() -> Html {
         });
     }
 
-    let toggle = {
+    let close_panel = {
         let panel = panel.clone();
-        Callback::from(move |_| {
-            panel.set(match *panel {
-                Panel::Open => Panel::Closed,
-                Panel::Closed => Panel::Open,
-            });
-        })
+        Callback::from(move |_| panel.set(Panel::Closed))
     };
 
     let navigator = use_navigator().unwrap();
 
-    let go_content = {
+    let open_panel = {
+        let panel = panel.clone();
+        Callback::from(move |_| panel.set(Panel::Open))
+    };
+
+    let go_content_hub = {
         let navigator = navigator.clone();
         let panel = panel.clone();
         Callback::from(move |_| {
@@ -92,14 +92,18 @@ pub fn content_nav() -> Html {
     let item_class = "block w-full px-3 py-2 text-left text-sm text-foreground transition hover:bg-surface";
 
     html! {
-        <div class="relative">
+        <div
+            class="relative"
+            onmouseleave={close_panel.clone()}
+        >
             <button
                 type="button"
                 class={trigger_class}
-                aria-label="Content menu"
+                aria-label="Content menu — double-click for hub"
                 aria-expanded={(*panel == Panel::Open).to_string()}
                 aria-haspopup="true"
-                onclick={toggle}
+                onclick={open_panel}
+                ondblclick={go_content_hub}
             >
                 { "Content" }
                 <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -109,14 +113,6 @@ pub fn content_nav() -> Html {
 
             if *panel == Panel::Open {
                 <div class="absolute left-0 top-full z-50 mt-1 min-w-[11rem] rounded-xl border border-border bg-surface-elevated py-1 shadow-lg">
-                    <button
-                        type="button"
-                        class="block w-full px-3 py-2 text-left text-sm font-medium text-accent transition hover:bg-surface"
-                        onclick={go_content}
-                    >
-                        { "Content hub" }
-                    </button>
-                    <div class="my-1 border-t border-border" />
                     <button type="button" class={item_class} onclick={go_galleries}>
                         { "Galleries" }
                     </button>
