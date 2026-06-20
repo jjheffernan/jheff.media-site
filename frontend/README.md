@@ -1,32 +1,29 @@
-# Web Client Frontend
+# Frontend
 
-This template serves as a starting point for using Yew in an easy and pragmatic manner. It hopes to serve you as a showcase of what can be done and to provide you with a useful basis for developing your own projects.
+Yew 0.23 WASM client (`jheffmedia-site-frontend`), bundled with [Trunk](https://trunk-rs.github.io/trunk/).
 
-## About
+**Full reference:** [docs/frontend.md](../docs/frontend.md) · patterns: [.agents/skills/yew-patterns](../.agents/skills/yew-patterns/SKILL.md)
 
-This template is loosely based upon the [yew-wasm-pack-template](https://github.com/yewstack/yew-wasm-pack-template).
+## Quick commands
 
-## 🚴 Usage
+```bash
+rustup target add wasm32-unknown-unknown
+cargo install --locked trunk   # first time
 
-Generally you will want to work with the full stack instead, but here are a few instructions to work the web client on its own.
-
-### 🛠️ Build with `yarn run build`
-
-```
-yarn run build
-```
-
-### 🔬 Serve locally with `yarn run start:dev`
-
-```
-yarn run start:dev
+cd frontend
+trunk serve --open             # dev :8000
+trunk build --release          # dist/
 ```
 
-## 🔋 Batteries Included
+## Dev tip
 
-- [`wasm-bindgen`](https://github.com/rustwasm/wasm-bindgen) for communicating
-  between WebAssembly and JavaScript.
-- [`console_error_panic_hook`](https://github.com/rustwasm/console_error_panic_hook)
-  for logging panic messages to the developer console.
-- [`wee_alloc`](https://github.com/rustwasm/wee_alloc), an allocator optimized
-  for small code size.
+Use http://localhost:8080 (backend proxy) so `/api/auth/*` shares origin with the UI.
+
+## Structure
+
+- `index.html`, `Trunk.toml` — Trunk entry
+- `src/app.rs`, `router.rs`, `routes/` — dashboard, shoots, galleries, profile
+- `src/context/auth.rs` — session + `AuthContext`
+- `static/` — CSS
+
+Patterns from [Yew docs](https://yew.rs/docs/getting-started/introduction) and [yewstack examples](https://github.com/yewstack/yew/tree/master/examples).

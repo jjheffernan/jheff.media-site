@@ -1,40 +1,19 @@
-use css_in_rust::Style;
-use yew::{html, Component, ComponentLink, Html, ShouldRender};
+use yew::prelude::*;
 
 /// Profile page lining to login.
-pub struct Profile {
-    style: Style,
-}
-
-pub enum Msg {}
+pub struct Profile {}
 
 impl Component for Profile {
-    type Message = Msg;
+    type Message = ();
     type Properties = ();
 
-    fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        let style = Style::create(
-            String::from("profile-page"),
-            String::from(
-                r#"
-                "#,
-            ),
-        )
-        .expect("An error occured while creating the style.");
-        Self { style }
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        true
-    }
-
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
-            <div class=self.style.clone()>
+            <div class="profile-page">
                 {"Profile Page"}
             </div>
         }

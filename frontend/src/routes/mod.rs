@@ -1,24 +1,37 @@
+mod galleries;
 mod home;
 mod profile;
+mod shoots;
 
-use yew_router::switch::Permissive;
-use yew_router::Switch;
-// use yew_router::matcher::MatcherToken;
+use yew::prelude::*;
+use yew_router::prelude::*;
 
+pub use galleries::Galleries;
 pub use home::Home;
 pub use profile::Profile;
+pub use shoots::Shoots;
 
-/// App routes
-#[derive(Switch, Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Routable)]
 pub enum AppRoutes {
-    #[to = "/profile"]
-    Profile,
-    #[to = "/404"]
-    NotFound(Permissive<String>),
-    #[to = "/"]
+    #[at("/")]
     Home,
-    // #[to = MatcherToken::Exact("/")]
-    // Home,
-    // #[to = "/{*:any}"]
-    // NotFound(Permissive<String>),
+    #[at("/shoots")]
+    Shoots,
+    #[at("/galleries")]
+    Galleries,
+    #[at("/profile")]
+    Profile,
+    #[at("/404")]
+    #[not_found]
+    NotFound,
+}
+
+pub fn switch(routes: AppRoutes) -> Html {
+    match routes {
+        AppRoutes::Home => html! { <Home /> },
+        AppRoutes::Shoots => html! { <Shoots /> },
+        AppRoutes::Galleries => html! { <Galleries /> },
+        AppRoutes::Profile => html! { <Profile /> },
+        AppRoutes::NotFound => html! { <p>{"Page not found"}</p> },
+    }
 }

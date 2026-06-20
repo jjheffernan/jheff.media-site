@@ -1,30 +1,15 @@
-use crate::agents::auth::{AuthEventBus, Request as AuthEventBusRequest};
 use crate::model::Auth;
-use anyhow::Error;
-use css_in_rust::Style;
-use yew::{
-    agent::{Dispatched, Dispatcher},
-    format::Nothing,
-    html,
-    services::{
-        fetch::{FetchTask, Request, Response},
-        FetchService,
-    },
-    Callback, Component, ComponentLink, Html, MouseEvent, Properties, ShouldRender,
-};
+use wasm_bindgen_futures::spawn_local;
+use yew::prelude::*;
 
 pub struct Controls {
-    link: ComponentLink<Self>,
-    props: Props,
-    style: Style,
-    fetch_service: FetchService,
-    fetch_task: Option<FetchTask>,
-    auth_event_bus: Dispatcher<AuthEventBus>,
+    submitting: bool,
 }
 
 #[derive(Properties, Clone, PartialEq, Debug)]
 pub struct Props {
     pub auth: Auth,
+    pub on_logout: Callback<()>,
 }
 
 pub enum Msg {
@@ -36,62 +21,48 @@ impl Component for Controls {
     type Message = Msg;
     type Properties = Props;
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let style = Style::create("auth-controls", include_str!("controls.scss"))
-            .expect("An error occured while creating the style.");
-        Self {
-            link,
-            props,
-            style,
-            fetch_service: FetchService::new(),
-            fetch_task: None,
-            auth_event_bus: AuthEventBus::dispatcher(),
-        }
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self { submitting: false }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn changed(&mut self, _ctx: &Context<Self>, _old_props: &Self::Properties) -> bool {
+        true
+    }
+
+    fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
             Msg::Logout => {
-                let req = Request::post("/api/auth/logout")
-                    .header("Authentication", format!("bearer {}", self.props.auth.jwt))
-                    .body(Nothing)
-                    .expect("Failed to build login request.");
-                let fetch_task = self
-                    .fetch_service
-                    .fetch(
-                        req,
-                        self.link
-                            .callback(|_response: Response<Result<String, Error>>| Msg::Response),
-                    )
-                    .unwrap();
-                self.fetch_task = Some(fetch_task);
+                self.submitting = true;
+                let jwt = ctx.props().auth.jwt.clone();
+                let link = ctx.link().clone();
+                let auth_header = format!("bearer {}", jwt);
+                spawn_local(async move {
+                    let _ = gloo_net::http::Request::post("/api/auth/logout")
+                        .header("Authorization", auth_header.as_str())
+                        .send()
+                        .await;
+                    link.send_message(Msg::Response);
+                });
             }
             Msg::Response => {
-                self.fetch_task = None;
-                self.auth_event_bus.send(AuthEventBusRequest::Logout);
+                self.submitting = false;
+                ctx.props().on_logout.emit(());
             }
         }
         false
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        if self.props != props {
-            self.props = props;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn view(&self) -> Html {
-        let onclick_logout: Callback<MouseEvent> = self.link.callback(|ev: MouseEvent| {
-            ev.prevent_default();
+    fn view(&self, ctx: &Context<Self>) -> Html {
+        let onclick_logout = ctx.link().callback(|e: MouseEvent| {
+            e.prevent_default();
             Msg::Logout
         });
         html! {
-            <div class=self.style.clone()>
-                <span class="username">{ format!("Hi, {}!", &self.props.auth.user.username) }</span>
-                <a onclick=onclick_logout>{ "Logout" }</a>
+            <div class="auth-controls">
+                <span class="username">{ format!("Hi, {}!", ctx.props().auth.user.username) }</span>
+                <a onclick={onclick_logout} class={if self.submitting { "disabled" } else { "" }}>
+                    { "Logout" }
+                </a>
             </div>
         }
     }

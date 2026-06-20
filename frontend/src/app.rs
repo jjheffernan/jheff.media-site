@@ -1,6 +1,8 @@
 use crate::components::Layout;
+use crate::context::AuthProvider;
 use crate::router::Router;
-use yew::prelude::{html, Component, ComponentLink, Html, ShouldRender};
+use yew::prelude::*;
+use yew_router::prelude::*;
 
 pub struct App {}
 
@@ -10,23 +12,23 @@ impl Component for App {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
+    fn create(_ctx: &Context<Self>) -> Self {
         Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _ctx: &Context<Self>, _msg: Self::Message) -> bool {
         true
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
-            <Layout>
-                <Router />
-            </Layout>
+            <BrowserRouter>
+                <AuthProvider>
+                    <Layout>
+                        <Router />
+                    </Layout>
+                </AuthProvider>
+            </BrowserRouter>
         }
     }
 }

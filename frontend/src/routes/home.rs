@@ -1,42 +1,37 @@
-use css_in_rust::Style;
-use yew::{html, Component, ComponentLink, Html, ShouldRender};
+use yew::prelude::*;
 
-/// Home page for logging in or displaying the Dashboard.
-pub struct Home {
-    style: Style,
-}
-
-pub enum Msg {}
+/// Dashboard for automotive photography operations.
+pub struct Home {}
 
 impl Component for Home {
-    type Message = Msg;
+    type Message = ();
     type Properties = ();
 
-    fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        let style = Style::create(
-            String::from("home-page"),
-            String::from(
-                r#"
-                "#,
-            ),
-        )
-        .expect("An error occured while creating the style.");
-        Self { style }
+    fn create(_ctx: &Context<Self>) -> Self {
+        Self {}
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        true
-    }
-
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
-    }
-
-    fn view(&self) -> Html {
+    fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
-            <div class=self.style.clone()>
-                <h1>{"Home Page"}</h1>
-                <p>{"Home Page Content"}</p>
+            <div class="page home-page">
+                <h1>{"Automotive Photography"}</h1>
+                <p class="page-lead">
+                    {"Manage shoots, galleries, and client deliveries for jheff.media."}
+                </p>
+                <section class="dashboard-grid">
+                    <article class="dashboard-card">
+                        <h2>{"Shoots"}</h2>
+                        <p>{"Schedule track days, dealer shoots, and private collections."}</p>
+                    </article>
+                    <article class="dashboard-card">
+                        <h2>{"Galleries"}</h2>
+                        <p>{"Curate selects, mark favorites, and publish client galleries."}</p>
+                    </article>
+                    <article class="dashboard-card">
+                        <h2>{"Deliverables"}</h2>
+                        <p>{"Export web, print, and social crops from a single master set."}</p>
+                    </article>
+                </section>
             </div>
         }
     }

@@ -1,12 +1,11 @@
-FROM node:latest
-ENV SRCDIR /usr/src/frontend
-ENV RUST_LOG "info"
-WORKDIR /root
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN cargo install wasm-pack
-WORKDIR ${SRCDIR}
-COPY . .
-RUN /usr/local/bin/yarn install
+FROM rust:1.85-bookworm
+ENV RUST_LOG=info
+WORKDIR /usr/src/workspace
+RUN cargo install --locked trunk
+COPY Cargo.toml Cargo.lock ./
+COPY frontend ./frontend
+COPY backend/Cargo.toml backend/Cargo.toml
+RUN mkdir -p backend/src && echo 'fn main() {}' > backend/src/main.rs
+WORKDIR /usr/src/workspace/frontend
 EXPOSE 8000
-CMD ["/usr/local/bin/yarn", "run", "start:dev"]
+CMD ["trunk", "serve", "--port", "8000", "--address", "0.0.0.0"]
