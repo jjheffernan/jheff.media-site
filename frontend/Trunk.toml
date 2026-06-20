@@ -4,8 +4,17 @@ dist = "dist"
 public_url = "/"
 
 [watch]
-watch = ["src", "static", "index.html", "Trunk.toml"]
+watch = ["src", "static", "styles", "index.html", "Trunk.toml", "package.json"]
 
 [serve]
 addresses = ["0.0.0.0"]
 port = 8000
+
+# Proxy /api/* to the Actix backend so :8000 dev server can call APIs (same as :8080).
+[[proxy]]
+backend = "http://127.0.0.1:8080/api/"
+
+[[hooks]]
+stage = "build"
+command = "npm"
+command_arguments = ["run", "css:build"]

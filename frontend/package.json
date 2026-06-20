@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "css:build": "tailwindcss -i ./styles/input.css -o ./static/app.css --minify",
+    "css:watch": "tailwindcss -i ./styles/input.css -o ./static/app.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.7",
+    "tailwindcss": "^4.1.7"
+  }
+}

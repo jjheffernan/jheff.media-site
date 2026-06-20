@@ -25,7 +25,18 @@ anyhow = "1.0"
 uuid = { workspace = true, features = ["js"] }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 wee_alloc = { version = "0.4.5", optional = true }
-web-sys = { version = "0.3.102", features = ["HtmlInputElement", "console"] }
+web-sys = { version = "0.3.102", features = [
+    "Document",
+    "Element",
+    "Event",
+    "HtmlDocument",
+    "HtmlElement",
+    "DomTokenList",
+    "HtmlInputElement",
+    "MediaQueryList",
+    "Window",
+    "console",
+] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.50"

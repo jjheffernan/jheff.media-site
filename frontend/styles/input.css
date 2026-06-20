@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@source "../src/**/*.rs";
+@source "../index.html";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+}
+
+:root {
+  color-scheme: light dark;
+  --bg: oklch(0.99 0 0);
+  --fg: oklch(0.22 0.01 260);
+  --surface: oklch(1 0 0);
+  --surface-elevated: oklch(0.97 0.005 260);
+  --border: oklch(0.9 0.005 260);
+  --muted: oklch(0.55 0.01 260);
+  --accent: oklch(0.58 0.14 200);
+  --accent-hover: oklch(0.52 0.14 200);
+}
+
+.dark {
+  --bg: oklch(0.14 0.01 260);
+  --fg: oklch(0.97 0.005 260);
+  --surface: oklch(0.17 0.012 260);
+  --surface-elevated: oklch(0.2 0.012 260);
+  --border: oklch(0.28 0.01 260);
+  --muted: oklch(0.65 0.01 260);
+  --accent: oklch(0.75 0.14 200);
+  --accent-hover: oklch(0.8 0.16 200);
+}
+
+@layer base {
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+  }
+}

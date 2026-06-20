@@ -3,11 +3,26 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>jheff.media — Automotive Photography</title>
+    <script>
+      (function () {
+        var pref = localStorage.getItem("theme-preference") || "auto";
+        var dark =
+          pref === "dark" ||
+          (pref === "auto" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link data-trunk rel="rust" href="Cargo.toml" data-wasm-opt="z" />
-    <link data-trunk rel="css" href="static/reset.css" />
-    <link data-trunk rel="css" href="static/theme.css" />
-    <link data-trunk rel="css" href="static/components.css" />
+    <link data-trunk rel="css" href="static/app.css" />
   </head>
-  <body></body>
+  <body class="font-sans"></body>
 </html>
