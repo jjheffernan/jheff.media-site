@@ -1,6 +1,6 @@
 use crate::{
     models::social::{SocialAccount, SocialHubResponse},
-    services::instagram_service,
+    services::{instagram_service, youtube_service},
 };
 use awc::Client;
 use std::env;
@@ -34,11 +34,20 @@ pub async fn hub_config(client: &Client) -> SocialHubResponse {
         );
     }
 
+    if !accounts.iter().any(|a| a.platform == "youtube") {
+        accounts.push(SocialAccount {
+            platform: String::from("youtube"),
+            handle: String::from("@jheffmedia"),
+            profile_url: youtube_service::channel_url(),
+            display_name: Some(String::from("jheffmedia")),
+        });
+    }
+
     let (instagram_posts, instagram_source) =
         instagram_service::instagram_posts_or_fallback(client, 12).await;
 
     let has_instagram = !instagram_posts.is_empty();
-    let posts = if has_instagram {
+    let mut posts = if has_instagram {
         instagram_posts
     } else {
         static_posts
@@ -46,6 +55,10 @@ pub async fn hub_config(client: &Client) -> SocialHubResponse {
             .filter(|p| p.platform == "instagram")
             .collect()
     };
+
+    if let Ok(youtube_posts) = youtube_service::fetch_channel_videos(client, 6).await {
+        posts.extend(youtube_posts);
+    }
 
     let source = if has_instagram {
         instagram_source

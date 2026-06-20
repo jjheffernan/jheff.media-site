@@ -1,5 +1,6 @@
 pub mod feed;
 pub mod content;
+pub mod media;
 pub mod schedule;
 pub mod social;
 pub mod response;
