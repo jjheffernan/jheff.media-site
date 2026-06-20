@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-
-WORKDIR="$( cd "$(dirname "$0")"/.. ; pwd -P )" # get the project dir
-
-source "$WORKDIR/scripts/build.sh"
-source "$WORKDIR/scripts/run.sh"
+# Build + run production. Prefer: scripts/prod.sh build && scripts/prod.sh start
+set -euo pipefail
+DIR="$(cd "$(dirname "$0")" && pwd)"
+"$DIR/prod.sh" build
+exec "$DIR/prod.sh" start "$@"

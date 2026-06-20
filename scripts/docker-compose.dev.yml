@@ -23,6 +23,8 @@ services:
       - "YEW_FULLSTACK_FORWARD_FRONTEND_URL=http://frontend:8000"
       - "YEW_FULLSTACK_DB_CONNSTR=mongodb://db:27017"
       - "YEW_FULLSTACK_DB_NAME=yew-fullstack_dev"
+      - "YEW_FULLSTACK_FEED_PROVIDER=static"
+      - "YEW_FULLSTACK_FEED_STATIC_JSON=[{\"id\":\"1\",\"thumbnailUrl\":\"https://picsum.photos/seed/auto1/800/600\",\"title\":\"Sample 1\"},{\"id\":\"2\",\"thumbnailUrl\":\"https://picsum.photos/seed/auto2/800/600\",\"title\":\"Sample 2\"},{\"id\":\"3\",\"thumbnailUrl\":\"https://picsum.photos/seed/auto3/800/600\",\"title\":\"Sample 3\"}]"
     ports:
       - "8080:8080"
     volumes:

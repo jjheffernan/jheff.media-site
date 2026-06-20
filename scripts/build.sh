@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-
-WORKDIR="$( cd "$(dirname "$0")"/.. ; pwd -P )"
-
-rm -rf "$WORKDIR/frontend/dist"
-
-docker build -t yew-fullstack/application -t yew-fullstack/application:latest "$WORKDIR"
+# Production Docker image build. Prefer: scripts/prod.sh build
+set -euo pipefail
+exec "$(cd "$(dirname "$0")" && pwd)/prod.sh" build "$@"
