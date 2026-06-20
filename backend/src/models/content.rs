@@ -17,6 +17,8 @@ pub struct MediaItem {
 pub struct ContentCollection {
     pub id: String,
     pub title: String,
+    #[serde(default)]
+    pub kind: Option<String>,
     pub summary: Option<String>,
     pub cover_url: Option<String>,
     pub status: Option<String>,

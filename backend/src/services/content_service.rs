@@ -1,6 +1,8 @@
 use crate::models::content::{
     ContentCollection, ContentCollectionSummary, ContentListResponse,
 };
+use crate::services::content_store_service;
+use mongodb::Database;
 use std::env;
 
 fn parse_collections(env_key: &str) -> Vec<ContentCollection> {
@@ -39,15 +41,13 @@ fn to_summary(collection: &ContentCollection) -> ContentCollectionSummary {
 }
 
 pub fn list_galleries() -> ContentListResponse {
-    let items = parse_collections("YEW_FULLSTACK_GALLERIES_JSON");
-    ContentListResponse {
-        items: items.iter().map(to_summary).collect(),
-        source: if items.is_empty() {
-            String::from("none")
-        } else {
-            String::from("config")
-        },
-    }
+    list_from_env("YEW_FULLSTACK_GALLERIES_JSON")
+}
+
+pub async fn list_galleries_merged(db: &Database) -> ContentListResponse {
+    let env_items = parse_collections("YEW_FULLSTACK_GALLERIES_JSON");
+    let mongo_items = content_store_service::list_by_kind("gallery", db).await;
+    list_from_items(merge_collections(env_items, mongo_items))
 }
 
 pub fn get_gallery(id: &str) -> Option<ContentCollection> {
@@ -56,8 +56,59 @@ pub fn get_gallery(id: &str) -> Option<ContentCollection> {
         .find(|c| c.id == id)
 }
 
+pub async fn get_gallery_merged(id: &str, db: &Database) -> Option<ContentCollection> {
+    if let Some(c) = get_gallery(id) {
+        return Some(c);
+    }
+    content_store_service::list_by_kind("gallery", db)
+        .await
+        .into_iter()
+        .find(|c| c.id == id)
+}
+
 pub fn list_shoots() -> ContentListResponse {
-    let items = parse_collections("YEW_FULLSTACK_SHOOTS_JSON");
+    list_from_env("YEW_FULLSTACK_SHOOTS_JSON")
+}
+
+pub async fn list_shoots_merged(db: &Database) -> ContentListResponse {
+    let env_items = parse_collections("YEW_FULLSTACK_SHOOTS_JSON");
+    let mongo_items = content_store_service::list_by_kind("shoot", db).await;
+    list_from_items(merge_collections(env_items, mongo_items))
+}
+
+pub fn get_shoot(id: &str) -> Option<ContentCollection> {
+    parse_collections("YEW_FULLSTACK_SHOOTS_JSON")
+        .into_iter()
+        .find(|c| c.id == id)
+}
+
+pub async fn get_shoot_merged(id: &str, db: &Database) -> Option<ContentCollection> {
+    if let Some(c) = get_shoot(id) {
+        return Some(c);
+    }
+    content_store_service::list_by_kind("shoot", db)
+        .await
+        .into_iter()
+        .find(|c| c.id == id)
+}
+
+pub async fn create_collection(
+    collection: ContentCollection,
+    kind: &str,
+    db: &Database,
+) -> bool {
+    let collection = ContentCollection {
+        kind: Some(kind.to_string()),
+        ..collection
+    };
+    content_store_service::insert(collection, db).await
+}
+
+fn list_from_env(env_key: &str) -> ContentListResponse {
+    list_from_items(parse_collections(env_key))
+}
+
+fn list_from_items(items: Vec<ContentCollection>) -> ContentListResponse {
     ContentListResponse {
         items: items.iter().map(to_summary).collect(),
         source: if items.is_empty() {
@@ -68,10 +119,17 @@ pub fn list_shoots() -> ContentListResponse {
     }
 }
 
-pub fn get_shoot(id: &str) -> Option<ContentCollection> {
-    parse_collections("YEW_FULLSTACK_SHOOTS_JSON")
-        .into_iter()
-        .find(|c| c.id == id)
+fn merge_collections(
+    env_items: Vec<ContentCollection>,
+    mongo_items: Vec<ContentCollection>,
+) -> Vec<ContentCollection> {
+    let mut merged = env_items;
+    for item in mongo_items {
+        if !merged.iter().any(|e| e.id == item.id) {
+            merged.push(item);
+        }
+    }
+    merged
 }
 
 pub fn booking_config() -> crate::models::content::BookingConfig {

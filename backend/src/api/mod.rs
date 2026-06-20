@@ -1,6 +1,9 @@
+pub mod admin_controller;
 pub mod account_controller;
 pub mod contact_controller;
 pub mod content_controller;
 pub mod feed_controller;
+pub mod media_controller;
+pub mod print_controller;
 pub mod schedule_controller;
 pub mod social_controller;

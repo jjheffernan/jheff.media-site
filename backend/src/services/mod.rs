@@ -1,10 +1,15 @@
 pub mod account_service;
+pub mod account_settings_service;
 pub mod contact_service;
 pub mod content_service;
+pub mod content_store_service;
 pub mod feed_service;
 pub mod instagram_service;
+pub mod media_feed_service;
+pub mod print_service;
 pub mod schedule_service;
 pub mod social_service;
+pub mod youtube_service;
 #[cfg(feature = "forward-frontend")]
 pub mod forward_frontend;
 #[cfg(not(feature = "forward-frontend"))]
