@@ -1,34 +1,79 @@
+use crate::{
+    components::{
+        content::ContentSummaryCard,
+        ui::{Heading, HeadingLevel, Spinner, Text, TextTone},
+    },
+    model::ContentListResponse,
+    routes::AppRoutes,
+};
+use gloo_net::http::Request;
+use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
-/// Placeholder gallery index for automotive photo collections.
-pub struct Galleries {}
+#[derive(Clone, PartialEq)]
+enum LoadState {
+    Loading,
+    Ready(ContentListResponse),
+    Error(String),
+}
 
-impl Component for Galleries {
-    type Message = ();
-    type Properties = ();
+#[function_component(Galleries)]
+pub fn galleries() -> Html {
+    let state = use_state(|| LoadState::Loading);
 
-    fn create(_ctx: &Context<Self>) -> Self {
-        Self {}
+    {
+        let state = state.clone();
+        use_effect_with((), move |_| {
+            spawn_local(async move {
+                let result = Request::get("/api/galleries").send().await;
+                match result {
+                    Ok(resp) if resp.ok() => {
+                        if let Ok(data) = resp.json::<ContentListResponse>().await {
+                            state.set(LoadState::Ready(data));
+                        } else {
+                            state.set(LoadState::Error("Could not parse galleries.".into()));
+                        }
+                    }
+                    Ok(_) => state.set(LoadState::Error("Galleries request failed.".into())),
+                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                }
+            });
+            || ()
+        });
     }
 
-    fn view(&self, _ctx: &Context<Self>) -> Html {
-        html! {
-            <div class="page galleries-page">
-                <h1>{"Galleries"}</h1>
-                <p class="page-lead">
-                    {"Organize finished sets by vehicle, event, or client delivery."}
-                </p>
-                <ul class="placeholder-list">
-                    <li class="placeholder-card">
-                        <span class="placeholder-title">{"Track Day — Laguna Seca"}</span>
-                        <span class="placeholder-meta">{"48 selects · draft"}</span>
-                    </li>
-                    <li class="placeholder-card">
-                        <span class="placeholder-title">{"Dealer Inventory — Q2"}</span>
-                        <span class="placeholder-meta">{"120 selects · published"}</span>
-                    </li>
-                </ul>
+    let content = match &*state {
+        LoadState::Loading => html! { <Spinner label="Loading galleries…" /> },
+        LoadState::Error(msg) => html! {
+            <p class="text-sm text-muted">{ format!("Galleries unavailable: {}", msg) }</p>
+        },
+        LoadState::Ready(data) if data.items.is_empty() => html! {
+            <Text tone={TextTone::Muted}>
+                { "No galleries configured yet. Set YEW_FULLSTACK_GALLERIES_JSON on the backend." }
+            </Text>
+        },
+        LoadState::Ready(data) => html! {
+            <div class="grid gap-4 sm:grid-cols-2">
+                { for data.items.iter().map(|item| html! {
+                    <ContentSummaryCard
+                        key={item.id.clone()}
+                        summary={item.clone()}
+                        detail_route={AppRoutes::GalleryDetail { id: item.id.clone() }}
+                    />
+                }) }
             </div>
-        }
+        },
+    };
+
+    html! {
+        <div class="space-y-6">
+            <Heading
+                level={HeadingLevel::H1}
+                subtitle="Finished sets and client deliveries — photos and onboard video from track days, shoots, and restoration projects."
+            >
+                { "Galleries" }
+            </Heading>
+            { content }
+        </div>
     }
 }
