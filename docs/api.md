@@ -107,6 +107,45 @@ Invalidate server session for the token.
 | 400 | `MISSING_TOKEN` | No `Authorization` header |
 | 500 | `TOKEN_PROCESSING_ERROR` | Invalid token, user not found, or session mismatch |
 
+### `GET /api/feed`
+
+Public photo feed metadata for the homepage grid. Images are **not** stored in the site repo — thumbnails are proxied from Immich (or static URLs).
+
+**Query**
+
+| Param | Type | Default | Purpose |
+|-------|------|---------|---------|
+| `limit` | integer | `24` | Max items (1–48) |
+
+**Success** `200` — direct JSON (not the auth `{ message, data }` envelope):
+
+```json
+{
+  "items": [
+    {
+      "id": "asset-uuid",
+      "title": "optional filename",
+      "thumbnailUrl": "/api/feed/thumbnail/asset-uuid",
+      "width": 4032,
+      "height": 3024
+    }
+  ],
+  "source": "immich"
+}
+```
+
+`source` is `immich`, `static`, or `none` when unconfigured.
+
+**Errors** use the standard envelope with HTTP 4xx/5xx.
+
+Backend env: [backend.md](./backend.md#photo-feed).
+
+### `GET /api/feed/thumbnail/{asset_id}`
+
+Proxies a preview thumbnail from Immich for use in `<img src="...">`. Only available when `YEW_FULLSTACK_FEED_PROVIDER=immich`.
+
+**Success** `200` — image bytes (`image/jpeg` or `image/webp`).
+
 ## CORS
 
 Allowed methods: `GET`, `POST`, `PUT`, `DELETE`.  

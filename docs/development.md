@@ -7,11 +7,14 @@ How to run and debug the stack locally.
 ## Quick start
 
 ```bash
-scripts/setup-dev.sh
-scripts/run-dev.sh
+scripts/dev.sh setup
+scripts/dev.sh build
+scripts/dev.sh start
 ```
 
-Open http://localhost:8080 — Actix proxies the Yew/webpack app from port 8000.
+Open http://localhost:8080 — Actix proxies the Trunk app from port 8000.
+
+See [scripts/README.md](../scripts/README.md) for the full dev/prod command schema.
 
 ## Stack layout
 

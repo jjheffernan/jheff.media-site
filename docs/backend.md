@@ -10,7 +10,7 @@ Controlled by Cargo feature `forward-frontend`:
 
 | Feature | Frontend handling | Build flag |
 |---------|-------------------|------------|
-| `forward-frontend` | Reverse proxy to webpack URL | `--features forward-frontend` |
+| `forward-frontend` | Reverse proxy to Trunk dev server | `--features forward-frontend` |
 | (default) | Serve files from `YEW_FULLSTACK_STATIC` | no feature |
 
 Dev Docker and local watch use `forward-frontend`. Production binary serves baked static assets.
@@ -25,6 +25,12 @@ Dev Docker and local watch use `forward-frontend`. Production binary serves bake
 | `YEW_FULLSTACK_FORWARD_FRONTEND_URL` | `http://localhost:8080` | Upstream webpack (dev) |
 | `YEW_FULLSTACK_DB_CONNSTR` | `mongodb://localhost:27017` | MongoDB connection string |
 | `YEW_FULLSTACK_DB_NAME` | `yew-fullstack` | Database name |
+| `YEW_FULLSTACK_FEED_PROVIDER` | `none` | `immich`, `static`, or `none` |
+| `YEW_FULLSTACK_IMMICH_URL` | — | Immich base URL (no trailing slash) |
+| `YEW_FULLSTACK_IMMICH_API_KEY` | — | Immich API key (server-side only) |
+| `YEW_FULLSTACK_IMMICH_ALBUM_ID` | — | Album UUID for homepage feed |
+| `YEW_FULLSTACK_IMMICH_SHARED_KEY` | — | Optional shared-link key for thumbnails |
+| `YEW_FULLSTACK_FEED_STATIC_JSON` | — | JSON array of `FeedItem` for `static` provider |
 
 Dev values are set in `scripts/docker-compose.dev.yml`.
 
@@ -48,11 +54,13 @@ backend/src/
     db.rs                 # async MongoDB client
     server.rs             # static path config
   api/account_controller.rs
+  api/feed_controller.rs
+  models/feed.rs
   models/user.rs          # users collection, async CRUD
   models/user_token.rs    # JWT claims + signing
   models/response.rs      # { message, data } envelope
   services/
-    account_service.rs
+    feed_service.rs         # Immich / static photo feed
     forward_frontend.rs   # awc proxy (dev)
     serve_frontend.rs     # disk static (prod)
   utils/token.rs

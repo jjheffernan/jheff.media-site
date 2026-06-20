@@ -7,6 +7,7 @@ Human-readable guides for jheff.media-site. Start here or from [README](../READM
 | Doc | What it explains |
 |-----|------------------|
 | [deployment-dev.md](./deployment-dev.md) | **Deploy dev stack** — setup, Docker, verify, tests |
+| [deployment-proxmox.md](./deployment-proxmox.md) | **Proxmox production** — Docker, Immich feed, TLS proxy |
 | [version-matrix.md](./version-matrix.md) | Dependency pins, Docker images, env var alignment |
 | [architecture.md](./architecture.md) | System layout, dev vs prod, request routing |
 | [authentication.md](./authentication.md) | JWT + session flow, login/logout behavior |
