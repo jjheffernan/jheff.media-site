@@ -50,7 +50,7 @@ pub async fn logout(authen_header: &HeaderValue, db: &web::Data<Database>) -> Re
         if authen_str.starts_with("bearer") {
             let token = authen_str[6..authen_str.len()].trim();
             if let Ok(token_data) = token_utils::decode_token(token.to_string()) {
-                if let Ok(username) = token_utils::verify_token(&token_data, db).await {
+                if let Ok(username) = token_utils::verify_token(&token_data, &**db).await {
                     if let Some(user) =
                         User::find_by_email_or_username(&username, db).await
                     {

@@ -23,6 +23,9 @@ uuid = { workspace = true }
 awc = "3.5"
 mime_guess = "2.0"
 mime = "0.3"
+totp-lite = "2.0"
+data-encoding = "2.6"
+rand = "0.8"
 
 [features]
 forward-frontend = []

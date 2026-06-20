@@ -2,7 +2,6 @@ use crate::models::{
     user::User,
     user_token::{UserToken, KEY},
 };
-use actix_web::web;
 use jsonwebtoken::{DecodingKey, TokenData, Validation};
 use mongodb::Database;
 
@@ -16,7 +15,7 @@ pub fn decode_token(token: String) -> jsonwebtoken::errors::Result<TokenData<Use
 
 pub async fn verify_token(
     token_data: &TokenData<UserToken>,
-    db: &web::Data<Database>,
+    db: &Database,
 ) -> Result<String, String> {
     if User::is_valid_login_session(&token_data.claims, db).await {
         Ok(token_data.claims.user.to_string())

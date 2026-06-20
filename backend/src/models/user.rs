@@ -7,7 +7,26 @@ use mongodb::Database;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use std::env;
+
+fn admin_emails() -> Vec<String> {
+    env::var("YEW_FULLSTACK_ADMIN_EMAILS")
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim().to_lowercase())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn role_for_email(email: &str) -> String {
+    if admin_emails().contains(&email.to_lowercase()) {
+        String::from("admin")
+    } else {
+        String::from("user")
+    }
+}
 const USERS_COLLECTION: &str = "users";
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
@@ -16,8 +35,20 @@ pub struct User {
     pub email: String,
     pub username: String,
     pub password: String,
+    #[serde(default = "default_role")]
+    pub role: String,
+    #[serde(default)]
+    pub totp_enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub totp_secret: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pending_email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub login_session: Option<String>,
+}
+
+fn default_role() -> String {
+    String::from("user")
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -43,6 +74,8 @@ pub struct LoginInfoDTO {
     pub email: String,
     pub username: String,
     pub login_session: String,
+    pub role: String,
+    pub totp_enabled: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -50,6 +83,27 @@ pub struct LoginInfoDTO {
 pub struct PublicUserDTO {
     pub email: String,
     pub username: String,
+    pub role: String,
+    pub totp_enabled: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangePasswordDTO {
+    pub current_password: String,
+    pub new_password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EmailChangeDTO {
+    pub new_email: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TotpVerifyDTO {
+    pub code: String,
 }
 
 impl From<LoginInfoDTO> for PublicUserDTO {
@@ -57,6 +111,19 @@ impl From<LoginInfoDTO> for PublicUserDTO {
         PublicUserDTO {
             email: li.email,
             username: li.username,
+            role: li.role,
+            totp_enabled: li.totp_enabled,
+        }
+    }
+}
+
+impl From<User> for PublicUserDTO {
+    fn from(user: User) -> Self {
+        PublicUserDTO {
+            email: user.email,
+            username: user.username,
+            role: user.role,
+            totp_enabled: user.totp_enabled,
         }
     }
 }
@@ -79,6 +146,10 @@ impl User {
         let hashed_pwd = hash(&user.password, DEFAULT_COST).unwrap();
         let user = Self {
             password: hashed_pwd,
+            role: role_for_email(&user.email),
+            totp_enabled: false,
+            totp_secret: None,
+            pending_email: None,
             ..user
         };
         match coll.insert_one(user).await {
@@ -105,6 +176,8 @@ impl User {
                             email: user_to_verify.email,
                             username: user_to_verify.username,
                             login_session: login_session_str,
+                            role: user_to_verify.role,
+                            totp_enabled: user_to_verify.totp_enabled,
                         });
                     }
                 }
@@ -188,6 +261,70 @@ impl User {
             }
         }
     }
+
+    pub async fn update_password(
+        user_id: &ObjectId,
+        new_password_hash: &str,
+        db: &Database,
+    ) -> bool {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        coll
+            .find_one_and_update(
+                doc! {"_id": user_id},
+                doc! {"$set": {"password": new_password_hash}},
+            )
+            .await
+            .is_ok()
+    }
+
+    pub async fn set_pending_email(user_id: &ObjectId, new_email: &str, db: &Database) -> bool {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        coll
+            .find_one_and_update(
+                doc! {"_id": user_id},
+                doc! {"$set": {"pendingEmail": new_email}},
+            )
+            .await
+            .is_ok()
+    }
+
+    pub async fn set_totp_secret(user_id: &ObjectId, secret: &str, db: &Database) -> bool {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        coll
+            .find_one_and_update(
+                doc! {"_id": user_id},
+                doc! {"$set": {"totpSecret": secret, "totpEnabled": false}},
+            )
+            .await
+            .is_ok()
+    }
+
+    pub async fn enable_totp(user_id: &ObjectId, db: &Database) -> bool {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        coll
+            .find_one_and_update(
+                doc! {"_id": user_id},
+                doc! {"$set": {"totpEnabled": true}},
+            )
+            .await
+            .is_ok()
+    }
+
+    pub async fn disable_totp(user_id: &ObjectId, db: &Database) -> bool {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        coll
+            .find_one_and_update(
+                doc! {"_id": user_id},
+                doc! {"$unset": {"totpSecret": "", "totpEnabled": ""}},
+            )
+            .await
+            .is_ok()
+    }
+
+    pub async fn find_by_id(id: &ObjectId, db: &Database) -> Option<Self> {
+        let coll = db.collection::<User>(USERS_COLLECTION);
+        coll.find_one(doc! {"_id": id}).await.ok().flatten()
+    }
 }
 
 #[cfg(test)]
@@ -208,6 +345,8 @@ mod tests {
             email: "a@b.com".into(),
             username: "bob".into(),
             login_session: "sess".into(),
+            role: "user".into(),
+            totp_enabled: false,
         };
         let public = PublicUserDTO::from(info);
         assert_eq!(public.email, "a@b.com");
