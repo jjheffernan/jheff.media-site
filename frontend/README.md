@@ -1,8 +1,6 @@
 # Frontend
 
-Yew 0.23 WASM client (`jheffmedia-site-frontend`), bundled with [Trunk](https://trunk-rs.github.io/trunk/).
-
-**Full reference:** [docs/frontend.md](../docs/frontend.md) · patterns: [.agents/skills/yew-patterns](../.agents/skills/yew-patterns/SKILL.md)
+Yew 0.23 WASM + **Tailwind CSS v4**, bundled with [Trunk](https://trunk-rs.github.io/trunk/).
 
 ## Quick commands
 
@@ -11,19 +9,31 @@ rustup target add wasm32-unknown-unknown
 cargo install --locked trunk   # first time
 
 cd frontend
+npm install                    # Tailwind CLI
+npm run css:build              # or runs via Trunk hook
 trunk serve --open             # dev :8000
-trunk build --release          # dist/
 ```
 
-## Dev tip
+Use http://localhost:8080 in dev (Actix proxies Trunk).
 
-Use http://localhost:8080 (backend proxy) so `/api/auth/*` shares origin with the UI.
+## CSS
 
-## Structure
+- Source: `styles/input.css` (`@import "tailwindcss"`, `@source` scans `src/**/*.rs`)
+- Output: `static/app.css` (gitignored — built by Trunk hook / `npm run css:build`)
+- UI: Tailwind utility classes in Yew `html!` macros (Rust underneath)
 
-- `index.html`, `Trunk.toml` — Trunk entry
-- `src/app.rs`, `router.rs`, `routes/` — dashboard, shoots, galleries, profile
-- `src/context/auth.rs` — session + `AuthContext`
-- `static/` — CSS
+## Component toolbox
 
-Patterns from [Yew docs](https://yew.rs/docs/getting-started/introduction) and [yewstack examples](https://github.com/yewstack/yew/tree/master/examples).
+Reusable building blocks in `src/components/ui/` (patterns from [yewstack examples](https://github.com/yewstack/yew/tree/master/examples)):
+
+| Component | Use |
+|-----------|-----|
+| `Button`, `Card`, `Grid`, `Stack` | Layout and actions |
+| `Heading`, `Text`, `Section` | Typography |
+| `NavLink` | Router-aware nav (`function_router`) |
+| `Spinner`, `LazyImage` | Async / `suspense` loading |
+| `PhotoFeed` | Homepage grid — fetches `/api/feed`, keyed list |
+
+Photos are streamed from Immich (or static URLs) via the backend proxy — not bundled in this crate.
+
+See [.agents/skills/yew-patterns](../.agents/skills/yew-patterns/SKILL.md) and [docs/frontend.md](../docs/frontend.md).

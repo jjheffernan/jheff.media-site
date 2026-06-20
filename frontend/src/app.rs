@@ -1,5 +1,5 @@
 use crate::components::Layout;
-use crate::context::AuthProvider;
+use crate::context::{AuthProvider, ThemeProvider};
 use crate::router::Router;
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -23,11 +23,13 @@ impl Component for App {
     fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
             <BrowserRouter>
-                <AuthProvider>
-                    <Layout>
-                        <Router />
-                    </Layout>
-                </AuthProvider>
+                <ThemeProvider>
+                    <AuthProvider>
+                        <Layout>
+                            <Router />
+                        </Layout>
+                    </AuthProvider>
+                </ThemeProvider>
             </BrowserRouter>
         }
     }

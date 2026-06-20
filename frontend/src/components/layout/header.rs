@@ -1,8 +1,7 @@
-use crate::{
-    components::auth::{AuthControls, Login, Signup},
-    context::AuthContext,
-    routes::AppRoutes,
-};
+use super::content_nav::ContentNav;
+use crate::components::ui::{NavLink, Text, TextTone};
+use crate::routes::AppRoutes;
+use super::{profile_menu::ProfileMenu, theme_toggle::ThemeToggle};
 use yew::prelude::*;
 use yew_router::prelude::*;
 
@@ -14,41 +13,36 @@ pub struct Props {
 
 #[function_component(Header)]
 pub fn header(props: &Props) -> Html {
-    let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
     html! {
-        <div class={classes!("site-header", props.class.clone())}>
-            <div class="menu">
-                <Link<AppRoutes> to={AppRoutes::Home} classes="nav-link">
-                    { "Dashboard" }
+        <header class={format!(
+            "sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md {}",
+            props.class
+        )}>
+            <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+                <Link<AppRoutes>
+                    to={AppRoutes::Home}
+                    classes="min-w-0 rounded-md transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+                        { "jheff.media" }
+                    </p>
+                    <Text tone={TextTone::Muted} class="mt-0.5 hidden sm:block">
+                        { "@jheffmedia · automotive media" }
+                    </Text>
                 </Link<AppRoutes>>
-                <Link<AppRoutes> to={AppRoutes::Shoots} classes="nav-link">
-                    { "Shoots" }
-                </Link<AppRoutes>>
-                <Link<AppRoutes> to={AppRoutes::Galleries} classes="nav-link">
-                    { "Galleries" }
-                </Link<AppRoutes>>
-                <Link<AppRoutes> to={AppRoutes::Profile} classes="nav-link">
-                    { "Profile" }
-                </Link<AppRoutes>>
-            </div>
-            <div class="divider" />
-            <div class="auth-info">
-                { render_auth(&auth_ctx) }
-            </div>
-        </div>
-    }
-}
 
-fn render_auth(auth_ctx: &AuthContext) -> Html {
-    match &auth_ctx.auth {
-        Some(auth) => html! {
-            <AuthControls auth={auth.clone()} on_logout={auth_ctx.logout.clone()} />
-        },
-        None => html! {
-            <>
-                <Login class="login" on_login={auth_ctx.login.clone()} />
-                <Signup class="signup" />
-            </>
-        },
+                <nav class="flex flex-wrap items-center gap-1">
+                    <NavLink route={crate::routes::AppRoutes::Home} label="Home" />
+                    <ContentNav />
+                    <NavLink route={crate::routes::AppRoutes::Booking} label="Booking" />
+                    <NavLink route={crate::routes::AppRoutes::Schedule} label="Schedule" />
+                </nav>
+
+                <div class="flex shrink-0 items-center gap-2">
+                    <ThemeToggle />
+                    <ProfileMenu />
+                </div>
+            </div>
+        </header>
     }
 }

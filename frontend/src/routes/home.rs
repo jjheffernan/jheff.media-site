@@ -1,6 +1,8 @@
+use crate::components::{Hero, Grid, LinkCard, PhotoFeed, Stack, Text, TextTone};
+use crate::routes::AppRoutes;
 use yew::prelude::*;
 
-/// Dashboard for automotive photography operations.
+/// Public homepage — media-first hub for @jheffmedia.
 pub struct Home {}
 
 impl Component for Home {
@@ -13,26 +15,25 @@ impl Component for Home {
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
-            <div class="page home-page">
-                <h1>{"Automotive Photography"}</h1>
-                <p class="page-lead">
-                    {"Manage shoots, galleries, and client deliveries for jheff.media."}
-                </p>
-                <section class="dashboard-grid">
-                    <article class="dashboard-card">
-                        <h2>{"Shoots"}</h2>
-                        <p>{"Schedule track days, dealer shoots, and private collections."}</p>
-                    </article>
-                    <article class="dashboard-card">
-                        <h2>{"Galleries"}</h2>
-                        <p>{"Curate selects, mark favorites, and publish client galleries."}</p>
-                    </article>
-                    <article class="dashboard-card">
-                        <h2>{"Deliverables"}</h2>
-                        <p>{"Export web, print, and social crops from a single master set."}</p>
-                    </article>
-                </section>
-            </div>
+            <Stack>
+                <Hero />
+
+                <PhotoFeed title="Recent media" limit={12} />
+
+                <Grid cols_sm={1} cols_lg={3}>
+                    <LinkCard route={AppRoutes::Content} title="Content hub">
+                        { "Social posts, shoots, and galleries — everything @jheffmedia in one view." }
+                    </LinkCard>
+                    <LinkCard route={AppRoutes::Booking} title="Booking">
+                        { "Request track instruction, media shoots, or race engineering sessions." }
+                    </LinkCard>
+                    <LinkCard route={AppRoutes::Contact} title="Contact">
+                        <Text tone={TextTone::Muted}>
+                            { "Questions, collaborations, and booking inquiries." }
+                        </Text>
+                    </LinkCard>
+                </Grid>
+            </Stack>
         }
     }
 }

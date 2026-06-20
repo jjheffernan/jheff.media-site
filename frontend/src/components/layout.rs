@@ -1,11 +1,14 @@
 mod footer;
 mod header;
+mod content_nav;
+mod profile_menu;
+mod theme_toggle;
 
 use footer::Footer;
 use header::Header;
 use yew::prelude::*;
 
-/// Site layout.
+/// Site shell: header, routed content, footer.
 pub struct Layout {
     props: Props,
 }
@@ -41,11 +44,11 @@ impl Component for Layout {
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
-            <div class={classes!("site-layout", self.props.class.clone())}>
+            <div class={format!("flex min-h-screen flex-col bg-background text-foreground {}", self.props.class)}>
                 <Header />
-                <div class="content">
+                <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
                     { for self.props.children.iter() }
-                </div>
+                </main>
                 <Footer />
             </div>
         }

@@ -1,11 +1,20 @@
 use serde::{Deserialize, Serialize};
 
 mod auth;
+mod content;
+mod feed;
+mod social;
 
 pub use auth::Auth;
 pub use auth::Login;
 pub use auth::Signup;
 pub use auth::User;
+pub use content::{
+    BookingConfig, ContactSubmission, ContentCollection, ContentCollectionSummary,
+    ContentListResponse, MediaItem, OtherSite, OtherSitesResponse,
+};
+pub use feed::{FeedItem, FeedResponse};
+pub use social::{SocialAccount, SocialHubResponse, SocialPost};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ServerResponse<T> {
@@ -23,6 +32,16 @@ mod tests {
             serde_json::from_str(r#"{"emailOrUsername":"u","password":"p"}"#).unwrap();
         assert_eq!(login.email_or_username, "u");
         assert_eq!(login.password, "p");
+    }
+
+    #[test]
+    fn feed_item_deserializes_camel_case() {
+        let item: FeedItem = serde_json::from_str(
+            r#"{"id":"a","thumbnailUrl":"/api/feed/thumbnail/a","title":"shot"}"#,
+        )
+        .unwrap();
+        assert_eq!(item.id, "a");
+        assert_eq!(item.thumbnail_url, "/api/feed/thumbnail/a");
     }
 
     #[test]
