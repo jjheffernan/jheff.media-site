@@ -1,12 +1,16 @@
 FROM rust:1.85-bookworm AS frontend-build
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /usr/src/workspace
 COPY Cargo.toml Cargo.lock ./
 COPY frontend ./frontend
 COPY backend/Cargo.toml backend/Cargo.toml
 RUN mkdir -p backend/src && echo 'fn main() {}' > backend/src/main.rs
+RUN rustup target add wasm32-unknown-unknown
 RUN cargo install --locked trunk
 WORKDIR /usr/src/workspace/frontend
-RUN trunk build --release
+RUN npm install && trunk build --release
 
 FROM rust:1.85-bookworm AS backend-build
 WORKDIR /usr/src/workspace

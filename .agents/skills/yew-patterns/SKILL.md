@@ -22,7 +22,8 @@ description: Yew 0.23 + Trunk patterns for jheff.media automotive photography fr
 | `contexts` | Shared auth/session state |
 | `futures` / `async_clock` | gloo-net HTTP, timers |
 | `file_upload` | Future gallery ingest |
-| `keyed_list` | Shoot/gallery lists |
+| `keyed_list` | Shoot/gallery lists, `PhotoGrid` |
+| `suspense` / `async_clock` | `PhotoFeed`, `Spinner` loading states |
 
 Run an example locally: `cd examples/<name> && trunk serve --open`
 
@@ -35,9 +36,9 @@ frontend/
   src/
     app.rs            # BrowserRouter → AuthProvider → Layout → Router
     context/auth.rs   # session + login/logout callbacks
-    routes/           # Home (dashboard), Shoots, Galleries, Profile
-    components/       # layout, auth forms
-  static/             # CSS (theme, components)
+    routes/           # Home (hero + feed), Shoots, Galleries, Profile
+    components/       # layout, auth, ui toolbox, feed
+  static/             # app.css (generated)
 ```
 
 ## Trunk dev
@@ -52,7 +53,7 @@ Production: `trunk build --release` → `frontend/dist/` (served by Actix in pro
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Dashboard — shoots, galleries, deliverables overview |
+| `/` | Home — hero, Immich/static photo feed, feature cards |
 | `/shoots` | Session planning placeholder |
 | `/galleries` | Client gallery placeholder |
 | `/profile` | Account placeholder |

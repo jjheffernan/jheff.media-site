@@ -12,10 +12,10 @@ Forked from [yew-fullstack-boilerplate](https://github.com/lukidoescode/yew-full
 
 - **Yew 0.23** + **yew-router 0.20** — function components, hooks, `ContextProvider`, `Routable`
 - **Trunk** — bundler (`trunk serve`, `trunk build`); see [Trunk getting started](https://trunk-rs.github.io/trunk/)
+- **Tailwind CSS v4** — `styles/input.css` → `static/app.css` via `npm run css:build` (Trunk hook)
 - HTTP: **gloo-net** + `wasm_bindgen_futures::spawn_local`
 - Auth: **AuthContext** in `frontend/src/context/auth.rs`
-- Styles: static CSS in `frontend/static/`
-- Domain: **automotive photography** — shoots, galleries, client delivery (barebones shell in routes)
+- Domain: **automotive photography** — shoots, galleries, client delivery
 
 ## Build
 
@@ -24,8 +24,9 @@ rustup target add wasm32-unknown-unknown
 cargo install --locked trunk   # first time
 
 cd frontend
-trunk serve --open             # dev on :8000
-trunk build --release          # output in frontend/dist/
+npm install                   # Tailwind (first time)
+trunk serve --open            # dev on :8000
+trunk build --release         # output in frontend/dist/
 ```
 
 Use http://localhost:8080 in dev (Actix proxies Trunk on :8000).
@@ -39,6 +40,6 @@ Use http://localhost:8080 in dev (Actix proxies Trunk on :8000).
 
 ## Do not
 
-- Reintroduce webpack / Node bundler for the frontend
+- Reintroduce webpack as the primary bundler (Trunk stays canonical)
 - Add dependencies that pull `stdweb`
 - Use `Authentication` header — backend expects `Authorization`

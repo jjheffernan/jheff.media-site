@@ -18,12 +18,12 @@ Forked from [yew-fullstack-boilerplate](https://github.com/lukidoescode/yew-full
 
 - **Frontend** — Yew 0.23, **Trunk**, routes: Dashboard, Shoots, Galleries, Profile
 - **Backend** — Actix 4, MongoDB 3, JWT (`backend/src/secret.key`, gitignored)
-- **Dev** — `scripts/run-dev.sh`; app at http://localhost:8080 (proxies Trunk :8000)
+- **Dev** — `scripts/dev.sh start` (local, fast); `scripts/dev.sh start --docker` for full Docker stack
 
 ## Build commands
 
 ```bash
-scripts/setup-dev.sh   # secret.key, wasm target, trunk
+scripts/dev.sh setup   # secret.key, wasm target, trunk
 
 cargo build -p jheffmedia-site-backend --features forward-frontend
 cd frontend && trunk build

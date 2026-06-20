@@ -24,6 +24,9 @@ jobs:
       run: openssl rand -out backend/src/secret.key 32
     - name: Install Trunk
       run: cargo install --locked trunk
+    - name: Install frontend CSS toolchain
+      run: npm install
+      working-directory: frontend
     - name: Build frontend with Trunk
       run: trunk build --release
       working-directory: frontend

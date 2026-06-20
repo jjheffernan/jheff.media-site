@@ -1,47 +1,68 @@
 ---
 name: dev-server
-description: Start, stop, and troubleshoot the jheff.media-site dev stack (Trunk + Actix + MongoDB via Docker). Use when the user asks to run dev, fix blank page, or debug localhost:8080/8000.
+description: Start, stop, and troubleshoot the jheff.media-site dev stack (Trunk + Actix + MongoDB). Use when the user asks to run dev, fix blank page, or debug localhost:8080/8000.
 ---
 
 # Dev server skill
 
+## Schema
+
+| Script | Role |
+|--------|------|
+| `scripts/dev.sh setup` | One-time machine setup |
+| `scripts/dev.sh build` | Local compile + CSS (fast) |
+| `scripts/dev.sh build --docker` | Dev Docker images (verbose, slow) |
+| `scripts/dev.sh start` | **Local** dev — background processes, non-blocking |
+| `scripts/dev.sh start --docker` | Full Docker dev stack (detached) |
+| `scripts/dev.sh stop` | Stop local + Docker dev |
+| `scripts/dev.sh logs [name]` | `trunk`, `backend`, `tailwind`, `docker`, `all` |
+| `scripts/prod.sh` | Production build/start/stop |
+
+Logs and PIDs: `.dev/logs/`, `.dev/pids/`. Config: `scripts/config/dev.env`.
+
 ## Prerequisites
 
 ```bash
-scripts/setup-dev.sh   # secret.key, wasm target, trunk
+scripts/dev.sh setup
 ```
 
-- `backend/src/secret.key` (32 bytes): `openssl rand -out backend/src/secret.key 32`
-- Docker Desktop with Compose v2
+- `backend/src/secret.key` (32 bytes)
+- Docker (for MongoDB in local mode, or full stack in `--docker` mode)
 
-## Start / stop
+## Start (recommended — local)
 
 ```bash
-scripts/run-dev.sh     # Trunk :8000 + Actix :8080 + Mongo
-scripts/stop-dev.sh
+scripts/dev.sh build    # optional but fast sanity check
+scripts/dev.sh start    # returns while Trunk compiles in background
+scripts/dev.sh logs trunk
 ```
 
-**Use http://localhost:8080** — Actix proxies Trunk and serves `/api/auth/*`.
+**Use http://localhost:8080** — Actix proxies Trunk and serves `/api/*`.
+
+## Start (Docker — slow first compile)
+
+```bash
+scripts/dev.sh build --docker
+scripts/dev.sh start --docker
+scripts/dev.sh logs docker
+```
 
 ## Stack
 
-| Container | Port | Role |
-|-----------|------|------|
-| yew-fullstack-frontend | 8000 | `trunk serve` |
-| yew-fullstack-backend | 8080 | Actix + JWT + proxy |
-| yew-fullstack-database | 27017 | MongoDB 7 |
-
-Local without Docker: `cd frontend && trunk serve --port 8000` + `cargo run -p jheffmedia-site-backend --features forward-frontend` with env from [docs/development.md](../../docs/development.md).
+| Service | Port | Role |
+|---------|------|------|
+| Trunk | 8000 | Yew WASM dev server |
+| Actix | 8080 | API + frontend proxy |
+| MongoDB | 27017 | User/session data |
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Blank page, CSS only | Trunk not running or proxy broken; check `yew-fullstack-frontend.js` returns 200 on :8080 |
-| `docker-compose` not found | `scripts/docker-compose.sh` |
-| Backend won't compile | Missing `secret.key` |
-| Workspace error in Docker | Compose mounts repo root at `/usr/src/workspace` |
-| Stale containers | `scripts/stop-dev.sh` then `scripts/run-dev-force-recreate.sh` |
+| Hangs on compile | Use local `dev.sh start`; watch `dev.sh logs trunk` |
+| Blank page | Trunk still building; `dev.sh status` |
+| `NO_COLOR` trunk error | Scripts unset `NO_COLOR` automatically |
+| Stale processes | `scripts/dev.sh stop` |
 
 ## Reference
 

@@ -19,10 +19,11 @@ Landing page to showcase automotive socials — built with **Yew** (WASM fronten
 ## Quick start
 
 ```bash
-# JWT signing key (32 bytes, not committed — required before first backend build)
-scripts/setup-dev.sh          # secret key, wasm target, trunk
-
-scripts/run-dev.sh
+scripts/dev.sh setup              # once: secret, trunk, npm, wasm target
+scripts/dev.sh build              # local compile check (fast)
+scripts/dev.sh start              # local dev — returns while Trunk compiles in background
+scripts/dev.sh logs trunk         # watch compilation progress
+scripts/dev.sh status             # ports, PIDs, containers
 ```
 
 | Service | URL |
@@ -31,7 +32,9 @@ scripts/run-dev.sh
 | Frontend dev server | http://localhost:8000 |
 | MongoDB | localhost:27017 |
 
-Stop: `scripts/stop-dev.sh`
+Docker dev (slow first build): `scripts/dev.sh build --docker && scripts/dev.sh start --docker`
+
+Stop: `scripts/dev.sh stop`
 
 Full setup, env vars, and troubleshooting: [docs/README.md](docs/README.md) · [docs/development.md](docs/development.md) · [docs/TODO.md](docs/TODO.md)
 
@@ -51,13 +54,18 @@ Full setup, env vars, and troubleshooting: [docs/README.md](docs/README.md) · [
 
 | Command | Purpose |
 |---------|---------|
-| `scripts/setup-dev.sh` | First-time setup (secret key, wasm target, yarn) |
-| `scripts/run-dev.sh` | Dev stack (frontend + backend + MongoDB) |
-| `scripts/stop-dev.sh` | Tear down dev containers |
-| `scripts/run-dev-force-recreate.sh` | Rebuild images after dependency/cache issues |
-| `scripts/build.sh` | Production Docker image |
-| `scripts/run.sh` | Run production container |
-| `scripts/build-and-run.sh` | Build + run production |
+| `scripts/dev.sh setup` | One-time setup (secret, wasm, trunk, npm) |
+| `scripts/dev.sh build` | Local compile check + CSS (fast) |
+| `scripts/dev.sh build --docker` | Build dev Docker images (verbose, slow) |
+| `scripts/dev.sh start` | Local dev — Trunk + backend in background |
+| `scripts/dev.sh start --docker` | Full dev stack in Docker (detached) |
+| `scripts/dev.sh stop` | Stop local processes + dev containers |
+| `scripts/dev.sh logs [name]` | Tail logs: trunk, backend, tailwind, docker, all |
+| `scripts/prod.sh build` | Production Docker image |
+| `scripts/prod.sh start` | Run production stack |
+| `scripts/prod.sh stop` | Tear down production |
+
+Legacy wrappers (`setup-dev.sh`, `run-dev.sh`, `stop-dev.sh`, `build.sh`, etc.) forward to the commands above.
 | `scripts/stop.sh` | Stop production containers |
 
 ## Project layout
