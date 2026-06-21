@@ -2,7 +2,7 @@ name: Rust
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   pull_request:
     branches: [ "main" ]
 
@@ -16,23 +16,42 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set up Node.js 24 LTS
+      uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+        cache: npm
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Tailwind CSS CLI (frontend)
+      working-directory: frontend
+      run: |
+        npm ci --prefer-offline --no-audit
+        npm ls tailwindcss @tailwindcss/cli --depth=0
+        test -x node_modules/.bin/tailwindcss
+        node_modules/.bin/tailwindcss --help >/dev/null
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: wasm32-unknown-unknown
+
     - name: Generate JWT secret for build
       run: openssl rand -out backend/src/secret.key 32
+
     - name: Install Trunk
       run: cargo install --locked trunk
-    - name: Install frontend CSS toolchain
-      run: npm install
-      working-directory: frontend
+
     - name: Build frontend with Trunk
       run: trunk build --release
       working-directory: frontend
+
     - name: Build backend
       run: cargo build --verbose -p jheffmedia-site-backend --features forward-frontend
+
     - name: Run backend tests
       run: cargo test --verbose -p jheffmedia-site-backend
+
     - name: Run frontend tests
       run: cargo test --verbose -p jheffmedia-site-frontend

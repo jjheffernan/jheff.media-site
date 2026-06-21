@@ -15,6 +15,6 @@ port = 8000
 backend = "http://127.0.0.1:8080/api/"
 
 [[hooks]]
-stage = "build"
+stage = "pre_build"
 command = "npm"
 command_arguments = ["run", "css:build"]
