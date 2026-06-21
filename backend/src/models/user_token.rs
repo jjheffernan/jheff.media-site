@@ -48,6 +48,8 @@ mod tests {
             email: "a@example.com".into(),
             username: "alice".into(),
             login_session: "session-abc".into(),
+            role: "user".into(),
+            totp_enabled: false,
         };
         let token = UserToken::generate_token(login.clone());
         let decoded = decode_token(token).expect("token should decode");
