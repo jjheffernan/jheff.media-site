@@ -1,0 +1,43 @@
+# Production stack (Mongo bundled; Immich optional via env)
+services:
+  application:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: site/application:latest
+    container_name: site-application
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      YEW_FULLSTACK_HOST: ${HOST:-0.0.0.0}
+      YEW_FULLSTACK_PORT: ${PORT:-8080}
+      YEW_FULLSTACK_DB_CONNSTR: ${DB_CONNSTR}
+      YEW_FULLSTACK_DB_NAME: ${DB_NAME}
+      YEW_FULLSTACK_FEED_PROVIDER: ${FEED_PROVIDER:-none}
+      YEW_FULLSTACK_CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+      YEW_FULLSTACK_FEED_STATIC_JSON: ${FEED_STATIC_JSON:-}
+      YEW_FULLSTACK_IMMICH_URL: ${IMMICH_URL:-}
+      YEW_FULLSTACK_IMMICH_API_KEY: ${IMMICH_API_KEY:-}
+      YEW_FULLSTACK_IMMICH_ALBUM_ID: ${IMMICH_ALBUM_ID:-}
+      YEW_FULLSTACK_IMMICH_SHARED_KEY: ${IMMICH_SHARED_KEY:-}
+      YEW_FULLSTACK_ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_started
+
+  db:
+    image: mongo:7.0
+    container_name: site-database
+    restart: unless-stopped
+    environment:
+      MONGODB_INITDB_DATABASE: ${DB_NAME:-jheffmedia}
+      MONGODB_INITDB_ROOT_USERNAME: root
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
+    volumes:
+      - site-mongo:/data/db
+
+volumes:
+  site-mongo:

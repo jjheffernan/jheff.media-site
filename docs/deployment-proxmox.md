@@ -2,7 +2,17 @@
 
 Deploy **jheff.media** on a Proxmox host using Docker — single production container (Actix + baked Yew frontend) plus MongoDB. Photos stay on your self-hosted Immich (or other) instance; the site only proxies thumbnails.
 
-Related: [architecture.md](./architecture.md) · [deployment-dev.md](./deployment-dev.md) · [backend.md](./backend.md) · [version-matrix.md](./version-matrix.md)
+Related: [architecture.md](./architecture.md) · [deployment-dev.md](./deployment-dev.md) · [backend.md](./backend.md) · [version-matrix.md](./version-matrix.md) · [install/proxmox/README.md](../install/proxmox/README.md)
+
+## One-line install (recommended)
+
+From the **Proxmox host** (creates a new LXC) or **inside an existing LXC/VM** as root:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
+```
+
+Guided whiptail sections cover repository branch (`dev` by default), site port, bundled MongoDB credentials, and photo feed (`static` demo works without Immich). Unattended: `UNATTENDED=yes MONGO_PASSWORD='…'`. Full reference: [install/proxmox/README.md](../install/proxmox/README.md) · other targets: [install/README.md](../install/README.md).
 
 ## Target layout
 
@@ -88,7 +98,9 @@ The backend proxies `/api/feed` and `/api/feed/thumbnail/{id}` so the browser ne
 
 ## 4. Run with Docker Compose
 
-Extend `scripts/docker-compose.yml` or run:
+Production compose for install targets lives at `install/common/docker-compose.yml` (no public Mongo port). After guided install, env is at `install/common/.env.production`.
+
+Manual equivalent using legacy scripts path:
 
 ```bash
 docker compose -f scripts/docker-compose.yml --env-file scripts/.env.production up -d
