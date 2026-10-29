@@ -159,7 +159,7 @@ pub fn contact_form() -> Html {
                     <span class="text-sm font-medium text-foreground">{ "Name" }</span>
                     <input
                         type="text"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+                        class="field"
                         value={(*name).clone()}
                         oninput={on_name}
                         disabled={disabled}
@@ -169,7 +169,7 @@ pub fn contact_form() -> Html {
                     <span class="text-sm font-medium text-foreground">{ "Email" }</span>
                     <input
                         type="email"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+                        class="field"
                         value={(*email).clone()}
                         oninput={on_email}
                         disabled={disabled}
@@ -180,7 +180,7 @@ pub fn contact_form() -> Html {
                 <span class="text-sm font-medium text-foreground">{ "Subject" }</span>
                 <input
                     type="text"
-                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+                    class="field"
                     value={(*subject).clone()}
                     oninput={on_subject}
                     disabled={disabled}
@@ -190,7 +190,7 @@ pub fn contact_form() -> Html {
             <label class="block space-y-1">
                 <span class="text-sm font-medium text-foreground">{ "Message" }</span>
                 <textarea
-                    class="min-h-[8rem] w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+                    class="min-h-[8rem] field"
                     value={(*message).clone()}
                     oninput={on_message}
                     disabled={disabled}

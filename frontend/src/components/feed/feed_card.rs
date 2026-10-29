@@ -104,7 +104,7 @@ pub fn feed_card(props: &Props) -> Html {
             class={if item.featured {
                 "mb-4 break-inside-avoid overflow-hidden rounded-2xl border-2 border-accent/40 bg-surface-elevated shadow-lg shadow-accent/5"
             } else {
-                "mb-4 break-inside-avoid overflow-hidden rounded-2xl border border-border bg-surface-elevated"
+                "mb-4 break-inside-avoid card card-flat overflow-hidden"
             }}
         >
             <div class="overflow-hidden bg-surface">

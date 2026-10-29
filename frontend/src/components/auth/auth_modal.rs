@@ -49,7 +49,7 @@ pub fn auth_modal(props: &Props) -> Html {
             onclick={props.on_close.reform(|_| ())}
         >
             <div
-                class="relative my-auto w-full max-w-md rounded-2xl border border-border bg-surface-elevated shadow-2xl"
+                class="card card-flat relative my-auto w-full max-w-md"
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}

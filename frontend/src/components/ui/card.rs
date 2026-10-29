@@ -14,7 +14,7 @@ pub struct Props {
 pub fn card(props: &Props) -> Html {
     html! {
         <article class={format!(
-            "rounded-2xl border border-border bg-surface-elevated p-6 shadow-sm shadow-black/5 dark:shadow-black/20 {}",
+            "card {}",
             props.class
         )}>
             if let Some(title) = &props.title {

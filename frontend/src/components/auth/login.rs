@@ -186,27 +186,24 @@ impl Component for Login {
             Msg::UpdateTotp(value)
         });
         let username_class = if self.username_error.is_some() {
-            "rounded-lg border border-red-500 bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-red-500/30"
+            "field field-invalid"
         } else {
-            "rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+            "field"
         };
         let password_class = if self.password_error.is_some() {
-            "rounded-lg border border-red-500 bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-red-500/30"
+            "field field-invalid"
         } else {
-            "rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+            "field"
         };
         let totp_class = if self.totp_error.is_some() {
-            "rounded-lg border border-red-500 bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-red-500/30"
+            "field field-invalid"
         } else {
-            "rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+            "field"
         };
         let wrapper_class = if ctx.props().embedded {
             format!("p-0 {}", ctx.props().class)
         } else {
-            format!(
-                "rounded-xl border border-border bg-surface-elevated p-4 {}",
-                ctx.props().class
-            )
+            format!("card {}", ctx.props().class)
         };
         html! {
             <div class={wrapper_class}>
@@ -214,7 +211,7 @@ impl Component for Login {
                     { "Log in" }
                 </p>
                 <form id={self.id.clone()} class="space-y-3" onsubmit={onsubmit}>
-                    <label class="block text-xs font-medium text-muted" for={format!("{}-email-or-userame", self.id)}>
+                    <label class="label-xs" for={format!("{}-email-or-userame", self.id)}>
                         { "Email or Username" }
                     </label>
                     <input
@@ -225,7 +222,7 @@ impl Component for Login {
                         oninput={oninput_email_or_username}
                         placeholder="Email or Username"
                         spellcheck="false" />
-                    <label class="block text-xs font-medium text-muted" for={format!("{}-password", self.id)}>
+                    <label class="label-xs" for={format!("{}-password", self.id)}>
                         { "Password" }
                     </label>
                     <input
@@ -260,7 +257,7 @@ impl Component for Login {
                     <button
                         type="submit"
                         disabled={self.submitting}
-                        class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-accent-hover disabled:opacity-50"
+                        class="w-full btn btn-primary w-full"
                     >
                         { "Log in" }
                     </button>

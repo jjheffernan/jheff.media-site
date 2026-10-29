@@ -15,18 +15,7 @@ pub fn nav_link(props: &Props) -> Html {
     html! {
         <Link<AppRoutes>
             to={props.route.clone()}
-            classes={classes!(
-                "rounded-md",
-                "px-3",
-                "py-2",
-                "text-sm",
-                "font-medium",
-                "text-muted",
-                "transition",
-                "hover:bg-surface-elevated",
-                "hover:text-foreground",
-                props.class.clone(),
-            )}
+            classes={classes!("nav-link", props.class.clone())}
         >
             { props.label.clone() }
         </Link<AppRoutes>>

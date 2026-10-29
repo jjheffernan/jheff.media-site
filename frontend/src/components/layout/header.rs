@@ -15,15 +15,15 @@ pub struct Props {
 pub fn header(props: &Props) -> Html {
     html! {
         <header class={format!(
-            "sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md {}",
+            "site-header {}",
             props.class
         )}>
-            <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+            <div class="site-header-bar">
                 <Link<AppRoutes>
                     to={AppRoutes::Home}
-                    classes="min-w-0 rounded-md transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    classes="brand"
                 >
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+                    <p class="kicker">
                         { "jheff.media" }
                     </p>
                     <Text tone={TextTone::Muted} class="mt-0.5 hidden sm:block">

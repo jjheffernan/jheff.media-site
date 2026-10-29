@@ -27,6 +27,12 @@
   --muted: oklch(0.55 0.01 260);
   --accent: oklch(0.58 0.14 200);
   --accent-hover: oklch(0.52 0.14 200);
+  --on-accent: oklch(0.2 0.02 260);
+  --radius-card: 1rem;
+  --radius-control: 0.5rem;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05);
+  --page-width: 72rem;
+  --font-display: var(--font-sans);
 }
 
 .dark {
@@ -43,5 +49,229 @@
 @layer base {
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
+  }
+}
+
+/* Designer sheet. Pages use these names. Change the rules here, not the Rust templates. */
+@layer components {
+  .page {
+    width: 100%;
+    max-width: var(--page-width);
+    margin-inline: auto;
+    flex: 1;
+    padding: 2rem 1rem;
+  }
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in oklch, var(--surface) 90%, transparent);
+    backdrop-filter: blur(12px);
+  }
+  .site-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    max-width: var(--page-width);
+    margin-inline: auto;
+    padding: 1rem;
+  }
+  .brand {
+    min-width: 0;
+    border-radius: var(--radius-control);
+  }
+  .brand:hover { opacity: 0.9; }
+  .kicker {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .nav-link {
+    border-radius: var(--radius-control);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .nav-link:hover {
+    background: var(--surface-elevated);
+    color: var(--fg);
+  }
+  .site-footer {
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 2.5rem 1rem;
+  }
+  .footer-link {
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+  .footer-link:hover { color: var(--accent); }
+  .wrap {
+    width: 100%;
+    max-width: var(--page-width);
+    margin-inline: auto;
+  }
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius-card) + 0.5rem);
+    background: var(--surface-elevated);
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom right,
+      color-mix(in oklch, var(--accent) 16%, transparent),
+      transparent 55%
+    );
+    pointer-events: none;
+  }
+  .hero-body {
+    position: relative;
+    z-index: 1;
+    padding: 3rem 1.5rem;
+  }
+  .display {
+    margin-top: 1rem;
+    max-width: 48rem;
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 4vw, 3.75rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .lede {
+    margin-top: 1rem;
+    max-width: 42rem;
+    font-size: 1.125rem;
+    color: var(--muted);
+  }
+  .title {
+    font-size: clamp(1.875rem, 2vw, 2.25rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .title-sm {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .subtitle {
+    margin-top: 0.75rem;
+    max-width: 42rem;
+    color: var(--muted);
+  }
+  .card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface-elevated);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-card);
+  }
+  .card.card-flat { padding: 0; box-shadow: none; }
+  .card-link {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface-elevated);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-card);
+  }
+  .card-link:hover { border-color: var(--accent); }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-control);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 150ms, border-color 150ms, color 150ms;
+  }
+  .btn:disabled { opacity: 0.5; }
+  .btn-primary { background: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-quiet {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg);
+  }
+  .btn-quiet:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-lg { padding: 0.625rem 1.25rem; }
+  .field {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--fg);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 30%, transparent);
+  }
+  .field-invalid { border-color: oklch(0.63 0.19 25); }
+  .field-area { min-height: 8rem; }
+  .label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--fg);
+  }
+  .label-xs {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .muted { font-size: 0.875rem; color: var(--muted); }
+  .icon-btn {
+    display: flex;
+    height: 2.5rem;
+    width: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-elevated);
+    color: var(--fg);
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    z-index: 50;
+    margin-top: 0.5rem;
+    min-width: 9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface-elevated);
+    padding-block: 0.25rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  @media (min-width: 640px) {
+    .page,
+    .site-header-bar,
+    .site-footer { padding-inline: 1.5rem; }
+    .hero-body { padding: 4rem 2.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .page,
+    .site-header-bar { padding-inline: 2rem; }
   }
 }

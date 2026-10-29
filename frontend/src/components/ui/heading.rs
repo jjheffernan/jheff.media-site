@@ -22,12 +22,12 @@ pub struct Props {
 pub fn heading(props: &Props) -> Html {
     let title = match props.level {
         HeadingLevel::H1 => html! {
-            <h1 class="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            <h1 class="title">
                 { for props.children.iter() }
             </h1>
         },
         HeadingLevel::H2 => html! {
-            <h2 class="text-2xl font-semibold tracking-tight text-foreground">
+            <h2 class="title-sm">
                 { for props.children.iter() }
             </h2>
         },
@@ -42,7 +42,7 @@ pub fn heading(props: &Props) -> Html {
         <div class={props.class.clone()}>
             { title }
             if let Some(subtitle) = &props.subtitle {
-                <p class="mt-3 max-w-2xl text-base text-muted">{ subtitle }</p>
+                <p class="subtitle">{ subtitle }</p>
             }
         </div>
     }

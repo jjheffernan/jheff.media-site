@@ -128,7 +128,7 @@ pub fn content_detail(props: &Props) -> Html {
             <div class="space-y-2">
                 <Link<crate::routes::AppRoutes>
                     to={props.back_route.clone()}
-                    classes="text-sm text-muted transition hover:text-accent"
+                    classes="footer-link"
                 >
                     { format!("← Back to {}", props.back_label) }
                 </Link<crate::routes::AppRoutes>>

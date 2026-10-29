@@ -21,16 +21,15 @@ pub struct Props {
 
 #[function_component(Button)]
 pub fn button(props: &Props) -> Html {
-    let base = "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500 disabled:opacity-50";
     let variant = match props.variant {
-        ButtonVariant::Primary => "bg-accent text-zinc-950 hover:bg-accent-hover",
-        ButtonVariant::Ghost => "text-foreground hover:bg-surface-elevated",
+        ButtonVariant::Primary => "btn btn-primary",
+        ButtonVariant::Ghost => "btn btn-quiet",
     };
 
     html! {
         <button
             type="button"
-            class={format!("{} {} {}", base, variant, props.class)}
+            class={format!("{} {}", variant, props.class)}
             disabled={props.disabled}
             onclick={props.onclick.clone()}
         >

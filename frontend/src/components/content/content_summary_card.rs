@@ -48,7 +48,7 @@ pub fn content_summary_card(props: &Props) -> Html {
     html! {
         <Link<AppRoutes>
             to={props.detail_route.clone()}
-            classes="group block overflow-hidden rounded-2xl border border-border bg-surface-elevated transition hover:border-accent/50 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20"
+            classes="card card-flat overflow-hidden group"
         >
             <div class="aspect-[16/9] overflow-hidden bg-surface">
                 <LazyImage

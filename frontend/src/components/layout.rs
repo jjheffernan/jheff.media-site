@@ -46,7 +46,7 @@ impl Component for Layout {
         html! {
             <div class={format!("flex min-h-screen flex-col bg-background text-foreground {}", self.props.class)}>
                 <Header />
-                <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+                <main class="page">
                     { for self.props.children.iter() }
                 </main>
                 <Footer />

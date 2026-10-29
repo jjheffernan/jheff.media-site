@@ -160,7 +160,7 @@ pub fn profile_menu() -> Html {
         >
             <button
                 type="button"
-                class="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-elevated text-foreground transition hover:border-accent hover:text-accent"
+                class="icon-btn"
                 aria-label="Account menu"
                 aria-expanded={(*panel == OpenPanel::Menu).to_string()}
                 onclick={toggle_menu}

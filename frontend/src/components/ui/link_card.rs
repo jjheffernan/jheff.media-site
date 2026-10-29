@@ -17,24 +17,10 @@ pub fn link_card(props: &Props) -> Html {
     html! {
         <Link<AppRoutes>
             to={props.route.clone()}
-            classes={classes!(
-                "block",
-                "rounded-2xl",
-                "border",
-                "border-border",
-                "bg-surface-elevated",
-                "p-6",
-                "shadow-sm",
-                "shadow-black/5",
-                "transition",
-                "hover:border-accent/50",
-                "hover:shadow-md",
-                "dark:shadow-black/20",
-                props.class.clone(),
-            )}
+            classes={classes!("card-link", props.class.clone())}
         >
-            <h2 class="text-lg font-semibold text-foreground">{ props.title.clone() }</h2>
-            <div class="mt-2 text-sm text-muted">
+            <h2 class="title-sm">{ props.title.clone() }</h2>
+            <div class="mt-2 muted">
                 { for props.children.iter() }
             </div>
         </Link<AppRoutes>>

@@ -9,7 +9,7 @@ fn footer_link(route: AppRoutes, label: &str) -> Html {
     html! {
         <Link<AppRoutes>
             to={route}
-            classes="text-sm text-muted transition hover:text-accent"
+            classes="footer-link"
         >
             { label }
         </Link<AppRoutes>>
@@ -77,10 +77,10 @@ impl Component for Footer {
     fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
             <footer class={format!(
-                "border-t border-border bg-surface px-4 py-10 sm:px-6 {}",
+                "site-footer {}",
                 self.props.class
             )}>
-                <div class="mx-auto max-w-6xl">
+                <div class="wrap">
                     <div class="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
                         <div class="space-y-3">
                             <p class="text-sm font-semibold text-foreground">{ "jheff.media" }</p>

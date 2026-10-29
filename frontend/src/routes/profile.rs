@@ -14,7 +14,7 @@ pub fn profile() -> Html {
     match &auth_ctx.auth {
         Some(auth) => html! {
             <div class="space-y-8">
-                <div class="rounded-2xl border border-border bg-surface-elevated p-6">
+                <div class="card">
                     <Heading level={HeadingLevel::H1}>
                         { html! { { format!("Welcome, {}", auth.user.username) } } }
                     </Heading>
@@ -47,7 +47,7 @@ pub fn profile() -> Html {
 
                 <button
                     type="button"
-                    class="rounded-lg border border-border px-4 py-2 text-sm text-foreground transition hover:border-accent hover:text-accent"
+                    class="btn btn-quiet"
                     onclick={{
                         let auth_ctx = auth_ctx.clone();
                         Callback::from(move |_| auth_ctx.logout.emit(()))

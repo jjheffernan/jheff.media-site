@@ -53,7 +53,7 @@ pub fn other_sites() -> Html {
                 { for data.sites.iter().map(|site| html! {
                     <li
                         key={site.url.clone()}
-                        class="rounded-2xl border border-border bg-surface-elevated p-5 transition hover:border-accent/50"
+                        class="card"
                     >
                         <a
                             class="text-lg font-semibold text-foreground hover:text-accent"

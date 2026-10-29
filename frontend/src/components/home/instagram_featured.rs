@@ -47,7 +47,7 @@ pub fn instagram_featured_card() -> Html {
                 .clone()
                 .unwrap_or_else(|| "Latest from Instagram".to_string());
             html! {
-                <section class="overflow-hidden rounded-2xl border border-border bg-surface-elevated">
+                <section class="card card-flat overflow-hidden">
                     <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
                         if let Some(thumb) = &featured.thumbnail_url {
                             <a
@@ -60,7 +60,7 @@ pub fn instagram_featured_card() -> Html {
                             </a>
                         }
                         <div class="flex-1 space-y-3">
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+                            <p class="kicker">
                                 { "Instagram" }
                             </p>
                             <a
@@ -79,13 +79,13 @@ pub fn instagram_featured_card() -> Html {
                                     href={featured.post_url.clone()}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="inline-flex items-center rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-accent-hover"
+                                    class="btn btn-primary"
                                 >
                                     { "View post" }
                                 </a>
                                 <Link<AppRoutes>
                                     to={AppRoutes::Social}
-                                    classes="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
+                                    classes="btn btn-quiet"
                                 >
                                     { "All social →" }
                                 </Link<AppRoutes>>

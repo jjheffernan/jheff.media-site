@@ -321,7 +321,7 @@ pub fn content_admin() -> Html {
     };
 
     html! {
-        <section class="space-y-6 rounded-2xl border border-border bg-surface-elevated p-6">
+        <section class="card space-y-6">
             <Heading level={HeadingLevel::H2} subtitle="Admin only — create collections and upload images.">
                 { "Content management" }
             </Heading>
@@ -336,7 +336,7 @@ pub fn content_admin() -> Html {
                     <input
                         type="text"
                         placeholder="ID (slug)"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="field"
                         value={(*gallery_id).clone()}
                         oninput={{
                             let gallery_id = gallery_id.clone();
@@ -348,7 +348,7 @@ pub fn content_admin() -> Html {
                     <input
                         type="text"
                         placeholder="Title"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="field"
                         value={(*gallery_title).clone()}
                         oninput={{
                             let gallery_title = gallery_title.clone();
@@ -359,7 +359,7 @@ pub fn content_admin() -> Html {
                     />
                     <button
                         type="button"
-                        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950"
+                        class="btn btn-primary"
                         onclick={on_create_gallery}
                     >
                         { "Create gallery" }
@@ -380,7 +380,7 @@ pub fn content_admin() -> Html {
                     <input
                         type="text"
                         placeholder="ID (slug)"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="field"
                         value={(*shoot_id).clone()}
                         oninput={{
                             let shoot_id = shoot_id.clone();
@@ -392,7 +392,7 @@ pub fn content_admin() -> Html {
                     <input
                         type="text"
                         placeholder="Title"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="field"
                         value={(*shoot_title).clone()}
                         oninput={{
                             let shoot_title = shoot_title.clone();
@@ -403,7 +403,7 @@ pub fn content_admin() -> Html {
                     />
                     <button
                         type="button"
-                        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950"
+                        class="btn btn-primary"
                         onclick={on_create_shoot}
                     >
                         { "Create shoot" }
@@ -425,7 +425,7 @@ pub fn content_admin() -> Html {
                 <input
                     type="text"
                     placeholder="Title"
-                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    class="field"
                     value={(*date_title).clone()}
                     oninput={{
                         let date_title = date_title.clone();
@@ -438,7 +438,7 @@ pub fn content_admin() -> Html {
                     <Text tone={TextTone::Muted}>{ "Starts" }</Text>
                     <input
                         type="datetime-local"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="field"
                         value={(*date_starts).clone()}
                         oninput={{
                             let date_starts = date_starts.clone();
@@ -451,7 +451,7 @@ pub fn content_admin() -> Html {
                 <input
                     type="text"
                     placeholder="Location"
-                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    class="field"
                     value={(*date_location).clone()}
                     oninput={{
                         let date_location = date_location.clone();
@@ -463,7 +463,7 @@ pub fn content_admin() -> Html {
                 <label class="block space-y-1">
                     <Text tone={TextTone::Muted}>{ "Kind" }</Text>
                     <select
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="field"
                         value={(*date_kind).clone()}
                         onchange={on_kind}
                     >
@@ -474,7 +474,7 @@ pub fn content_admin() -> Html {
                 </label>
                 <button
                     type="button"
-                    class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950"
+                    class="btn btn-primary"
                     onclick={on_add_date}
                 >
                     { "Add date" }

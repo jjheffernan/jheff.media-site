@@ -177,40 +177,40 @@ impl Component for Signup {
                     </p>
                 }
                 <form id={self.id.clone()} class="space-y-3" onsubmit={onsubmit}>
-                    <label class="block text-xs font-medium text-muted" for={format!("{}-email", self.id)}>{ "Email" }</label>
+                    <label class="label-xs" for={format!("{}-email", self.id)}>{ "Email" }</label>
                     <input
                         id={format!("{}-email", self.id)}
                         type="email"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        class="field"
                         value={self.form_data.email.clone()}
                         oninput={oninput_email}
                         placeholder="Email"
                         spellcheck="false" />
-                    <label class="block text-xs font-medium text-muted" for={format!("{}-username", self.id)}>{ "Username" }</label>
+                    <label class="label-xs" for={format!("{}-username", self.id)}>{ "Username" }</label>
                     <input
                         id={format!("{}-username", self.id)}
                         type="text"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        class="field"
                         value={self.form_data.username.clone()}
                         oninput={oninput_username}
                         placeholder="Username"
                         spellcheck="false" />
-                    <label class="block text-xs font-medium text-muted" for={format!("{}-password", self.id)}>{ "Password" }</label>
+                    <label class="label-xs" for={format!("{}-password", self.id)}>{ "Password" }</label>
                     <input
                         id={format!("{}-password", self.id)}
                         type="password"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        class="field"
                         value={self.form_data.password.clone()}
                         oninput={oninput_password}
                         placeholder="Password"
                         spellcheck="false" />
-                    <label class="block text-xs font-medium text-muted" for={format!("{}-password-repeat", self.id)}>
+                    <label class="label-xs" for={format!("{}-password-repeat", self.id)}>
                         { "Repeat Password" }
                     </label>
                     <input
                         id={format!("{}-password-repeat", self.id)}
                         type="password"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        class="field"
                         value={self.form_data.password_repeat.clone()}
                         oninput={oninput_password_repeat}
                         placeholder="Repeat Password"
@@ -218,7 +218,7 @@ impl Component for Signup {
                     <button
                         type="submit"
                         disabled={self.submitting}
-                        class="w-full rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-accent-hover disabled:opacity-50"
+                        class="w-full btn btn-primary w-full"
                     >
                         { if self.submitting { "Creating account…" } else { "Sign up" } }
                     </button>

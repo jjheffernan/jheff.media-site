@@ -30,14 +30,14 @@ pub fn theme_toggle() -> Html {
         <div class="relative">
             <button
                 type="button"
-                class="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-elevated text-foreground transition hover:border-accent hover:text-accent"
+                class="icon-btn"
                 aria-label={icon_label}
                 onclick={toggle}
             >
                 { theme_icon(theme_ctx.preference) }
             </button>
             if *open {
-                <div class="absolute right-0 top-full z-50 mt-2 min-w-[9rem] rounded-xl border border-border bg-surface-elevated py-1 shadow-lg">
+                <div class="menu">
                     { theme_option("Auto", ThemePreference::Auto, theme_ctx.preference, pick.clone()) }
                     { theme_option("Light", ThemePreference::Light, theme_ctx.preference, pick.clone()) }
                     { theme_option("Dark", ThemePreference::Dark, theme_ctx.preference, pick.clone()) }

@@ -44,7 +44,7 @@ fn event_list(events: &[ScheduleEvent]) -> Html {
             { for events.iter().map(|event| {
                 let location = event.location.clone().filter(|value| !value.is_empty());
                 html! {
-                    <li class="space-y-1 rounded-2xl border border-border bg-surface-elevated p-4">
+                    <li class="card space-y-1">
                         <p class="font-medium text-foreground">{ event.title.clone() }</p>
                         <p class="text-sm text-muted">{ event.kind.clone() }</p>
                         <p class="text-sm text-muted">{ event.starts_at.clone() }</p>
@@ -97,13 +97,13 @@ pub fn schedule() -> Html {
         LoadState::Ready(config) => {
             let panel = if config.embed_url.is_none() {
                 html! {
-                    <div class="space-y-4 rounded-2xl border border-border bg-surface-elevated p-6">
+                    <div class="card space-y-4">
                         <Text tone={TextTone::Muted}>
                             { "Shoot dates aren't published here yet. Send a booking note and we'll line up the calendar." }
                         </Text>
                         <Link<AppRoutes>
                             to={AppRoutes::Contact}
-                            classes="inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-accent-hover"
+                            classes="inline-flex btn btn-primary"
                         >
                             { "Contact & book" }
                         </Link<AppRoutes>>
@@ -111,7 +111,7 @@ pub fn schedule() -> Html {
                 }
             } else {
                 html! {
-                    <div class="overflow-hidden rounded-2xl border border-border bg-surface-elevated">
+                    <div class="card card-flat overflow-hidden">
                         <iframe
                             class="min-h-[min(70vh,720px)] w-full border-0 bg-surface"
                             src={config.embed_url.clone().unwrap_or_default()}
