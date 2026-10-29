@@ -57,8 +57,10 @@ pub fn header(props: &Props) -> Html {
                 </nav>
 
                 <div class="site-header-actions">
-                    <ThemeToggle />
-                    <ProfileMenu />
+                    <div class="site-header-tools">
+                        <ThemeToggle />
+                        <ProfileMenu />
+                    </div>
                     <button
                         type="button"
                         class="icon-btn site-nav-toggle"
@@ -78,6 +80,10 @@ pub fn header(props: &Props) -> Html {
                     <ContentNav inline={true} />
                     <NavLink route={AppRoutes::Booking} label="Booking" />
                     <NavLink route={AppRoutes::Schedule} label="Schedule" />
+                    <div class="menu-section">
+                        <ThemeToggle inline={true} />
+                        <ProfileMenu inline={true} />
+                    </div>
                 </nav>
             }
         </header>

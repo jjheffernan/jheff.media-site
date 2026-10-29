@@ -99,6 +99,11 @@
     align-items: center;
     gap: 0.5rem;
   }
+  .site-header-tools {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+  }
   .site-nav-desktop {
     display: none;
     flex: 0 1 auto;
@@ -193,6 +198,53 @@
     width: 100%;
     margin-top: 0.25rem;
     box-shadow: none;
+  }
+  .menu-section {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 0.5rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border);
+  }
+  .menu-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .menu-theme,
+  .menu-account { display: grid; gap: 0.35rem; }
+  .menu-choice-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .menu-choice,
+  .menu-action {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    border-radius: var(--radius-control);
+    padding: 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    color: var(--fg);
+  }
+  .menu-choice {
+    justify-content: center;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .menu-choice.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .menu-action { width: 100%; text-align: left; }
+  .menu-action:hover { background: var(--surface-elevated); }
+  .menu-user {
+    padding: 0.15rem 0.875rem;
+    font-size: 0.75rem;
+    color: var(--muted);
   }
   .site-footer {
     border-top: 1px solid var(--border);
@@ -533,6 +585,7 @@
     .home-actions .card-link:last-child:nth-child(odd) {
       grid-column: auto;
     }
+    .site-header-tools { display: flex; }
     .site-nav-desktop { display: flex; }
     .site-nav-toggle,
     .site-nav-panel { display: none !important; }

@@ -29,6 +29,19 @@ impl ThemePreference {
             ThemePreference::Dark => "dark",
         }
     }
+
+    pub fn effective(self) -> Self {
+        match self {
+            ThemePreference::Light | ThemePreference::Dark => self,
+            ThemePreference::Auto => {
+                if system_prefers_dark() {
+                    ThemePreference::Dark
+                } else {
+                    ThemePreference::Light
+                }
+            }
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]
