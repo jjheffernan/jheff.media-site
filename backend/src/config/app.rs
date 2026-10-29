@@ -61,6 +61,8 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
             )
             .service(
                 web::scope("/account")
+                    .route("/prints/orders", web::get().to(print_controller::list_orders))
+                    .route("/prints/checkout", web::post().to(print_controller::checkout))
                     .route("/prints", web::get().to(print_controller::list))
                     .route("/prints", web::post().to(print_controller::add))
                     .route("/prints/{id}", web::delete().to(print_controller::remove)),

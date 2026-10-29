@@ -92,6 +92,9 @@ pub fn media_feed_scroll(props: &Props) -> Html {
                 title: item.title.clone(),
                 thumbnail_url: item.thumbnail_url.clone(),
                 media_url: item.media_url.clone(),
+                collection_id: item.collection_id.clone(),
+                collection_kind: item.collection_kind.clone(),
+                collection_title: item.collection_title.clone(),
             };
             let print_ids = print_ids.clone();
             let item_id = item.id.clone();
@@ -166,7 +169,7 @@ pub fn media_feed_scroll(props: &Props) -> Html {
                     }
                 </div>
             }
-        },
+        }
     };
 
     html! {

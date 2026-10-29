@@ -5,8 +5,8 @@ use crate::{
     },
     context::AuthContext,
     model::{
-        ChangePassword, EmailChange, PrintSelection, ServerResponse, TotpEnrollResponse, TotpVerify,
-        User,
+        ChangePassword, EmailChange, PrintOrder, PrintSelection, ServerResponse,
+        TotpEnrollResponse, TotpVerify, User,
     },
     routes::AppRoutes,
     services::auth_header,
@@ -16,6 +16,27 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 use yew_router::prelude::*;
+
+fn print_unit_cents(size: &str) -> i64 {
+    match size {
+        "11x14" => 4500,
+        "16x20" => 7500,
+        _ => 2500,
+    }
+}
+
+fn print_dollars(cents: i64) -> String {
+    format!("${}", cents / 100)
+}
+
+fn print_size_label(size: &str) -> String {
+    match size {
+        "8x10" => "8×10".into(),
+        "11x14" => "11×14".into(),
+        "16x20" => "16×20".into(),
+        other => other.to_string(),
+    }
+}
 
 #[derive(Clone, PartialEq)]
 enum PrintsState {
@@ -32,6 +53,9 @@ pub fn account() -> Html {
     let message = use_state(|| None::<String>);
     let totp_setup = use_state(|| None::<TotpEnrollResponse>);
     let prints = use_state(|| PrintsState::Loading);
+    let orders = use_state(Vec::<PrintOrder>::new);
+    let checkout_note = use_state(String::new);
+    let print_size = use_state(|| "8x10".to_string());
 
     let current_password = use_state(String::new);
     let new_password = use_state(String::new);
@@ -88,10 +112,35 @@ pub fn account() -> Html {
                             prints.set(PrintsState::Ready(items));
                             return;
                         }
-                        prints.set(PrintsState::Error("Could not load print selections.".into()));
+                        prints.set(PrintsState::Error(
+                            "Could not load print selections.".into(),
+                        ));
                     }
                     Ok(_) => prints.set(PrintsState::Error("Print selections unavailable.".into())),
                     Err(err) => prints.set(PrintsState::Error(err.to_string())),
+                }
+            });
+            || ()
+        });
+    }
+
+    {
+        let orders = orders.clone();
+        let jwt = jwt.clone();
+        use_effect_with(jwt.clone(), move |jwt| {
+            let jwt = jwt.clone();
+            spawn_local(async move {
+                let auth_val = auth_header(&jwt);
+                if let Ok(resp) = Request::get("/api/account/prints/orders")
+                    .header("Authorization", auth_val.as_str())
+                    .send()
+                    .await
+                {
+                    if resp.ok() {
+                        if let Ok(items) = resp.json::<Vec<PrintOrder>>().await {
+                            orders.set(items);
+                        }
+                    }
                 }
             });
             || ()
@@ -262,7 +311,9 @@ pub fn account() -> Html {
     let totp_enabled = display_user.totp_enabled;
 
     let prints_section = match &*prints {
-        PrintsState::Loading => html! { <Text tone={TextTone::Muted}>{ "Loading print selections…" }</Text> },
+        PrintsState::Loading => {
+            html! { <Text tone={TextTone::Muted}>{ "Loading print selections…" }</Text> }
+        }
         PrintsState::Error(msg) => html! { <p class="text-sm text-muted">{ msg }</p> },
         PrintsState::Ready(items) if items.is_empty() => html! {
             <Text tone={TextTone::Muted}>
@@ -306,6 +357,15 @@ pub fn account() -> Html {
                             <div class="flex-1 space-y-1">
                                 <p class="text-sm font-medium">{ item.title.clone().unwrap_or_else(|| "Photo".into()) }</p>
                                 <p class="text-xs text-muted">{ item.source.clone() }</p>
+                                if let Some(title) = item.collection_title.clone().or_else(|| item.collection_id.clone()) {
+                                    <p class="text-xs text-muted">
+                                        { format!(
+                                            "{} · {}",
+                                            item.collection_kind.clone().unwrap_or_else(|| "collection".into()),
+                                            title
+                                        ) }
+                                    </p>
+                                }
                                 <button
                                     type="button"
                                     class="text-xs text-accent hover:underline"
@@ -319,6 +379,86 @@ pub fn account() -> Html {
                 }) }
             </div>
         },
+    };
+
+    let can_checkout = matches!(&*prints, PrintsState::Ready(items) if !items.is_empty());
+    let photo_count = match &*prints {
+        PrintsState::Ready(items) => items.len(),
+        _ => 0,
+    };
+    let on_checkout = {
+        let jwt = jwt.clone();
+        let checkout_note = checkout_note.clone();
+        let print_size = print_size.clone();
+        let orders = orders.clone();
+        let message = message.clone();
+        Callback::from(move |_| {
+            let jwt = jwt.clone();
+            let note = (*checkout_note).clone();
+            let size = (*print_size).clone();
+            let orders = orders.clone();
+            let message = message.clone();
+            spawn_local(async move {
+                let body = serde_json::json!({ "note": note, "size": size }).to_string();
+                let auth_val = auth_header(&jwt);
+                let result = Request::post("/api/account/prints/checkout")
+                    .header("Authorization", auth_val.as_str())
+                    .header("Content-Type", "application/json")
+                    .body(body);
+                match result {
+                    Ok(req) => match req.send().await {
+                        Ok(resp) if resp.ok() => {
+                            if let Ok(body) = resp.json::<ServerResponse<PrintOrder>>().await {
+                                orders.set({
+                                    let mut next = (*orders).clone();
+                                    next.insert(0, body.data);
+                                    next
+                                });
+                            }
+                            message.set(Some(
+                                "Print request received. We'll follow up about sizes and payment."
+                                    .into(),
+                            ));
+                        }
+                        Ok(resp) => {
+                            if let Ok(body) = resp.json::<ServerResponse<String>>().await {
+                                message.set(Some(body.message));
+                            } else {
+                                message.set(Some("Could not request prints.".into()));
+                            }
+                        }
+                        Err(err) => message.set(Some(err.to_string())),
+                    },
+                    Err(err) => message.set(Some(err.to_string())),
+                }
+            });
+        })
+    };
+
+    let orders_list = if orders.is_empty() {
+        html! {}
+    } else {
+        html! {
+            <div class="space-y-2">
+                <p class="text-sm font-medium text-foreground">{ "Requests" }</p>
+                { for orders.iter().map(|order| {
+                    html! {
+                        <p key={order.id.clone()} class="text-sm text-muted">
+                            { format!(
+                                "{} · {} · {} · {} photo{} · {} · {}",
+                                order.status,
+                                print_size_label(&order.size),
+                                print_dollars(order.total_cents),
+                                order.item_count,
+                                if order.item_count == 1 { "" } else { "s" },
+                                order.payment_status,
+                                order.created_at
+                            ) }
+                        </p>
+                    }
+                }) }
+            </div>
+        }
     };
 
     html! {
@@ -464,6 +604,59 @@ pub fn account() -> Html {
                     { "Print selections" }
                 </Heading>
                 { prints_section }
+                if can_checkout {
+                    <label class="block space-y-1">
+                        <span class="text-sm font-medium text-foreground">{ "Size" }</span>
+                        <select
+                            class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                            value={(*print_size).clone()}
+                            onchange={{
+                                let print_size = print_size.clone();
+                                Callback::from(move |e: Event| {
+                                    // ponytail: HTMLSelectElement feature is off; the value getter is the same JS property
+                                    print_size.set(e.target_unchecked_into::<HtmlInputElement>().value());
+                                })
+                            }}
+                        >
+                            <option value="8x10" selected={*print_size == "8x10"}>{ "8×10 ($25)" }</option>
+                            <option value="11x14" selected={*print_size == "11x14"}>{ "11×14 ($45)" }</option>
+                            <option value="16x20" selected={*print_size == "16x20"}>{ "16×20 ($75)" }</option>
+                        </select>
+                    </label>
+                    <p class="text-sm text-foreground">
+                        { format!(
+                            "Estimated total {} for {} photos.",
+                            print_dollars(print_unit_cents(&print_size) * photo_count as i64),
+                            photo_count
+                        ) }
+                    </p>
+                    <label class="block space-y-1">
+                        <span class="text-sm font-medium text-foreground">{ "Note for this request" }</span>
+                        <input
+                            type="text"
+                            class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                            placeholder="Sizes, paper, or delivery notes"
+                            value={(*checkout_note).clone()}
+                            oninput={{
+                                let checkout_note = checkout_note.clone();
+                                Callback::from(move |e: InputEvent| {
+                                    checkout_note.set(e.target_unchecked_into::<HtmlInputElement>().value());
+                                })
+                            }}
+                        />
+                    </label>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-accent-hover"
+                        onclick={on_checkout}
+                    >
+                        { "Request prints" }
+                    </button>
+                    <p class="text-sm text-muted">
+                        { "Payment is collected separately. This request stays unpaid until we confirm." }
+                    </p>
+                }
+                { orders_list }
             </section>
 
             <ContentAdmin />

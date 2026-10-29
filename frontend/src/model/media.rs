@@ -44,6 +44,12 @@ pub struct PrintSelection {
     pub title: Option<String>,
     pub thumbnail_url: String,
     pub media_url: Option<String>,
+    #[serde(default)]
+    pub collection_id: Option<String>,
+    #[serde(default)]
+    pub collection_kind: Option<String>,
+    #[serde(default)]
+    pub collection_title: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -54,6 +60,26 @@ pub struct PrintSelectionInput {
     pub title: Option<String>,
     pub thumbnail_url: String,
     pub media_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_kind: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub collection_title: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PrintOrder {
+    pub id: String,
+    pub status: String,
+    pub note: Option<String>,
+    pub item_count: usize,
+    pub created_at: String,
+    pub size: String,
+    pub unit_price_cents: i64,
+    pub total_cents: i64,
+    pub payment_status: String,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]

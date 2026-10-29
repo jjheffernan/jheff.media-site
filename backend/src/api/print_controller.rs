@@ -1,6 +1,6 @@
 use crate::{
     error::ServiceError,
-    models::media::{PrintSelectionInput, PrintSelectionView},
+    models::media::{PrintCheckoutInput, PrintOrderView, PrintSelectionInput, PrintSelectionView},
     services::print_service,
     utils::auth::extract_auth_user,
 };
@@ -11,7 +11,8 @@ pub async fn list(req: HttpRequest, db: web::Data<Database>) -> Result<HttpRespo
     match extract_auth_user(&req, &db).await {
         Some(auth) => {
             let items = print_service::list_for_user(&auth, &db).await;
-            let views: Vec<PrintSelectionView> = items.into_iter().map(PrintSelectionView::from).collect();
+            let views: Vec<PrintSelectionView> =
+                items.into_iter().map(PrintSelectionView::from).collect();
             Ok(HttpResponse::Ok().json(views))
         }
         None => Ok(
@@ -44,6 +45,37 @@ pub async fn remove(
     match extract_auth_user(&req, &db).await {
         Some(auth) => match print_service::remove(&auth, &path.into_inner(), &db).await {
             Ok(_) => Ok(HttpResponse::Ok().json(serde_json::json!({"message":"REMOVED"}))),
+            Err(err) => Ok(err.response()),
+        },
+        None => Ok(
+            ServiceError::new(actix_web::http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED").response(),
+        ),
+    }
+}
+
+pub async fn list_orders(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    match extract_auth_user(&req, &db).await {
+        Some(auth) => {
+            let orders: Vec<PrintOrderView> = print_service::list_orders(&auth, &db).await;
+            Ok(HttpResponse::Ok().json(orders))
+        }
+        None => Ok(
+            ServiceError::new(actix_web::http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED").response(),
+        ),
+    }
+}
+
+pub async fn checkout(
+    req: HttpRequest,
+    body: web::Json<PrintCheckoutInput>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    match extract_auth_user(&req, &db).await {
+        Some(auth) => match print_service::checkout(&auth, body.0, &db).await {
+            Ok(order) => Ok(HttpResponse::Ok().json(serde_json::json!({
+                "message": "PRINT_REQUESTED",
+                "data": order
+            }))),
             Err(err) => Ok(err.response()),
         },
         None => Ok(
