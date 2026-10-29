@@ -1,94 +1,121 @@
+use crate::error::ServiceError;
 use crate::models::media::{InstagramFeatured, MediaFeedItem, MediaFeedResponse};
 use crate::services::{content_service, instagram_service, youtube_service};
+use actix_web::http::StatusCode;
 use awc::Client;
 use mongodb::Database;
 use std::env;
 
-pub async fn unified_feed(client: &Client, db: &Database, limit: usize) -> MediaFeedResponse {
+/// Missing or blank means every source. Unknown values are `UNKNOWN_SOURCE`.
+pub fn feed_source(raw: Option<&str>) -> Result<Option<&str>, ServiceError> {
+    let Some(source) = raw.map(str::trim).filter(|source| !source.is_empty()) else {
+        return Ok(None);
+    };
+    match source {
+        "instagram" | "youtube" | "gallery" | "shoot" => Ok(Some(source)),
+        _ => Err(ServiceError::new(StatusCode::BAD_REQUEST, "UNKNOWN_SOURCE")),
+    }
+}
+
+pub async fn unified_feed(
+    client: &Client,
+    db: &Database,
+    limit: usize,
+    source: Option<&str>,
+) -> MediaFeedResponse {
     let limit = limit.clamp(1, 48);
     let mut items: Vec<MediaFeedItem> = vec![];
     let mut sources: Vec<String> = vec![];
+    let include = |name: &str| source.is_none() || source == Some(name);
 
-    let (instagram_posts, ig_source) =
-        instagram_service::instagram_posts_or_fallback(client, limit).await;
-    if !instagram_posts.is_empty() {
-        sources.push(ig_source);
-        for post in instagram_posts {
-            items.push(MediaFeedItem {
-                id: post.id.clone(),
-                source: String::from("instagram"),
-                media_type: String::from("image"),
-                title: Some(post.title.clone()),
-                caption: None,
-                thumbnail_url: post
-                    .thumbnail_url
-                    .clone()
-                    .unwrap_or_else(|| post.url.clone()),
-                media_url: None,
-                link_url: Some(post.url.clone()),
-                published_at: post.published_at.clone(),
-                collection_id: None,
-                collection_kind: None,
-                collection_title: None,
-                featured: is_featured_instagram(&post.url),
-            });
-        }
-    }
-
-    if let Ok(youtube_posts) = youtube_service::fetch_channel_videos(client, limit).await {
-        if !youtube_posts.is_empty() {
-            sources.push(String::from("youtube"));
-            for post in youtube_posts {
+    if include("instagram") {
+        let (instagram_posts, ig_source) =
+            instagram_service::instagram_posts_or_fallback(client, limit).await;
+        if !instagram_posts.is_empty() {
+            sources.push(ig_source);
+            for post in instagram_posts {
                 items.push(MediaFeedItem {
                     id: post.id.clone(),
-                    source: String::from("youtube"),
-                    media_type: String::from("video"),
+                    source: String::from("instagram"),
+                    media_type: String::from("image"),
                     title: Some(post.title.clone()),
                     caption: None,
-                    thumbnail_url: post.thumbnail_url.clone().unwrap_or_default(),
-                    media_url: Some(post.url.clone()),
+                    thumbnail_url: post
+                        .thumbnail_url
+                        .clone()
+                        .unwrap_or_else(|| post.url.clone()),
+                    media_url: None,
                     link_url: Some(post.url.clone()),
                     published_at: post.published_at.clone(),
                     collection_id: None,
                     collection_kind: None,
                     collection_title: None,
-                    featured: false,
+                    featured: is_featured_instagram(&post.url),
                 });
             }
         }
     }
 
-    let galleries = content_service::list_galleries_merged(db).await;
-    if !galleries.items.is_empty() {
-        sources.push(String::from("galleries"));
-        for g in galleries.items {
-            if let Some(collection) = content_service::get_gallery_merged(&g.id, db).await {
-                for media in collection.media {
-                    items.push(media_to_feed_item(
-                        &media.id,
-                        "gallery",
-                        &collection.id,
-                        &collection.title,
-                        &media,
-                    ));
+    if include("youtube") {
+        if let Ok(youtube_posts) = youtube_service::fetch_channel_videos(client, limit).await {
+            if !youtube_posts.is_empty() {
+                sources.push(String::from("youtube"));
+                for post in youtube_posts {
+                    items.push(MediaFeedItem {
+                        id: post.id.clone(),
+                        source: String::from("youtube"),
+                        media_type: String::from("video"),
+                        title: Some(post.title.clone()),
+                        caption: None,
+                        thumbnail_url: post.thumbnail_url.clone().unwrap_or_default(),
+                        media_url: Some(post.url.clone()),
+                        link_url: Some(post.url.clone()),
+                        published_at: post.published_at.clone(),
+                        collection_id: None,
+                        collection_kind: None,
+                        collection_title: None,
+                        featured: false,
+                    });
                 }
             }
         }
     }
 
-    let shoots = content_service::list_shoots_merged(db).await;
-    if !shoots.items.is_empty() {
-        sources.push(String::from("shoots"));
-        for s in shoots.items {
-            if let Some(collection) = content_service::get_shoot_merged(&s.id, db).await {
-                for media in collection.media {
-                    items.push(media_to_feed_item(
-                        &media.id,
-                        "shoot",
-                        &collection.id,
-                        &collection.title,
-                        &media,
-                    ));
+    if include("gallery") {
+        let galleries = content_service::list_galleries_merged(db).await;
+        if !galleries.items.is_empty() {
+            sources.push(String::from("galleries"));
+            for g in galleries.items {
+                if let Some(collection) = content_service::get_gallery_merged(&g.id, db).await {
+                    for media in collection.media {
+                        items.push(media_to_feed_item(
+                            &media.id,
+                            "gallery",
+                            &collection.id,
+                            &collection.title,
+                            &media,
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    if include("shoot") {
+        let shoots = content_service::list_shoots_merged(db).await;
+        if !shoots.items.is_empty() {
+            sources.push(String::from("shoots"));
+            for s in shoots.items {
+                if let Some(collection) = content_service::get_shoot_merged(&s.id, db).await {
+                    for media in collection.media {
+                        items.push(media_to_feed_item(
+                            &media.id,
+                            "shoot",
+                            &collection.id,
+                            &collection.title,
+                            &media,
+                        ));
+                    }
                 }
             }
         }
@@ -144,6 +171,37 @@ fn is_featured_instagram(url: &str) -> bool {
         return false;
     }
     url.contains(&featured) || featured.contains(url)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::feed_source;
+    use actix_web::http::StatusCode;
+
+    #[test]
+    fn blank_source_is_all_and_unknown_is_rejected() {
+        for (raw, expected) in [
+            (None, None),
+            (Some(""), None),
+            (Some("  "), None),
+            (Some("instagram"), Some("instagram")),
+            (Some("youtube"), Some("youtube")),
+            (Some("gallery"), Some("gallery")),
+            (Some("shoot"), Some("shoot")),
+        ] {
+            match feed_source(raw) {
+                Ok(source) => assert_eq!(source, expected),
+                Err(_) => panic!("rejected {raw:?}"),
+            }
+        }
+        match feed_source(Some("tiktok")) {
+            Ok(_) => panic!("tiktok should be rejected"),
+            Err(err) => {
+                assert_eq!(err.http_status, StatusCode::BAD_REQUEST);
+                assert_eq!(err.body.message, "UNKNOWN_SOURCE");
+            }
+        }
+    }
 }
 
 pub fn instagram_featured() -> Option<InstagramFeatured> {

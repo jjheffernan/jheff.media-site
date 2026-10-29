@@ -24,21 +24,35 @@ pub struct Props {
     pub title: Option<String>,
 }
 
+const FEED_FILTERS: &[(&str, Option<&str>)] = &[
+    ("All", None),
+    ("Instagram", Some("instagram")),
+    ("YouTube", Some("youtube")),
+    ("Galleries", Some("gallery")),
+    ("Shoots", Some("shoot")),
+];
+
 #[function_component(MediaFeedScroll)]
 pub fn media_feed_scroll(props: &Props) -> Html {
     let state = use_state(|| FeedState::Loading);
     let limit = use_state(|| props.limit);
+    let source = use_state(|| None::<&'static str>);
     let print_ids = use_state(Vec::<String>::new);
     let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
     let jwt_for_prints = auth_ctx.auth.as_ref().map(|a| a.jwt.clone());
 
     let current_limit = *limit;
+    let current_source = *source;
     {
         let state = state.clone();
-        use_effect_with(current_limit, move |limit| {
+        use_effect_with((current_limit, current_source), move |(limit, source)| {
             let limit = *limit;
+            let source = *source;
             spawn_local(async move {
-                let url = format!("/api/media/feed?limit={}", limit);
+                let url = match source {
+                    Some(source) => format!("/api/media/feed?limit={limit}&source={source}"),
+                    None => format!("/api/media/feed?limit={limit}"),
+                };
                 match Request::get(&url).send().await {
                     Ok(response) if response.ok() => {
                         if let Ok(feed) = response.json::<MediaFeedResponse>().await {
@@ -129,6 +143,18 @@ pub fn media_feed_scroll(props: &Props) -> Html {
         })
     };
 
+    let select_source = {
+        let source = source.clone();
+        let state = state.clone();
+        Callback::from(move |next: Option<&'static str>| {
+            if *source == next {
+                return;
+            }
+            source.set(next);
+            state.set(FeedState::Loading);
+        })
+    };
+
     let content = match &*state {
         FeedState::Loading => html! { <Spinner label="Loading feed…" /> },
         FeedState::Error(message) => html! {
@@ -160,7 +186,7 @@ pub fn media_feed_scroll(props: &Props) -> Html {
                         <div class="flex justify-center pt-4">
                             <button
                                 type="button"
-                                class="rounded-lg border border-border px-5 py-2 text-sm font-medium text-foreground transition hover:border-accent hover:text-accent"
+                                class="btn btn-quiet"
                                 onclick={load_more}
                             >
                                 { "Load more" }
@@ -174,6 +200,22 @@ pub fn media_feed_scroll(props: &Props) -> Html {
 
     html! {
         <Section title={props.title.clone()}>
+            <div class="flex flex-wrap gap-2">
+                { for FEED_FILTERS.iter().map(|(label, value)| {
+                    let selected = *source == *value;
+                    let select_source = select_source.clone();
+                    let value = *value;
+                    html! {
+                        <button
+                            type="button"
+                            class={if selected { "btn btn-primary" } else { "btn btn-quiet" }}
+                            onclick={Callback::from(move |_| select_source.emit(value))}
+                        >
+                            { *label }
+                        </button>
+                    }
+                }) }
+            </div>
             { content }
         </Section>
     }

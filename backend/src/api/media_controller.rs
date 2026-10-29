@@ -8,7 +8,14 @@ pub async fn feed(
     query: web::Query<FeedQuery>,
 ) -> Result<HttpResponse> {
     let limit = query.limit.unwrap_or(24);
-    Ok(HttpResponse::Ok().json(media_feed_service::unified_feed(&client, &db, limit).await))
+    let source = match media_feed_service::feed_source(query.source.as_deref()) {
+        Ok(source) => source,
+        Err(err) => return Ok(err.response()),
+    };
+    Ok(
+        HttpResponse::Ok()
+            .json(media_feed_service::unified_feed(&client, &db, limit, source).await),
+    )
 }
 
 pub async fn instagram_featured() -> Result<HttpResponse> {
@@ -21,4 +28,5 @@ pub async fn instagram_featured() -> Result<HttpResponse> {
 #[derive(serde::Deserialize)]
 pub struct FeedQuery {
     pub limit: Option<usize>,
+    pub source: Option<String>,
 }
