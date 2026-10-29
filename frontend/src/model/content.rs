@@ -65,7 +65,11 @@ pub struct BookingConfig {
     pub source: String,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+fn default_contact_kind() -> String {
+    "contact".into()
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ContactSubmission {
     pub name: String,
@@ -74,6 +78,8 @@ pub struct ContactSubmission {
     pub message: String,
     #[serde(default)]
     pub website: String,
+    #[serde(default = "default_contact_kind")]
+    pub kind: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

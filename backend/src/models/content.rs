@@ -50,6 +50,10 @@ pub struct ContentCollectionSummary {
     pub has_video: bool,
 }
 
+fn default_contact_kind() -> String {
+    "contact".into()
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContactSubmission {
@@ -60,6 +64,8 @@ pub struct ContactSubmission {
     /// Honeypot. Humans leave this empty; filled values are dropped.
     #[serde(default)]
     pub website: String,
+    #[serde(default = "default_contact_kind")]
+    pub kind: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

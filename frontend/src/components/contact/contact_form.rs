@@ -1,10 +1,13 @@
-use crate::{
-    components::ui::{Button, ButtonVariant, Text, TextTone},
-    model::{ContactSubmission, ServerResponse},
-};
+use crate::model::{ContactSubmission, ServerResponse};
 use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+
+#[derive(Properties, PartialEq, Clone)]
+pub struct Props {
+    #[prop_or(false)]
+    pub booking: bool,
+}
 
 #[derive(Clone, PartialEq)]
 enum SubmitState {
@@ -15,13 +18,14 @@ enum SubmitState {
 }
 
 #[function_component(ContactForm)]
-pub fn contact_form() -> Html {
+pub fn contact_form(props: &Props) -> Html {
     let name = use_state(String::new);
     let email = use_state(String::new);
     let subject = use_state(String::new);
     let message = use_state(String::new);
     let website = use_state(String::new);
     let submit_state = use_state(|| SubmitState::Idle);
+    let booking = props.booking;
 
     let on_name = {
         let name = name.clone();
@@ -85,6 +89,11 @@ pub fn contact_form() -> Html {
                 subject: (*subject).clone(),
                 message: (*message).clone(),
                 website: (*website).clone(),
+                kind: if booking {
+                    "booking".into()
+                } else {
+                    "contact".into()
+                },
             };
             let submit_state = submit_state.clone();
             spawn_local(async move {
@@ -98,6 +107,12 @@ pub fn contact_form() -> Html {
                 };
                 match result {
                     Ok(resp) if resp.ok() => {
+                        if booking {
+                            submit_state.set(SubmitState::Success(
+                                "Request received. We'll follow up.".into(),
+                            ));
+                            return;
+                        }
                         if let Ok(body) = resp.json::<ServerResponse<String>>().await {
                             submit_state.set(SubmitState::Success(body.data));
                         } else {
@@ -128,17 +143,15 @@ pub fn contact_form() -> Html {
 
     let feedback = match &*submit_state {
         SubmitState::Success(msg) => html! {
-            <p class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
-                { msg.clone() }
-            </p>
+            <p class="muted">{ msg.clone() }</p>
         },
         SubmitState::Error(msg) => html! {
-            <p class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
-                { msg.clone() }
-            </p>
+            <p class="muted">{ msg.clone() }</p>
         },
         _ => html! {},
     };
+
+    let subject_label = if booking { "What do you want" } else { "Subject" };
 
     html! {
         <form class="relative space-y-4" onsubmit={Callback::from(|e: SubmitEvent| e.prevent_default())}>
@@ -155,8 +168,8 @@ pub fn contact_form() -> Html {
                 </label>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
-                <label class="block space-y-1">
-                    <span class="text-sm font-medium text-foreground">{ "Name" }</span>
+                <label class="label">
+                    { "Name" }
                     <input
                         type="text"
                         class="field"
@@ -165,8 +178,8 @@ pub fn contact_form() -> Html {
                         disabled={disabled}
                     />
                 </label>
-                <label class="block space-y-1">
-                    <span class="text-sm font-medium text-foreground">{ "Email" }</span>
+                <label class="label">
+                    { "Email" }
                     <input
                         type="email"
                         class="field"
@@ -176,37 +189,50 @@ pub fn contact_form() -> Html {
                     />
                 </label>
             </div>
-            <label class="block space-y-1">
-                <span class="text-sm font-medium text-foreground">{ "Subject" }</span>
-                <input
-                    type="text"
-                    class="field"
-                    value={(*subject).clone()}
-                    oninput={on_subject}
-                    disabled={disabled}
-                    placeholder="Track instruction, shoot booking, data engineering…"
-                />
-            </label>
-            <label class="block space-y-1">
-                <span class="text-sm font-medium text-foreground">{ "Message" }</span>
+            if !booking {
+                <label class="label">
+                    { subject_label }
+                    <input
+                        type="text"
+                        class="field"
+                        value={(*subject).clone()}
+                        oninput={on_subject.clone()}
+                        disabled={disabled}
+                        placeholder="General question"
+                    />
+                </label>
+            }
+            <label class="label">
+                { "Message" }
                 <textarea
-                    class="min-h-[8rem] field"
+                    class="field field-area"
                     value={(*message).clone()}
                     oninput={on_message}
                     disabled={disabled}
                 />
             </label>
+            if booking {
+                <label class="label">
+                    { subject_label }
+                    <input
+                        type="text"
+                        class="field"
+                        value={(*subject).clone()}
+                        oninput={on_subject}
+                        disabled={disabled}
+                    />
+                </label>
+            }
             { feedback }
-            <Button variant={ButtonVariant::Primary} disabled={disabled} onclick={on_submit}>
+            <button type="button" class="btn btn-primary" disabled={disabled} onclick={on_submit}>
                 if disabled {
                     { "Sending…" }
+                } else if booking {
+                    { "Send request" }
                 } else {
                     { "Send message" }
                 }
-            </Button>
-            <Text tone={TextTone::Muted} class="text-xs">
-                { "For booking track days, media shoots, or race engineering inquiries — tell me what you're working on and how I can help." }
-            </Text>
+            </button>
         </form>
     }
 }

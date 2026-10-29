@@ -1,13 +1,14 @@
 use crate::{
-    components::ui::{Heading, HeadingLevel, Spinner, Text, TextTone},
-    model::{BookingConfig, ServerResponse},
-    routes::AppRoutes,
+    components::{
+        ui::{Heading, HeadingLevel, Spinner},
+        ContactForm,
+    },
+    model::ServerResponse,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
-use yew_router::prelude::*;
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -27,52 +28,37 @@ struct SchedulePayload {
 }
 
 #[derive(Clone, PartialEq)]
-struct BookingPage {
-    config: BookingConfig,
-    events: Vec<ScheduleEvent>,
-}
-
-#[derive(Clone, PartialEq)]
 enum LoadState {
     Loading,
-    Ready(BookingPage),
+    Ready(Vec<ScheduleEvent>),
     Error(String),
 }
 
 fn event_list(events: &[ScheduleEvent]) -> Html {
+    let events = &events[..events.len().min(8)];
     if events.is_empty() {
         return Html::default();
     }
     html! {
-        <ul class="space-y-3">
-            { for events.iter().map(|event| {
-                let location = event.location.clone().filter(|value| !value.is_empty());
-                html! {
-                    <li class="card space-y-1">
-                        <p class="font-medium text-foreground">{ event.title.clone() }</p>
-                        <p class="text-sm text-muted">{ event.kind.clone() }</p>
-                        <p class="text-sm text-muted">{ event.starts_at.clone() }</p>
-                        if let Some(location) = location {
-                            <p class="text-sm text-muted">{ location }</p>
-                        }
-                    </li>
-                }
-            }) }
-        </ul>
+        <section class="space-y-3">
+            <h2 class="title-sm">{ "Availability" }</h2>
+            <ul class="space-y-3">
+                { for events.iter().map(|event| {
+                    let location = event.location.clone().filter(|value| !value.is_empty());
+                    html! {
+                        <li class="card">
+                            <p>{ event.title.clone() }</p>
+                            <p class="muted">{ event.kind.clone() }</p>
+                            <p class="muted">{ event.starts_at.clone() }</p>
+                            if let Some(location) = location {
+                                <p class="muted">{ location }</p>
+                            }
+                        </li>
+                    }
+                }) }
+            </ul>
+        </section>
     }
-}
-
-async fn load_events() -> Vec<ScheduleEvent> {
-    let Ok(resp) = Request::get("/api/schedule").send().await else {
-        return vec![];
-    };
-    if !resp.ok() {
-        return vec![];
-    }
-    resp.json::<SchedulePayload>()
-        .await
-        .map(|payload| payload.events)
-        .unwrap_or_default()
 }
 
 #[function_component(Booking)]
@@ -83,21 +69,20 @@ pub fn booking() -> Html {
         let state = state.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let result = Request::get("/api/booking").send().await;
+                let result = Request::get("/api/schedule").send().await;
                 match result {
                     Ok(resp) if resp.ok() => {
-                        if let Ok(config) = resp.json::<BookingConfig>().await {
-                            let events = load_events().await;
-                            state.set(LoadState::Ready(BookingPage { config, events }));
+                        if let Ok(payload) = resp.json::<SchedulePayload>().await {
+                            state.set(LoadState::Ready(payload.events));
                             return;
                         }
-                        state.set(LoadState::Error("Could not parse booking config.".into()));
+                        state.set(LoadState::Error("Could not parse schedule.".into()));
                     }
                     Ok(resp) => {
                         if let Ok(body) = resp.json::<ServerResponse<String>>().await {
                             state.set(LoadState::Error(body.message));
                         } else {
-                            state.set(LoadState::Error("Booking request failed.".into()));
+                            state.set(LoadState::Error("Schedule request failed.".into()));
                         }
                     }
                     Err(err) => state.set(LoadState::Error(err.to_string())),
@@ -110,50 +95,21 @@ pub fn booking() -> Html {
     let content = match &*state {
         LoadState::Loading => html! { <Spinner label="Loading booking…" /> },
         LoadState::Error(msg) => html! {
-            <p class="text-sm text-muted">{ format!("Booking unavailable: {}", msg) }</p>
+            <>
+                <p class="muted">{ format!("Availability unavailable: {}", msg) }</p>
+                <div class="card">
+                    <ContactForm booking=true />
+                </div>
+            </>
         },
-        LoadState::Ready(page) => {
-            let panel = if page.config.embed_url.is_none() {
-                html! {
-                    <div class="card space-y-4">
-                        <Text tone={TextTone::Muted}>
-                            { "Book track instruction, media shoots, or race data engineering — send a message and we'll line up dates." }
-                        </Text>
-                        if let Some(email) = &page.config.contact_email {
-                            <p class="text-sm text-foreground">
-                                { "Email: " }
-                                <a class="text-accent hover:underline" href={format!("mailto:{}", email)}>
-                                    { email.clone() }
-                                </a>
-                            </p>
-                        }
-                        <Link<AppRoutes>
-                            to={AppRoutes::Contact}
-                            classes="inline-flex btn btn-primary"
-                        >
-                            { "Contact & book" }
-                        </Link<AppRoutes>>
-                    </div>
-                }
-            } else {
-                html! {
-                    <div class="card card-flat overflow-hidden">
-                        <iframe
-                            class="min-h-[min(70vh,720px)] w-full border-0 bg-surface"
-                            src={page.config.embed_url.clone().unwrap_or_default()}
-                            title="Booking"
-                            loading="lazy"
-                        />
-                    </div>
-                }
-            };
-            html! {
-                <>
-                    { event_list(&page.events) }
-                    { panel }
-                </>
-            }
-        }
+        LoadState::Ready(events) => html! {
+            <>
+                { event_list(events) }
+                <div class="card">
+                    <ContactForm booking=true />
+                </div>
+            </>
+        },
     };
 
     html! {

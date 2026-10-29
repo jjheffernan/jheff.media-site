@@ -4,7 +4,13 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use std::env;
 
-pub async fn notify_contact(name: &str, email: &str, subject: &str, message: &str) {
+pub async fn notify_contact(
+    name: &str,
+    email: &str,
+    subject: &str,
+    message: &str,
+    kind: &str,
+) {
     let host = env_trimmed("YEW_FULLSTACK_SMTP_HOST");
     let to = env_trimmed("YEW_FULLSTACK_CONTACT_EMAIL");
     if host.is_empty() || to.is_empty() {
@@ -12,7 +18,7 @@ pub async fn notify_contact(name: &str, email: &str, subject: &str, message: &st
         return;
     }
 
-    if let Err(err) = deliver(&host, &to, name, email, subject, message).await {
+    if let Err(err) = deliver(&host, &to, name, email, subject, message, kind).await {
         error!("Contact email send failed: {err}");
     }
 }
@@ -24,6 +30,7 @@ async fn deliver(
     email: &str,
     subject: &str,
     message: &str,
+    kind: &str,
 ) -> Result<(), String> {
     let from = {
         let configured = env_trimmed("YEW_FULLSTACK_SMTP_FROM");
@@ -38,10 +45,10 @@ async fn deliver(
     let outgoing = Message::builder()
         .from(from)
         .to(to)
-        .subject(subject_line(subject))
+        .subject(subject_line(subject, kind))
         .header(ContentType::TEXT_PLAIN)
         .body(format!(
-            "Name: {name}\nEmail: {email}\nSubject: {subject}\n\n{message}"
+            "Kind: {kind}\nName: {name}\nEmail: {email}\nSubject: {subject}\n\n{message}"
         ))
         .map_err(|err| err.to_string())?;
 
@@ -74,8 +81,12 @@ fn smtp_port() -> u16 {
         .unwrap_or(587)
 }
 
-fn subject_line(subject: &str) -> String {
+fn subject_line(subject: &str, kind: &str) -> String {
     let subject = subject.trim();
+    if kind == "booking" {
+        let subject = if subject.is_empty() { "request" } else { subject };
+        return format!("[jheff.media] Booking: {subject}");
+    }
     let subject = if subject.is_empty() {
         "New message"
     } else {
@@ -96,7 +107,12 @@ mod tests {
 
     #[test]
     fn subject_line_prefixes_or_defaults() {
-        assert_eq!(subject_line("Prints"), "[jheff.media] Prints");
-        assert_eq!(subject_line("  "), "[jheff.media] New message");
+        assert_eq!(subject_line("Prints", "contact"), "[jheff.media] Prints");
+        assert_eq!(subject_line("  ", "contact"), "[jheff.media] New message");
+        assert_eq!(
+            subject_line("Track day", "booking"),
+            "[jheff.media] Booking: Track day"
+        );
+        assert_eq!(subject_line("", "booking"), "[jheff.media] Booking: request");
     }
 }

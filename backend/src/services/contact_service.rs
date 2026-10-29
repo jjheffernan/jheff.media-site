@@ -21,6 +21,7 @@ struct ContactRecord {
     email: String,
     subject: String,
     message: String,
+    kind: String,
     created_at: DateTime,
 }
 
@@ -65,11 +66,17 @@ pub async fn submit_contact(
         ));
     }
 
+    let kind = if form.kind.trim() == "booking" {
+        "booking"
+    } else {
+        "contact"
+    };
     let record = ContactRecord {
         name: form.name.trim().to_string(),
         email: form.email.trim().to_string(),
         subject: form.subject.trim().to_string(),
         message: form.message.trim().to_string(),
+        kind: kind.to_string(),
         created_at: DateTime::now(),
     };
 
@@ -80,6 +87,7 @@ pub async fn submit_contact(
             "email": &record.email,
             "subject": &record.subject,
             "message": &record.message,
+            "kind": &record.kind,
             "createdAt": record.created_at,
         })
         .await
@@ -95,6 +103,7 @@ pub async fn submit_contact(
         &record.email,
         &record.subject,
         &record.message,
+        &record.kind,
     )
     .await;
 
@@ -106,6 +115,16 @@ pub async fn submit_contact(
 #[cfg(test)]
 mod tests {
     use super::allow_submission;
+    use crate::models::content::ContactSubmission;
+
+    #[test]
+    fn missing_kind_defaults_to_contact() {
+        let form: ContactSubmission = serde_json::from_str(
+            r#"{"name":"A","email":"a@b.c","subject":"Hi","message":"Hello"}"#,
+        )
+        .unwrap();
+        assert_eq!(form.kind, "contact");
+    }
 
     #[test]
     fn rate_limit_blocks_the_sixth_hit() {

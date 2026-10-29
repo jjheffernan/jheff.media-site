@@ -36,25 +36,29 @@ enum LoadState {
 }
 
 fn event_list(events: &[ScheduleEvent]) -> Html {
+    let events = &events[..events.len().min(8)];
     if events.is_empty() {
         return Html::default();
     }
     html! {
-        <ul class="space-y-3">
-            { for events.iter().map(|event| {
-                let location = event.location.clone().filter(|value| !value.is_empty());
-                html! {
-                    <li class="card space-y-1">
-                        <p class="font-medium text-foreground">{ event.title.clone() }</p>
-                        <p class="text-sm text-muted">{ event.kind.clone() }</p>
-                        <p class="text-sm text-muted">{ event.starts_at.clone() }</p>
-                        if let Some(location) = location {
-                            <p class="text-sm text-muted">{ location }</p>
-                        }
-                    </li>
-                }
-            }) }
-        </ul>
+        <section class="space-y-3">
+            <h2 class="title-sm">{ "Availability" }</h2>
+            <ul class="space-y-3">
+                { for events.iter().map(|event| {
+                    let location = event.location.clone().filter(|value| !value.is_empty());
+                    html! {
+                        <li class="card">
+                            <p>{ event.title.clone() }</p>
+                            <p class="muted">{ event.kind.clone() }</p>
+                            <p class="muted">{ event.starts_at.clone() }</p>
+                            if let Some(location) = location {
+                                <p class="muted">{ location }</p>
+                            }
+                        </li>
+                    }
+                }) }
+            </ul>
+        </section>
     }
 }
 

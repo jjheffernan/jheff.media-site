@@ -331,6 +331,9 @@ Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SM
 | `subject` | string | no |
 | `message` | string | yes |
 | `website` | string | no |
+| `kind` | string | no |
+
+`kind` is `booking` for a booking request and `contact` otherwise. A missing or unknown value is stored as `contact`. Booking mail uses the subject prefix `Booking:`.
 
 `website` is a honeypot. Leave it empty. A non-empty value returns the success envelope and is not stored.
 
