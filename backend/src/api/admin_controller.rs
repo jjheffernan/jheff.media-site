@@ -2,7 +2,7 @@ use crate::{
     error::ServiceError,
     models::{content::ContentCollection, response::ResponseBody},
     services::content_service,
-    utils::auth::{extract_auth_user, is_admin},
+    utils::auth::require_admin,
 };
 use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse, Result};
@@ -14,26 +14,17 @@ pub async fn create_gallery(
     body: web::Json<ContentCollection>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => {
-            if !is_admin(&auth) {
-                return Ok(
-                    ServiceError::new(actix_web::http::StatusCode::FORBIDDEN, "FORBIDDEN").response(),
-                );
-            }
-            if content_service::create_collection(body.0, "gallery", &db).await {
-                Ok(HttpResponse::Ok().json(serde_json::json!({"message":"CREATED"})))
-            } else {
-                Ok(ServiceError::new(
-                    actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "CREATE_FAILED",
-                )
-                    .response())
-            }
-        }
-        None => Ok(
-            ServiceError::new(actix_web::http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED").response(),
-        ),
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    if content_service::create_collection(body.0, "gallery", &db).await {
+        Ok(HttpResponse::Ok().json(serde_json::json!({"message":"CREATED"})))
+    } else {
+        Ok(ServiceError::new(
+            actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "CREATE_FAILED",
+        )
+        .response())
     }
 }
 
@@ -42,26 +33,17 @@ pub async fn create_shoot(
     body: web::Json<ContentCollection>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => {
-            if !is_admin(&auth) {
-                return Ok(
-                    ServiceError::new(actix_web::http::StatusCode::FORBIDDEN, "FORBIDDEN").response(),
-                );
-            }
-            if content_service::create_collection(body.0, "shoot", &db).await {
-                Ok(HttpResponse::Ok().json(serde_json::json!({"message":"CREATED"})))
-            } else {
-                Ok(ServiceError::new(
-                    actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "CREATE_FAILED",
-                )
-                    .response())
-            }
-        }
-        None => Ok(
-            ServiceError::new(actix_web::http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED").response(),
-        ),
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    if content_service::create_collection(body.0, "shoot", &db).await {
+        Ok(HttpResponse::Ok().json(serde_json::json!({"message":"CREATED"})))
+    } else {
+        Ok(ServiceError::new(
+            actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            "CREATE_FAILED",
+        )
+        .response())
     }
 }
 
@@ -72,19 +54,8 @@ async fn upload_collection_media(
     db: web::Data<Database>,
     kind: &str,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) if is_admin(&auth) => {}
-        Some(_) => {
-            return Ok(
-                ServiceError::new(actix_web::http::StatusCode::FORBIDDEN, "FORBIDDEN").response(),
-            );
-        }
-        None => {
-            return Ok(
-                ServiceError::new(actix_web::http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED")
-                    .response(),
-            );
-        }
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
     }
 
     let collection_id = path.into_inner();
@@ -158,17 +129,15 @@ async fn upload_collection_media(
     .await
     {
         Ok(media) => Ok(HttpResponse::Ok().json(ResponseBody::new("UPLOADED", media))),
-        Err(msg) if msg == "COLLECTION_NOT_FOUND" => Ok(
-            ServiceError::new(actix_web::http::StatusCode::NOT_FOUND, &msg).response(),
-        ),
+        Err(msg) if msg == "COLLECTION_NOT_FOUND" => {
+            Ok(ServiceError::new(actix_web::http::StatusCode::NOT_FOUND, &msg).response())
+        }
         Err(msg) if msg.starts_with("FILE_TOO_LARGE") || msg == "UNSUPPORTED_MEDIA_TYPE" => {
             Ok(ServiceError::new(actix_web::http::StatusCode::BAD_REQUEST, &msg).response())
         }
-        Err(msg) => Ok(ServiceError::new(
-            actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
-            &msg,
-        )
-        .response()),
+        Err(msg) => Ok(
+            ServiceError::new(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, &msg).response(),
+        ),
     }
 }
 

@@ -1,6 +1,10 @@
+use crate::error::ServiceError;
 use crate::models::user::User;
 use crate::utils::token::{decode_token, verify_token};
-use actix_web::{http::header, HttpRequest};
+use actix_web::{
+    http::{header, StatusCode},
+    HttpRequest, HttpResponse,
+};
 use bson::oid::ObjectId;
 use mongodb::Database;
 
@@ -35,4 +39,25 @@ pub async fn extract_auth_user(req: &HttpRequest, db: &Database) -> Option<AuthU
 
 pub fn is_admin(user: &AuthUser) -> bool {
     user.role == "admin"
+}
+
+fn unauthorized() -> HttpResponse {
+    ServiceError::new(StatusCode::UNAUTHORIZED, "UNAUTHORIZED").response()
+}
+
+fn forbidden() -> HttpResponse {
+    ServiceError::new(StatusCode::FORBIDDEN, "FORBIDDEN").response()
+}
+
+pub async fn require_auth(req: &HttpRequest, db: &Database) -> Result<AuthUser, HttpResponse> {
+    extract_auth_user(req, db).await.ok_or_else(unauthorized)
+}
+
+pub async fn require_admin(req: &HttpRequest, db: &Database) -> Result<AuthUser, HttpResponse> {
+    let user = require_auth(req, db).await?;
+    if is_admin(&user) {
+        Ok(user)
+    } else {
+        Err(forbidden())
+    }
 }

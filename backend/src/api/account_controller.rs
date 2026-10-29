@@ -4,7 +4,7 @@ use crate::{
         user::{ChangePasswordDTO, EmailChangeDTO, LoginDTO, TotpVerifyDTO, User},
     },
     services::{account_service, account_settings_service},
-    utils::auth::extract_auth_user,
+    utils::auth::require_auth,
 };
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use mongodb::Database;
@@ -53,10 +53,11 @@ pub async fn logout(req: HttpRequest, db: web::Data<Database>) -> Result<HttpRes
 }
 
 pub async fn me(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => Ok(HttpResponse::Ok().json(account_settings_service::me(&auth, &db).await)),
-        None => Ok(HttpResponse::Unauthorized().json(ResponseBody::new("UNAUTHORIZED", ""))),
-    }
+    let auth = match require_auth(&req, &db).await {
+        Ok(auth) => auth,
+        Err(resp) => return Ok(resp),
+    };
+    Ok(HttpResponse::Ok().json(account_settings_service::me(&auth, &db).await))
 }
 
 pub async fn change_password(
@@ -64,12 +65,13 @@ pub async fn change_password(
     body: web::Json<ChangePasswordDTO>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => match account_settings_service::change_password(&auth, body.0, &db).await {
-            Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("PASSWORD_UPDATED", msg))),
-            Err(err) => Ok(err.response()),
-        },
-        None => Ok(HttpResponse::Unauthorized().json(ResponseBody::new("UNAUTHORIZED", ""))),
+    let auth = match require_auth(&req, &db).await {
+        Ok(auth) => auth,
+        Err(resp) => return Ok(resp),
+    };
+    match account_settings_service::change_password(&auth, body.0, &db).await {
+        Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("PASSWORD_UPDATED", msg))),
+        Err(err) => Ok(err.response()),
     }
 }
 
@@ -78,27 +80,27 @@ pub async fn request_email_change(
     body: web::Json<EmailChangeDTO>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => {
-            match account_settings_service::request_email_change(&auth, body.0, &db).await {
-                Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("EMAIL_CHANGE_REQUESTED", msg))),
-                Err(err) => Ok(err.response()),
-            }
-        }
-        None => Ok(HttpResponse::Unauthorized().json(ResponseBody::new("UNAUTHORIZED", ""))),
+    let auth = match require_auth(&req, &db).await {
+        Ok(auth) => auth,
+        Err(resp) => return Ok(resp),
+    };
+    match account_settings_service::request_email_change(&auth, body.0, &db).await {
+        Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("EMAIL_CHANGE_REQUESTED", msg))),
+        Err(err) => Ok(err.response()),
     }
 }
 
 pub async fn totp_enroll(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => match account_settings_service::totp_enroll(&auth, &db).await {
-            Ok((secret, otpauth)) => Ok(HttpResponse::Ok().json(serde_json::json!({
-                "secret": secret,
-                "otpauthUrl": otpauth
-            }))),
-            Err(err) => Ok(err.response()),
-        },
-        None => Ok(HttpResponse::Unauthorized().json(ResponseBody::new("UNAUTHORIZED", ""))),
+    let auth = match require_auth(&req, &db).await {
+        Ok(auth) => auth,
+        Err(resp) => return Ok(resp),
+    };
+    match account_settings_service::totp_enroll(&auth, &db).await {
+        Ok((secret, otpauth)) => Ok(HttpResponse::Ok().json(serde_json::json!({
+            "secret": secret,
+            "otpauthUrl": otpauth
+        }))),
+        Err(err) => Ok(err.response()),
     }
 }
 
@@ -107,12 +109,13 @@ pub async fn totp_confirm(
     body: web::Json<TotpVerifyDTO>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => match account_settings_service::totp_confirm(&auth, body.0, &db).await {
-            Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("TOTP_ENABLED", msg))),
-            Err(err) => Ok(err.response()),
-        },
-        None => Ok(HttpResponse::Unauthorized().json(ResponseBody::new("UNAUTHORIZED", ""))),
+    let auth = match require_auth(&req, &db).await {
+        Ok(auth) => auth,
+        Err(resp) => return Ok(resp),
+    };
+    match account_settings_service::totp_confirm(&auth, body.0, &db).await {
+        Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("TOTP_ENABLED", msg))),
+        Err(err) => Ok(err.response()),
     }
 }
 
@@ -121,11 +124,12 @@ pub async fn totp_disable(
     body: web::Json<TotpVerifyDTO>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => match account_settings_service::totp_disable(&auth, body.0, &db).await {
-            Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("TOTP_DISABLED", msg))),
-            Err(err) => Ok(err.response()),
-        },
-        None => Ok(HttpResponse::Unauthorized().json(ResponseBody::new("UNAUTHORIZED", ""))),
+    let auth = match require_auth(&req, &db).await {
+        Ok(auth) => auth,
+        Err(resp) => return Ok(resp),
+    };
+    match account_settings_service::totp_disable(&auth, body.0, &db).await {
+        Ok(msg) => Ok(HttpResponse::Ok().json(ResponseBody::new("TOTP_DISABLED", msg))),
+        Err(err) => Ok(err.response()),
     }
 }

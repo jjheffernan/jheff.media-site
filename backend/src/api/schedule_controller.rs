@@ -1,8 +1,5 @@
 use crate::{
-    error::ServiceError,
-    models::schedule::CreateScheduleEvent,
-    services::schedule_service,
-    utils::auth::{extract_auth_user, is_admin},
+    models::schedule::CreateScheduleEvent, services::schedule_service, utils::auth::require_admin,
 };
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use mongodb::Database;
@@ -16,25 +13,15 @@ pub async fn create_event(
     body: web::Json<CreateScheduleEvent>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => {
-            if !is_admin(&auth) {
-                return Ok(
-                    ServiceError::new(actix_web::http::StatusCode::FORBIDDEN, "FORBIDDEN")
-                        .response(),
-                );
-            }
-            match schedule_service::create_event(body.0, &db).await {
-                Ok(id) => Ok(HttpResponse::Ok().json(serde_json::json!({
-                    "message": "CREATED",
-                    "data": { "id": id }
-                }))),
-                Err(err) => Ok(err.response()),
-            }
-        }
-        None => Ok(
-            ServiceError::new(actix_web::http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED").response(),
-        ),
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match schedule_service::create_event(body.0, &db).await {
+        Ok(id) => Ok(HttpResponse::Ok().json(serde_json::json!({
+            "message": "CREATED",
+            "data": { "id": id }
+        }))),
+        Err(err) => Ok(err.response()),
     }
 }
 
@@ -43,21 +30,11 @@ pub async fn delete_event(
     path: web::Path<String>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match extract_auth_user(&req, &db).await {
-        Some(auth) => {
-            if !is_admin(&auth) {
-                return Ok(
-                    ServiceError::new(actix_web::http::StatusCode::FORBIDDEN, "FORBIDDEN")
-                        .response(),
-                );
-            }
-            match schedule_service::delete_event(&path.into_inner(), &db).await {
-                Ok(()) => Ok(HttpResponse::Ok().json(serde_json::json!({"message": "REMOVED"}))),
-                Err(err) => Ok(err.response()),
-            }
-        }
-        None => Ok(
-            ServiceError::new(actix_web::http::StatusCode::UNAUTHORIZED, "UNAUTHORIZED").response(),
-        ),
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match schedule_service::delete_event(&path.into_inner(), &db).await {
+        Ok(()) => Ok(HttpResponse::Ok().json(serde_json::json!({"message": "REMOVED"}))),
+        Err(err) => Ok(err.response()),
     }
 }
