@@ -1,9 +1,8 @@
+use crate::config::jwt;
 use crate::models::user::LoginInfoDTO;
 use chrono::Utc;
 use jsonwebtoken::{EncodingKey, Header};
 use serde::{Deserialize, Serialize};
-
-pub static KEY: [u8; 32] = *include_bytes!("../secret.key");
 static ONE_WEEK: i64 = 60 * 60 * 24 * 7; // in seconds
 
 #[derive(Serialize, Deserialize)]
@@ -30,7 +29,7 @@ impl UserToken {
         jsonwebtoken::encode(
             &Header::default(),
             &payload,
-            &EncodingKey::from_secret(&KEY),
+            &EncodingKey::from_secret(jwt::key()),
         )
         .unwrap()
     }

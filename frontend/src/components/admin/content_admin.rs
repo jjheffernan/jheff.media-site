@@ -5,9 +5,46 @@ use crate::{
     services::auth_header,
 };
 use gloo_net::http::Request;
+use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::HtmlInputElement;
+use web_sys::{FormData, HtmlInputElement};
 use yew::prelude::*;
+
+async fn upload_collection_media(
+    jwt: &str,
+    kind: &str,
+    collection_id: &str,
+    file: web_sys::File,
+) -> Result<(), String> {
+    if collection_id.trim().is_empty() {
+        return Err("Enter a collection ID first.".into());
+    }
+
+    let form_data = FormData::new().map_err(|_| "Could not build upload form.".to_string())?;
+    form_data
+        .append_with_blob("file", &file)
+        .map_err(|_| "Could not attach file.".to_string())?;
+
+    let url = format!("/api/admin/{kind}/{collection_id}/media");
+    let auth_val = auth_header(jwt);
+    let req = Request::post(&url)
+        .header("Authorization", auth_val.as_str())
+        .body(JsValue::from(form_data))
+        .map_err(|e| e.to_string())?;
+
+    let resp = req.send().await.map_err(|e| e.to_string())?;
+    if resp.ok() {
+        Ok(())
+    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
+        Err(body
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("Upload failed.")
+            .to_string())
+    } else {
+        Err("Upload failed.".into())
+    }
+}
 
 #[function_component(ContentAdmin)]
 pub fn content_admin() -> Html {
@@ -51,7 +88,7 @@ pub fn content_admin() -> Html {
                         if let Ok(req) = result {
                             if let Ok(resp) = req.send().await {
                                 if resp.ok() {
-                                    message.set(Some("Gallery created.".into()));
+                                    message.set(Some("Gallery created. You can upload images below.".into()));
                                 } else {
                                     message.set(Some("Failed to create gallery.".into()));
                                 }
@@ -92,7 +129,7 @@ pub fn content_admin() -> Html {
                         if let Ok(req) = result {
                             if let Ok(resp) = req.send().await {
                                 if resp.ok() {
-                                    message.set(Some("Shoot created.".into()));
+                                    message.set(Some("Shoot created. You can upload images below.".into()));
                                 } else {
                                     message.set(Some("Failed to create shoot.".into()));
                                 }
@@ -104,9 +141,73 @@ pub fn content_admin() -> Html {
         })
     };
 
+    let on_gallery_files = {
+        let auth_ctx = auth_ctx.clone();
+        let gallery_id = gallery_id.clone();
+        let message = message.clone();
+        Callback::from(move |e: Event| {
+            let input = e.target_unchecked_into::<HtmlInputElement>();
+            let Some(files) = input.files() else {
+                return;
+            };
+            if files.length() == 0 {
+                return;
+            };
+            let Some(file) = files.get(0) else {
+                return;
+            };
+            if let Some(auth) = &auth_ctx.auth {
+                let jwt = auth.jwt.clone();
+                let collection_id = (*gallery_id).clone();
+                let message = message.clone();
+                spawn_local(async move {
+                    match upload_collection_media(&jwt, "galleries", &collection_id, file).await {
+                        Ok(()) => message.set(Some(format!(
+                            "Uploaded image to gallery \"{collection_id}\"."
+                        ))),
+                        Err(err) => message.set(Some(err)),
+                    }
+                });
+            }
+            input.set_value("");
+        })
+    };
+
+    let on_shoot_files = {
+        let auth_ctx = auth_ctx.clone();
+        let shoot_id = shoot_id.clone();
+        let message = message.clone();
+        Callback::from(move |e: Event| {
+            let input = e.target_unchecked_into::<HtmlInputElement>();
+            let Some(files) = input.files() else {
+                return;
+            };
+            if files.length() == 0 {
+                return;
+            };
+            let Some(file) = files.get(0) else {
+                return;
+            };
+            if let Some(auth) = &auth_ctx.auth {
+                let jwt = auth.jwt.clone();
+                let collection_id = (*shoot_id).clone();
+                let message = message.clone();
+                spawn_local(async move {
+                    match upload_collection_media(&jwt, "shoots", &collection_id, file).await {
+                        Ok(()) => message.set(Some(format!(
+                            "Uploaded image to shoot \"{collection_id}\"."
+                        ))),
+                        Err(err) => message.set(Some(err)),
+                    }
+                });
+            }
+            input.set_value("");
+        })
+    };
+
     html! {
         <section class="space-y-6 rounded-2xl border border-border bg-surface-elevated p-6">
-            <Heading level={HeadingLevel::H2} subtitle="Admin only — create new gallery or shoot collections.">
+            <Heading level={HeadingLevel::H2} subtitle="Admin only — create collections and upload images.">
                 { "Content management" }
             </Heading>
 
@@ -148,6 +249,15 @@ pub fn content_admin() -> Html {
                     >
                         { "Create gallery" }
                     </button>
+                    <label class="block space-y-1">
+                        <Text tone={TextTone::Muted}>{ "Upload images (uses ID above)" }</Text>
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            class="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface file:px-3 file:py-2"
+                            onchange={on_gallery_files}
+                        />
+                    </label>
                 </div>
 
                 <div class="space-y-3">
@@ -183,6 +293,15 @@ pub fn content_admin() -> Html {
                     >
                         { "Create shoot" }
                     </button>
+                    <label class="block space-y-1">
+                        <Text tone={TextTone::Muted}>{ "Upload images (uses ID above)" }</Text>
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            class="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-surface file:px-3 file:py-2"
+                            onchange={on_shoot_files}
+                        />
+                    </label>
                 </div>
             </div>
         </section>

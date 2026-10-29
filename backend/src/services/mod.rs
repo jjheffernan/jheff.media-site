@@ -3,6 +3,7 @@ pub mod account_settings_service;
 pub mod contact_service;
 pub mod content_service;
 pub mod content_store_service;
+pub mod content_upload_service;
 pub mod feed_service;
 pub mod instagram_service;
 pub mod media_feed_service;

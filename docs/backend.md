@@ -22,15 +22,19 @@ Dev Docker and local watch use `forward-frontend`. Production binary serves bake
 | `YEW_FULLSTACK_HOST` | `127.0.0.1` | Bind address |
 | `YEW_FULLSTACK_PORT` | `3000` (Docker: `8080`) | Listen port |
 | `YEW_FULLSTACK_STATIC` | `/usr/local/share/yew-fullstack/www` | Static root (prod) |
-| `YEW_FULLSTACK_FORWARD_FRONTEND_URL` | `http://localhost:8080` | Upstream webpack (dev) |
+| `YEW_FULLSTACK_FORWARD_FRONTEND_URL` | `http://localhost:8080` | Upstream Trunk dev server (dev) |
 | `YEW_FULLSTACK_DB_CONNSTR` | `mongodb://localhost:27017` | MongoDB connection string |
 | `YEW_FULLSTACK_DB_NAME` | `yew-fullstack` | Database name |
+| `YEW_FULLSTACK_JWT_SECRET_FILE` | — | Path to 32-byte JWT signing key (production) |
+| `YEW_FULLSTACK_JWT_SECRET` | — | Hex-encoded 32-byte JWT key (alternative to file) |
 | `YEW_FULLSTACK_FEED_PROVIDER` | `none` | `immich`, `static`, or `none` |
 | `YEW_FULLSTACK_IMMICH_URL` | — | Immich base URL (no trailing slash) |
 | `YEW_FULLSTACK_IMMICH_API_KEY` | — | Immich API key (server-side only) |
 | `YEW_FULLSTACK_IMMICH_ALBUM_ID` | — | Album UUID for homepage feed |
 | `YEW_FULLSTACK_IMMICH_SHARED_KEY` | — | Optional shared-link key for thumbnails |
 | `YEW_FULLSTACK_FEED_STATIC_JSON` | — | JSON array of `FeedItem` for `static` provider |
+| `YEW_FULLSTACK_CONTENT_UPLOAD_DIR` | `uploads/content` | On-disk storage for shoot/gallery uploads |
+| `YEW_FULLSTACK_CONTENT_UPLOAD_MAX_BYTES` | `10485760` | Max upload size per file (10 MB) |
 
 Dev values are set in `scripts/docker-compose.dev.yml`.
 
@@ -38,7 +42,14 @@ Dev values are set in `scripts/docker-compose.dev.yml`.
 
 ## Secrets
 
-`backend/src/secret.key` — 32-byte JWT signing key, compile-time `include_bytes!`, **gitignored**.
+JWT signing key (32 bytes). Loaded at **runtime**, not compile time:
+
+| Variable | Purpose |
+|----------|---------|
+| `YEW_FULLSTACK_JWT_SECRET_FILE` | Path to 32-byte file (production compose mounts `backend/src/secret.key`) |
+| `YEW_FULLSTACK_JWT_SECRET` | Hex-encoded 32 bytes (`openssl rand -hex 32`) — alternative to file |
+
+Dev/local fallback: `backend/src/secret.key` if present (**gitignored**).
 
 ```bash
 openssl rand -out backend/src/secret.key 32

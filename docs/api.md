@@ -146,6 +146,117 @@ Proxies a preview thumbnail from Immich for use in `<img src="...">`. Only avail
 
 **Success** `200` — image bytes (`image/jpeg` or `image/webp`).
 
+**Success** `200` — image bytes (`image/jpeg`, `image/png`, `image/webp`, or `image/gif`).
+
+### `GET /api/galleries`
+
+List gallery summaries (env JSON merged with MongoDB).
+
+**Success** `200` — direct JSON:
+
+```json
+{
+  "items": [
+    {
+      "id": "my-gallery",
+      "title": "Track Day",
+      "summary": "Optional blurb",
+      "coverUrl": "/api/content/media/uuid",
+      "status": "published",
+      "date": "2026-06-01",
+      "location": "Laguna Seca",
+      "mediaCount": 12,
+      "hasVideo": false
+    }
+  ],
+  "source": "config"
+}
+```
+
+### `GET /api/galleries/{id}`
+
+Gallery detail with media items.
+
+**Success** `200` — `ContentCollection` JSON (camelCase).
+
+**Errors** `404` — `{ "message": "GALLERY_NOT_FOUND", "data": "" }`
+
+### `GET /api/shoots`
+
+List shoot summaries (same shape as galleries).
+
+### `GET /api/shoots/{id}`
+
+Shoot detail with media items.
+
+**Errors** `404` — `{ "message": "SHOOT_NOT_FOUND", "data": "" }`
+
+### `GET /api/content/media/{asset_id}`
+
+Serve an uploaded shoot/gallery image from disk. Public read.
+
+**Success** `200` — image bytes.
+
+**Errors** `404` — `{ "message": "MEDIA_NOT_FOUND", "data": "" }`
+
+### `POST /api/admin/galleries`
+
+Create a gallery collection (admin JWT required).
+
+**Headers:** `Authorization: bearer <jwt>`
+
+**Request body:** `ContentCollection` JSON (`id`, `title`, optional metadata; `media` usually empty on create).
+
+**Success** `200` — `{ "message": "CREATED" }`
+
+### `POST /api/admin/shoots`
+
+Create a shoot collection (admin JWT required). Same shape as gallery create.
+
+### `POST /api/admin/galleries/{id}/media`
+
+Upload an image to an existing MongoDB gallery. Admin JWT required.
+
+**Headers:** `Authorization: bearer <jwt>`
+
+**Request:** `multipart/form-data` with field `file` (JPEG, PNG, WebP, or GIF; default max 10 MB).
+
+**Success** `200`
+
+```json
+{
+  "message": "UPLOADED",
+  "data": {
+    "id": "<asset-uuid>",
+    "thumbnailUrl": "/api/content/media/<asset-uuid>",
+    "mediaUrl": "/api/content/media/<asset-uuid>",
+    "mediaType": "image/jpeg"
+  }
+}
+```
+
+**Errors**
+
+| Status | `message` | When |
+|--------|-----------|------|
+| 401 | `UNAUTHORIZED` | Missing/invalid JWT |
+| 403 | `FORBIDDEN` | Not admin |
+| 404 | `COLLECTION_NOT_FOUND` | Gallery id not in MongoDB |
+| 400 | `MISSING_FILE` | No `file` field |
+| 400 | `UNSUPPORTED_MEDIA_TYPE` | Not an allowed image type |
+| 400 | `FILE_TOO_LARGE: max N bytes` | Over size limit |
+
+### `POST /api/admin/shoots/{id}/media`
+
+Upload an image to an existing MongoDB shoot. Same contract as gallery media upload.
+
+**Env (optional)**
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `YEW_FULLSTACK_CONTENT_UPLOAD_DIR` | `uploads/content` | On-disk image storage |
+| `YEW_FULLSTACK_CONTENT_UPLOAD_MAX_BYTES` | `10485760` | Per-file upload limit |
+
 ## CORS
 
 Allowed methods: `GET`, `POST`, `PUT`, `DELETE`.  

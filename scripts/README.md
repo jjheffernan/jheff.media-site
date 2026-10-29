@@ -34,9 +34,11 @@ Runtime: `.dev/logs/`, `.dev/pids/`. Env: `scripts/config/dev.env`.
 
 | Command | What it does |
 |---------|----------------|
-| `build` | Production Docker image (`yew-fullstack/application`) |
+| `build` | Production Docker image (`jheffmedia/application`) |
 | `start` | `docker compose` production stack |
 | `stop` | Tear down production stack |
+
+Post-deploy smoke check: `scripts/smoke.sh` (or `BASE_URL=https://jheff.media scripts/smoke.sh`).
 
 ## Legacy wrappers
 

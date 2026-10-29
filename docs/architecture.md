@@ -9,7 +9,7 @@ See also: [authentication.md](./authentication.md), [development.md](./developme
 | Piece | Location | Role |
 |-------|----------|------|
 | Backend | `backend/` | Actix Web API, optional frontend proxy or static files |
-| Frontend | `frontend/` | Yew WASM app bundled by webpack |
+| Frontend | `frontend/` | Yew WASM app bundled by Trunk |
 | Database | MongoDB | User records and login sessions |
 | Orchestration | `scripts/` | Docker Compose for dev and prod |
 
@@ -19,7 +19,7 @@ Cargo workspace (`Cargo.toml`): members `backend`, `frontend`.
 
 | Mode | Backend feature | Frontend delivery | Typical command |
 |------|-----------------|-------------------|-----------------|
-| **Development** | `forward-frontend` | Webpack dev server; backend proxies browser traffic | `scripts/run-dev.sh` |
+| **Development** | `forward-frontend` | Trunk dev server; backend proxies browser traffic | `scripts/dev.sh start` |
 | **Production** | default (no feature) | Pre-built static files from `YEW_FULLSTACK_STATIC` | `scripts/build.sh` + `scripts/run.sh` |
 
 ### Development path
@@ -27,10 +27,10 @@ Cargo workspace (`Cargo.toml`): members `backend`, `frontend`.
 ```
 Browser → :8080 Backend (Actix)
               ├─ /api/*     → API handlers (MongoDB)
-              └─ /*         → proxy to :8000 webpack (forward_frontend.rs)
+              └─ /*         → proxy to :8000 Trunk (forward_frontend.rs)
 ```
 
-Webpack serves WASM, JS, and static CSS. The browser usually hits **8080** so API and UI share one origin.
+Trunk serves WASM, JS, and static CSS. The browser usually hits **8080** so API and UI share one origin.
 
 Direct access to **:8000** still works for frontend-only debugging; API calls from there go to the same host path `/api/...` on port 8000 and will fail unless you proxy separately—prefer **8080** in dev.
 
@@ -51,7 +51,7 @@ Registered in `backend/src/config/app.rs`:
 1. **`/api/auth/*`** — signup, login, logout ([api.md](./api.md))
 2. **Everything else** — either reverse proxy (dev) or static file server (prod)
 
-CORS is permissive (`send_wildcard`) for browser API calls from the same app origin.
+CORS allows only origins listed in `YEW_FULLSTACK_CORS_ORIGINS` (comma-separated), defaulting to `YEW_FULLSTACK_FORWARD_FRONTEND_URL` or `http://localhost:8000` — not wildcard.
 
 ## Docker Compose layouts
 
@@ -61,9 +61,9 @@ Three services:
 
 | Service | Container | Port |
 |---------|-----------|------|
-| `frontend` | `yew-fullstack-frontend` | 8000 |
-| `backend` | `yew-fullstack-backend` | 8080 |
-| `db` | `yew-fullstack-database` | 27017 |
+| `frontend` | `jheffmedia-frontend` | 8000 |
+| `backend` | `jheffmedia-backend` | 8080 |
+| `db` | `jheffmedia-database` | 27017 |
 
 Backend env sets `YEW_FULLSTACK_FORWARD_FRONTEND_URL=http://frontend:8000`.
 
@@ -76,10 +76,13 @@ Single app container + MongoDB (`mongo:7.0`). Prod compose uses `YEW_FULLSTACK_D
 ```
 App (layout + router)
  └── Layout (header, footer, content)
-      └── Router → Home | Profile | 404
+      └── Router → Home, Content, Schedule, Social, Shoots, Galleries,
+                   Booking, Contact, Legal, OtherSites, Account, Profile, 404
 Header
  └── Login + Signup (guest) OR AuthControls (logged in)
 ```
+
+Route definitions: `frontend/src/routes/mod.rs` (`AppRoutes`).
 
 Details: [frontend.md](./frontend.md).
 
@@ -93,7 +96,7 @@ Full sequence: [authentication.md](./authentication.md).
 
 GitHub Actions (`.github/workflows/rust.yml`):
 
-- Generates ephemeral `secret.key` for compile
+- JWT secret loaded at runtime (`config/jwt.rs`); dev/tests use `backend/src/secret.key`
 - Builds backend with `forward-frontend`
 - Builds frontend for `wasm32-unknown-unknown`
 - Runs backend tests

@@ -2,13 +2,18 @@ version: "2.4"
 
 services:
   application:
-    image: "yew-fullstack/application"
-    container_name: "application-container"
+    image: "jheffmedia/application"
+    container_name: "jheffmedia-application"
     environment:
       - "YEW_FULLSTACK_HOST=0.0.0.0"
       - "YEW_FULLSTACK_PORT=8080"
-      - "YEW_FULLSTACK_DB_CONNSTR=mongodb://root:password@db:27017/yew-fullstack?authSource=admin"
-      - "YEW_FULLSTACK_DB_NAME=yew-fullstack"
+      - "YEW_FULLSTACK_DB_CONNSTR=mongodb://root:password@db:27017/jheffmedia?authSource=admin"
+      - "YEW_FULLSTACK_DB_NAME=jheffmedia"
+      - "YEW_FULLSTACK_JWT_SECRET_FILE=/run/secrets/jwt_secret"
+      - "YEW_FULLSTACK_CONTENT_UPLOAD_DIR=/data/content-uploads"
+    volumes:
+      - "../backend/src/secret.key:/run/secrets/jwt_secret:ro"
+      - "jheffmedia-content-uploads:/data/content-uploads"
     ports:
       - "8080:8080"
     depends_on:
@@ -16,10 +21,13 @@ services:
 
   db:
     image: "mongo:7.0"
-    container_name: "database-container"
+    container_name: "jheffmedia-database"
     environment:
-      - MONGODB_INITDB_DATABASE=yew-fullstack
+      - MONGODB_INITDB_DATABASE=jheffmedia
       - MONGODB_INITDB_ROOT_USERNAME=root
       - MONGODB_INITDB_ROOT_PASSWORD=password
     ports:
       - "27017:27017"
+
+volumes:
+  jheffmedia-content-uploads:

@@ -9,8 +9,8 @@ See also: [deployment-dev.md](./deployment-dev.md), [architecture.md](./architec
 | Tool | Minimum | Notes |
 |------|---------|-------|
 | Rust | 1.85+ (stable) | `rustup update stable` |
-| Node.js | 18+ | 22 OK with webpack 5 (no OpenSSL legacy flag) |
-| Yarn | 1.22+ | via `corepack enable` |
+| Node.js | 18+ | Tailwind CLI via npm |
+| npm | 9+ | `npm install` in `frontend/` |
 | Docker | 24+ with Compose v2 | `docker compose version` |
 | MongoDB (image) | 7.0 | Pinned in compose files |
 
@@ -52,10 +52,10 @@ Shared workspace deps (`Cargo.toml` `[workspace.dependencies]`): `serde`, `serde
 
 | Package | Range | Notes |
 |---------|-------|-------|
-| webpack | ^5.99 | No `NODE_OPTIONS=--openssl-legacy-provider` |
-| webpack-dev-server | ^5.2 | Dev server on :8000 |
-| @wasm-tool/wasm-pack-plugin | ^1.7 | Invokes wasm-pack during webpack build |
-| copy-webpack-plugin | ^12 | Static asset copy to `dist/` |
+| tailwindcss | ^4.3 | Utility CSS framework |
+| @tailwindcss/cli | ^4.3 | `npm run css:build` / `css:watch` |
+
+Bundling: [Trunk](https://trunk-rs.github.io/trunk/) (`frontend/Trunk.toml`), not webpack. Trunk runs `npm run css:build` as a pre-build hook.
 
 ## Docker images
 
@@ -70,8 +70,8 @@ Shared workspace deps (`Cargo.toml` `[workspace.dependencies]`): `serde`, `serde
 
 | Variable | Read by backend? | Dev compose | Prod compose (fixed) |
 |----------|------------------|-------------|----------------------|
-| `YEW_FULLSTACK_DB_CONNSTR` | yes | `mongodb://db:27017` | `mongodb://root:password@db:27017/yew-fullstack?authSource=admin` |
-| `YEW_FULLSTACK_DB_NAME` | yes | `yew-fullstack_dev` | `yew-fullstack` |
+| `YEW_FULLSTACK_DB_CONNSTR` | yes | `mongodb://db:27017` | `mongodb://root:password@db:27017/jheffmedia?authSource=admin` |
+| `YEW_FULLSTACK_DB_NAME` | yes | `jheffmedia_dev` | `jheffmedia` |
 | `YEW_FULLSTACK_DB_URL` | **no** | — | removed (legacy) |
 | `YEW_FULLSTACK_DB_USER` | **no** | — | removed (legacy) |
 | `YEW_FULLSTACK_DB_PASSWORD` | **no** | — | removed (legacy) |
@@ -82,8 +82,8 @@ Still present in scripts/images; safe to rename in a dedicated cleanup:
 
 | Legacy | Current crate/binary |
 |--------|---------------------|
-| `yew-fullstack-backend` (old Dockerfile) | `jheffmedia-site-backend` |
-| `yew-fullstack/application` (docker tag) | prod image name in `scripts/build.sh` |
+| `jheffmedia-backend` (dev container) | `jheffmedia-site-backend` (binary) |
+| `jheffmedia/application` (docker tag) | prod image in `scripts/prod.sh` |
 | `YEW_FULLSTACK_*` env prefix | unchanged for compatibility |
 
 ## CI (`.github/workflows/rust.yml`)
@@ -96,6 +96,6 @@ Still present in scripts/images; safe to rename in a dedicated cleanup:
 ## When you change versions
 
 1. Update pin in `Cargo.toml` / `package.json`
-2. Run `cargo build` / `yarn install` and fix compile errors
+2. Run `cargo build` / `npm install` and fix compile errors
 3. Update this file and [TODO.md](./TODO.md) if constraints change
 4. Run full test suite: `cargo test --workspace`

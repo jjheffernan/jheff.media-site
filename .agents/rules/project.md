@@ -25,10 +25,10 @@ Legacy env prefix `YEW_FULLSTACK_*` still used in Docker and scripts.
 
 | Script | Use |
 |--------|-----|
-| `scripts/run-dev.sh` | Full dev stack |
-| `scripts/stop-dev.sh` | Tear down dev |
-| `scripts/run-dev-force-recreate.sh` | Rebuild after cache/docker issues |
-| `scripts/docker-compose.sh` | Wrapper for `docker compose` v2 |
+| `scripts/dev.sh` | Dev stack — setup, build, start, stop, logs (see skill `dev-server`) |
+| `scripts/prod.sh` | Production build/start/stop |
+
+Legacy wrappers (`run-dev.sh`, `stop-dev.sh`, etc.) forward to `dev.sh` — see [scripts/README.md](../../scripts/README.md).
 
 ## Docs
 

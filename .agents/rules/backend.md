@@ -12,7 +12,7 @@ Applies to `backend/**/*.rs`.
 
 ## Dev vs prod frontend
 
-- **Dev** (`forward-frontend` feature): backend proxies non-`/api` traffic to webpack (`forward_frontend.rs`)
+- **Dev** (`forward-frontend` feature): backend proxies non-`/api` traffic to Trunk on :8000 (`forward_frontend.rs`)
 - **Prod**: static files from `YEW_FULLSTACK_STATIC` (see `serve_frontend.rs`)
 
 Build dev backend:

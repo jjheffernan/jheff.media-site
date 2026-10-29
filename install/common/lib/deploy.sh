@@ -48,7 +48,7 @@ write_credentials() {
     echo "MongoDB database: ${DB_NAME}"
     echo "Feed provider: ${FEED_PROVIDER}"
     echo "Env file: ${COMMON_DIR}/.env.production"
-    echo "JWT secret file: ${INSTALL_DIR}/backend/src/secret.key"
+    echo "JWT secret file: ${INSTALL_DIR}/backend/src/secret.key (mounted at container start)"
     echo "Compose: ${COMMON_DIR}/docker-compose.yml"
   } >"$creds"
   chmod 600 "$creds"

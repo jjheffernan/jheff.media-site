@@ -72,7 +72,7 @@ Signup does **not** log the user in automatically—the header still shows login
 
 ## Security notes
 
-- Replace `secret.key` per deployment; never commit it (gitignored).
+- Replace JWT secret per deployment (`YEW_FULLSTACK_JWT_SECRET_FILE` or hex env); never commit `secret.key` (gitignored).
 - JWT expiry is one week; `exp` is validated on every decode; session invalidation on logout is server-side.
 - CORS allows only origins listed in `YEW_FULLSTACK_CORS_ORIGINS` (comma-separated), defaulting to `YEW_FULLSTACK_FORWARD_FRONTEND_URL` or `http://localhost:8000` — not wildcard.
 - Response headers include `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy`.

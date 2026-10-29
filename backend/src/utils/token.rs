@@ -1,7 +1,5 @@
-use crate::models::{
-    user::User,
-    user_token::{UserToken, KEY},
-};
+use crate::config::jwt;
+use crate::models::{user::User, user_token::UserToken};
 use jsonwebtoken::{DecodingKey, TokenData, Validation};
 use mongodb::Database;
 
@@ -12,7 +10,7 @@ pub fn decode_token(token: String) -> jsonwebtoken::errors::Result<TokenData<Use
 
     jsonwebtoken::decode::<UserToken>(
         &token,
-        &DecodingKey::from_secret(&KEY),
+        &DecodingKey::from_secret(jwt::key()),
         &validation,
     )
 }
@@ -55,7 +53,7 @@ mod tests {
         let token = jsonwebtoken::encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(&crate::models::user_token::KEY),
+            &EncodingKey::from_secret(crate::config::jwt::key()),
         )
         .unwrap();
         let decoded = decode_token(token).unwrap();

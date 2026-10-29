@@ -66,6 +66,7 @@ async fn index() -> impl Responder {
 #[actix_rt::main]
 async fn main() -> io::Result<()> {
     env_logger::init();
+    config::jwt::init();
 
     let serve_static = env::var("YEW_FULLSTACK_STATIC")
         .unwrap_or(env::var("PWD").unwrap_or(String::from("/usr/local/share/yew-fullstack/www")));

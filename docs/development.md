@@ -30,7 +30,7 @@ See [architecture.md](./architecture.md) for dev vs prod routing.
                     ▼                   ▼                   ▼
             ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
             │ Frontend     │    │ MongoDB      │    │ /api/auth/*  │
-            │ webpack:8000 │    │ :27017       │    │ routes       │
+            │ Trunk :8000  │    │ :27017       │    │ routes       │
             └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
@@ -44,22 +44,27 @@ Full list: [backend.md](./backend.md). Set in `scripts/docker-compose.dev.yml`:
 | `YEW_FULLSTACK_PORT` | `8080` |
 | `YEW_FULLSTACK_FORWARD_FRONTEND_URL` | `http://frontend:8000` |
 | `YEW_FULLSTACK_DB_CONNSTR` | `mongodb://db:27017` |
-| `YEW_FULLSTACK_DB_NAME` | `yew-fullstack_dev` |
+| `YEW_FULLSTACK_DB_NAME` | `jheffmedia_dev` |
 
 ## Local without Docker
 
 Requires MongoDB on `mongodb://localhost:27017`.
 
-```bash
-# Frontend
-cd frontend && yarn run start:dev
+Preferred: `scripts/dev.sh start` (starts Trunk, Tailwind watch, backend, and MongoDB).
 
-# Backend (separate terminal)
+Manual (separate terminals):
+
+```bash
+# Frontend + CSS
+cd frontend && npm install && npm run css:watch   # terminal 1
+cd frontend && trunk serve --port 8000 --address 0.0.0.0   # terminal 2
+
+# Backend
 cd backend
 export YEW_FULLSTACK_FORWARD_FRONTEND_URL=http://localhost:8000
 export YEW_FULLSTACK_DB_CONNSTR=mongodb://localhost:27017
-export YEW_FULLSTACK_DB_NAME=yew-fullstack_dev
-cargo watch -x "run --features forward-frontend"
+export YEW_FULLSTACK_DB_NAME=jheffmedia_dev
+cargo watch -x "run -p jheffmedia-site-backend --features forward-frontend"
 ```
 
 Use http://localhost:8080 for the combined app once both processes run.
@@ -67,7 +72,7 @@ Use http://localhost:8080 for the combined app once both processes run.
 ## Verify
 
 ```bash
-docker ps | grep yew-fullstack
+docker ps | grep jheffmedia
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/
 ```
 
@@ -79,24 +84,23 @@ Auth smoke tests: [api.md](./api.md#examples).
 |---------|------------|
 | `docker-compose` not found | `scripts/docker-compose.sh` wraps `docker compose` v2 |
 | Backend compile: `secret.key` | `openssl rand -out backend/src/secret.key 32` |
-| Webpack OpenSSL error | Upgraded to webpack 5 — legacy OpenSSL flag no longer required |
+| Trunk not found | `scripts/dev.sh setup` (installs Trunk + wasm target) |
 | WASM build fails | `rustup target add wasm32-unknown-unknown` |
 | Mongo connection refused | Wait for `db` container; check compose env |
 | API 404 from :8000 | Use :8080 so `/api` hits backend |
-| Stale containers | `scripts/stop-dev.sh` then `scripts/run-dev-force-recreate.sh` |
+| Stale containers | `scripts/dev.sh stop` then `scripts/dev.sh start --docker --build` |
 
 More checklist items: [TODO.md](./TODO.md).
 
 ## AI agent tooling
 
-Cross-agent hub: **[AGENTS.md](../AGENTS.md)** · **[.agents/](../.agents/)**
+Cross-agent hub: **[AGENTS.md](../AGENTS.md)** · **[.agents/](../.agents/)** · **[.agents/cursor.md](../.agents/cursor.md)** (Cursor)
 
 | Path | Role |
 |------|------|
 | `.agents/rules/` | Repo conventions (project, backend, frontend) |
-| `.agents/skills/` | Workflows: dev server, rust fullstack build |
-| `.cursor/rules/` | caveman + ponytail (Cursor) |
-| `.cursor/skills/` | Symlinks to `.agents/skills/` |
+| `.agents/skills/` | Workflows and slash skills (`ponytail`, `caveman`, …) |
+| `.cursor/skills/` | Symlinks only — run `.agents/scripts/sync-cursor-skills.sh` after adding a skill |
 
 ## See also
 

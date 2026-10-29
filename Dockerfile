@@ -18,7 +18,6 @@ COPY Cargo.toml Cargo.lock ./
 COPY backend ./backend
 COPY frontend/Cargo.toml frontend/Cargo.toml
 RUN mkdir -p frontend/src && echo '' > frontend/src/lib.rs
-RUN openssl rand -out backend/src/secret.key 32
 RUN cargo build --release -p jheffmedia-site-backend
 RUN cp target/release/jheffmedia-site-backend /usr/local/bin/jheffmedia-site-backend
 

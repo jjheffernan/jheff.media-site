@@ -23,7 +23,7 @@ description: Yew 0.23 + Trunk patterns for jheff.media automotive photography fr
 | `futures` / `async_clock` | gloo-net HTTP, timers |
 | `file_upload` | Future gallery ingest |
 | `keyed_list` | Shoot/gallery lists, `PhotoGrid` |
-| `suspense` / `async_clock` | `PhotoFeed`, `Spinner` loading states |
+| `suspense` / `async_clock` | `MediaFeedScroll`, `Spinner` loading states |
 
 Run an example locally: `cd examples/<name> && trunk serve --open`
 

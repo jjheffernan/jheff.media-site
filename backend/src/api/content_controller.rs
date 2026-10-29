@@ -1,4 +1,4 @@
-use crate::services::content_service;
+use crate::services::{content_service, content_upload_service};
 use actix_web::{web, HttpResponse, Result};
 use mongodb::Database;
 
@@ -44,4 +44,17 @@ pub async fn booking() -> Result<HttpResponse> {
 
 pub async fn other_sites() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(content_service::other_sites()))
+}
+
+pub async fn serve_media(path: web::Path<String>) -> Result<HttpResponse> {
+    let asset_id = path.into_inner();
+    match content_upload_service::load_asset(&asset_id) {
+        Some((bytes, content_type)) => Ok(HttpResponse::Ok()
+            .content_type(content_type)
+            .body(bytes)),
+        None => Ok(HttpResponse::NotFound().json(serde_json::json!({
+            "message": "MEDIA_NOT_FOUND",
+            "data": ""
+        }))),
+    }
 }

@@ -56,15 +56,15 @@ cd jheff.media-site
 From repo root:
 
 ```bash
-openssl rand -out backend/src/secret.key 32   # once per environment
-scripts/build.sh                                # or: docker build -t jheffmedia-site .
+openssl rand -out backend/src/secret.key 32   # once per environment (runtime mount, not baked in image)
+scripts/build.sh                                # or: docker build -t jheffmedia/application .
 ```
 
-The multi-stage `Dockerfile` runs `trunk build --release` and embeds `frontend/dist/` in the Actix binary image.
+The multi-stage `Dockerfile` runs `trunk build --release` and embeds `frontend/dist/` in the Actix image. JWT secret is loaded at container start via `YEW_FULLSTACK_JWT_SECRET_FILE` (see `install/common/docker-compose.yml`).
 
 ## 3. Configure environment
 
-Create `scripts/.env.production` (do not commit):
+Create `scripts/.env.production` from `install/common/.env.production.example` (do not commit):
 
 ```bash
 # App
@@ -140,7 +140,10 @@ Use **http://localhost:8080** only behind the proxy; users hit `https://jheff.me
 ## 6. Verify
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://jheff.media/
+scripts/smoke.sh
+# or against public URL:
+BASE_URL=https://jheff.media scripts/smoke.sh
+
 curl -s https://jheff.media/api/feed | jq .
 ```
 
@@ -152,9 +155,10 @@ Production deploys should track **`main`**:
 
 ```bash
 git checkout main && git pull
-openssl rand -out backend/src/secret.key 32   # only if missing
+# Keep existing backend/src/secret.key — changing it invalidates sessions
 scripts/build.sh
 docker compose -f scripts/docker-compose.yml --env-file scripts/.env.production up -d --build
+scripts/smoke.sh
 ```
 
 Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship.
@@ -164,7 +168,7 @@ Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship
 | Data | Backup |
 |------|--------|
 | MongoDB users/sessions | `mongodump` from the `db` container volume |
-| JWT secret | `backend/src/secret.key` — store in secrets manager; **changing it invalidates sessions** |
+| JWT secret | `backend/src/secret.key` — mounted at container start; store in secrets manager; **changing it invalidates sessions** |
 | Photos | Immich backup (not in this repo) |
 
 ## 9. Troubleshooting
@@ -179,7 +183,7 @@ Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship
 ## Checklist
 
 - [ ] LXC/VM with Docker
-- [ ] `secret.key` generated before image build
+- [ ] `secret.key` generated on host (mounted at runtime, not image build)
 - [ ] MongoDB credentials rotated from dev defaults
 - [ ] Immich album + API key configured
 - [ ] TLS reverse proxy in front of :8080

@@ -12,8 +12,8 @@ PID_DIR="$DEV_DIR/pids"
 COMPOSE="$ROOT/scripts/docker-compose.sh"
 COMPOSE_DEV_FILE="$ROOT/scripts/docker-compose.dev.yml"
 COMPOSE_PROD_FILE="$ROOT/scripts/docker-compose.yml"
-COMPOSE_DEV_PROJECT="yew-fullstack-dev"
-COMPOSE_PROD_PROJECT="yew-fullstack"
+COMPOSE_DEV_PROJECT="jheffmedia-dev"
+COMPOSE_PROD_PROJECT="jheffmedia"
 
 CONFIG_DEV="$ROOT/scripts/config/dev.env"
 

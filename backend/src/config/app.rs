@@ -26,6 +26,10 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                     .route("/hub", web::get().to(social_controller::hub)),
             )
             .service(
+                web::scope("/content")
+                    .route("/media/{asset_id}", web::get().to(content_controller::serve_media)),
+            )
+            .service(
                 web::scope("/galleries")
                     .route("", web::get().to(content_controller::list_galleries))
                     .route("/{id}", web::get().to(content_controller::get_gallery)),
@@ -64,7 +68,15 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
             .service(
                 web::scope("/admin")
                     .route("/galleries", web::post().to(admin_controller::create_gallery))
-                    .route("/shoots", web::post().to(admin_controller::create_shoot)),
+                    .route(
+                        "/galleries/{id}/media",
+                        web::post().to(admin_controller::upload_gallery_media),
+                    )
+                    .route("/shoots", web::post().to(admin_controller::create_shoot))
+                    .route(
+                        "/shoots/{id}/media",
+                        web::post().to(admin_controller::upload_shoot_media),
+                    ),
             )
             .service(
                 web::scope("/auth")

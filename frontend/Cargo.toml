@@ -36,6 +36,9 @@ web-sys = { version = "0.3.102", features = [
     "MediaQueryList",
     "Window",
     "console",
+    "File",
+    "FileList",
+    "FormData",
 ] }
 
 [dev-dependencies]

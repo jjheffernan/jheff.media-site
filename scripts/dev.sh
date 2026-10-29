@@ -271,7 +271,7 @@ cmd_status() {
   done
 
   if command -v docker >/dev/null 2>&1; then
-    log_section "Docker (yew-fullstack-dev)"
+    log_section "Docker (jheffmedia-dev)"
     cd "$ROOT/scripts"
     "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" ps 2>/dev/null || log "  (no containers)"
   fi

@@ -2,39 +2,41 @@
 
 Automotive photography management — shoots, galleries, client delivery. Rust fullstack: Yew WASM + Actix + MongoDB.
 
-Forked from [yew-fullstack-boilerplate](https://github.com/lukidoescode/yew-fullstack-boilerplate). Frontend follows [Yew 0.23](https://yew.rs/docs/getting-started/introduction) and [yewstack/yew examples](https://github.com/yewstack/yew/tree/master/examples).
+Forked from [yew-fullstack-boilerplate](https://github.com/lukidoescode/yew-fullstack-boilerplate). Frontend: [Yew 0.23](https://yew.rs/docs/getting-started/introduction) + Trunk.
 
-## Read first
+## Canonical agent context
+
+**Everything lives in [.agents/](.agents/)** — rules, skills, Cursor integration. Do not duplicate long instructions here.
 
 | Resource | Purpose |
 |----------|---------|
-| [docs/README.md](docs/README.md) | Human docs index |
-| [.agents/README.md](.agents/README.md) | Rules and skills layout |
-| [.agents/skills/yew-patterns/SKILL.md](.agents/skills/yew-patterns/SKILL.md) | **Yew + Trunk patterns** |
-| [docs/development.md](docs/development.md) | Dev server, env vars |
-| [docs/deployment-dev.md](docs/deployment-dev.md) | Deploy and verify dev stack |
+| [.agents/README.md](.agents/README.md) | Layout, how to add rules/skills |
+| [.agents/rules/](.agents/rules/) | Repo conventions (project, backend, frontend) |
+| [.agents/skills/](.agents/skills/) | Task workflows and slash skills |
+| [.agents/cursor.md](.agents/cursor.md) | Cursor symlinks, `/ponytail`, `/caveman` |
+| [docs/README.md](docs/README.md) | Human docs (API, auth, architecture) |
 
-## Stack (short)
-
-- **Frontend** — Yew 0.23, **Trunk**, routes: Dashboard, Shoots, Galleries, Profile
-- **Backend** — Actix 4, MongoDB 3, JWT (`backend/src/secret.key`, gitignored)
-- **Dev** — `scripts/dev.sh start` (local, fast); `scripts/dev.sh start --docker` for full Docker stack
-
-## Build commands
+## Quick start
 
 ```bash
-scripts/dev.sh setup   # secret.key, wasm target, trunk
-
-cargo build -p jheffmedia-site-backend --features forward-frontend
-cd frontend && trunk build
+scripts/dev.sh setup
+scripts/dev.sh start    # http://localhost:8080
 ```
+
+Full dev/troubleshooting: skill [`dev-server`](.agents/skills/dev-server/SKILL.md) · [docs/deployment-dev.md](docs/deployment-dev.md)
 
 ## Skills
 
-| Skill | Use |
-|-------|-----|
-| `dev-server` | Start/stop Docker dev stack |
-| `rust-fullstack` | Cross-crate build and debug |
-| `yew-patterns` | Yew components, router, Trunk, example references |
+| Skill | When |
+|-------|------|
+| [`dev-server`](.agents/skills/dev-server/SKILL.md) | Start/stop/troubleshoot Trunk + Actix + MongoDB |
+| [`rust-fullstack`](.agents/skills/rust-fullstack/SKILL.md) | Build, test, debug across frontend + backend crates |
+| [`yew-patterns`](.agents/skills/yew-patterns/SKILL.md) | Yew components, router, Trunk, yewstack examples |
+| [`ponytail`](.agents/skills/ponytail/SKILL.md) | `/ponytail` — lazy senior dev, YAGNI, minimal diff |
+| [`caveman`](.agents/skills/caveman/SKILL.md) | `/caveman` — terse communication, fewer tokens |
 
-Project rules: `.agents/rules/` · Cursor symlinks: `.cursor/skills/`
+## Stack (one line)
+
+Yew 0.23 + Trunk · Actix 4 + MongoDB 3 · JWT in `backend/src/secret.key` (gitignored)
+
+Build/test commands: skill [`rust-fullstack`](.agents/skills/rust-fullstack/SKILL.md).

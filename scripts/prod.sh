@@ -27,10 +27,10 @@ cmd_build() {
   ensure_dev_dirs
   rm -rf "$ROOT/frontend/dist"
 
-  docker build -t yew-fullstack/application -t yew-fullstack/application:latest "$ROOT" \
+  docker build -t jheffmedia/application -t jheffmedia/application:latest "$ROOT" \
     2>&1 | tee "$LOG_DIR/prod-docker-build.log"
 
-  log "Image built: yew-fullstack/application"
+  log "Image built: jheffmedia/application"
   log "Log: $LOG_DIR/prod-docker-build.log"
 }
 

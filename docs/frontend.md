@@ -14,14 +14,26 @@ Yew 0.23 WASM client for **automotive photography** workflows: `jheffmedia-site-
 | gloo-net | HTTP from WASM |
 | CSS | `frontend/static/` |
 
-## Routes (automotive photography shell)
+## Routes (`frontend/src/routes/mod.rs`)
 
 | Path | Page |
 |------|------|
-| `/` | Dashboard — shoots, galleries, deliverables overview |
-| `/shoots` | Session planning placeholder |
-| `/galleries` | Gallery index placeholder |
-| `/profile` | Account placeholder |
+| `/` | Home |
+| `/content` | Content |
+| `/schedule` | Schedule |
+| `/social` | Social |
+| `/shoots` | Shoots |
+| `/shoots/:id` | Shoot detail |
+| `/galleries` | Galleries |
+| `/galleries/:id` | Gallery detail |
+| `/booking` | Booking |
+| `/contact` | Contact |
+| `/legal/terms` | Terms |
+| `/legal/privacy` | Privacy |
+| `/other-sites` | Other sites |
+| `/account` | Account |
+| `/profile` | Profile |
+| `/404` | Not found |
 
 ## Trunk
 

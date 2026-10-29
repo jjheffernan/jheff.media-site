@@ -80,20 +80,19 @@ docs/        Human docs — start at docs/README.md
 
 ## AI agent rules
 
-Cross-agent instructions: **[AGENTS.md](AGENTS.md)** and **[.agents/](.agents/)**
+Cross-agent instructions: **[AGENTS.md](AGENTS.md)** and **[.agents/](.agents/)** (canonical). Cursor shim: **[.agents/cursor.md](.agents/cursor.md)**.
 
 | Location | Purpose |
 |----------|---------|
-| `AGENTS.md` | Entry point for Codex, Antigravity, Copilot CLI, etc. |
+| `AGENTS.md` | Entry index — links to `.agents/`, not duplicate content |
 | `.agents/rules/` | Project, backend, frontend conventions |
-| `.agents/skills/` | Task workflows (`dev-server`, `rust-fullstack`) |
-| `.cursor/rules/` | Cursor always-on rules (caveman, ponytail) |
-| `.cursor/skills/` | Symlinks to `.agents/skills/` for Cursor skill picker |
+| `.agents/skills/` | Workflows + `/ponytail`, `/caveman` slash skills |
+| `.cursor/skills/` | Symlinks into `.agents/skills/` (Cursor requirement) |
 
-Community rules also installed:
+Community skills (adapted from upstream):
 
-- [caveman](https://github.com/JuliusBrussee/caveman) — `.cursor/rules/caveman.mdc`
-- [ponytail](https://github.com/DietrichGebert/ponytail) — `.cursor/rules/ponytail.mdc`
+- [caveman](https://github.com/JuliusBrussee/caveman) — `.agents/skills/caveman/`
+- [ponytail](https://github.com/DietrichGebert/ponytail) — `.agents/skills/ponytail/`
 
 ## About
 

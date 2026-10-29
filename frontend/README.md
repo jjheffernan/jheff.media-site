@@ -31,8 +31,8 @@ Reusable building blocks in `src/components/ui/` (patterns from [yewstack exampl
 | `Button`, `Card`, `Grid`, `Stack` | Layout and actions |
 | `Heading`, `Text`, `Section` | Typography |
 | `NavLink` | Router-aware nav (`function_router`) |
-| `Spinner`, `LazyImage` | Async / `suspense` loading |
-| `PhotoFeed` | Homepage grid — fetches `/api/feed`, keyed list |
+| `Spinner`, `LazyImage` | Async loading |
+| `MediaFeedScroll` | Homepage Larry Chen-style scroll — `/api/media/feed` |
 
 Photos are streamed from Immich (or static URLs) via the backend proxy — not bundled in this crate.
 

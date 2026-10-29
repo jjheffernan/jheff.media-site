@@ -4,8 +4,8 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-    image: site/application:latest
-    container_name: site-application
+    image: jheffmedia/application:latest
+    container_name: jheffmedia-application
     restart: unless-stopped
     env_file:
       - .env.production
@@ -14,6 +14,7 @@ services:
       YEW_FULLSTACK_PORT: ${PORT:-8080}
       YEW_FULLSTACK_DB_CONNSTR: ${DB_CONNSTR}
       YEW_FULLSTACK_DB_NAME: ${DB_NAME}
+      YEW_FULLSTACK_JWT_SECRET_FILE: /run/secrets/jwt_secret
       YEW_FULLSTACK_FEED_PROVIDER: ${FEED_PROVIDER:-none}
       YEW_FULLSTACK_CONTACT_EMAIL: ${CONTACT_EMAIL:-}
       YEW_FULLSTACK_FEED_STATIC_JSON: ${FEED_STATIC_JSON:-}
@@ -22,6 +23,10 @@ services:
       YEW_FULLSTACK_IMMICH_ALBUM_ID: ${IMMICH_ALBUM_ID:-}
       YEW_FULLSTACK_IMMICH_SHARED_KEY: ${IMMICH_SHARED_KEY:-}
       YEW_FULLSTACK_ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      YEW_FULLSTACK_CONTENT_UPLOAD_DIR: /data/content-uploads
+    volumes:
+      - ../../backend/src/secret.key:/run/secrets/jwt_secret:ro
+      - jheffmedia-content-uploads:/data/content-uploads
     ports:
       - "${HTTP_PORT:-8080}:8080"
     depends_on:
@@ -30,14 +35,15 @@ services:
 
   db:
     image: mongo:7.0
-    container_name: site-database
+    container_name: jheffmedia-database
     restart: unless-stopped
     environment:
       MONGODB_INITDB_DATABASE: ${DB_NAME:-jheffmedia}
       MONGODB_INITDB_ROOT_USERNAME: root
       MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
     volumes:
-      - site-mongo:/data/db
+      - jheffmedia-mongo:/data/db
 
 volumes:
-  site-mongo:
+  jheffmedia-mongo:
+  jheffmedia-content-uploads:

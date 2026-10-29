@@ -1,7 +1,7 @@
 use crate::models::content::{
-    ContentCollection, ContentCollectionSummary, ContentListResponse,
+    ContentCollection, ContentCollectionSummary, ContentListResponse, MediaItem,
 };
-use crate::services::content_store_service;
+use crate::services::{content_store_service, content_upload_service};
 use mongodb::Database;
 use std::env;
 
@@ -102,6 +102,36 @@ pub async fn create_collection(
         ..collection
     };
     content_store_service::insert(collection, db).await
+}
+
+pub async fn upload_media(
+    kind: &str,
+    collection_id: &str,
+    bytes: &[u8],
+    content_type: &str,
+    original_filename: Option<&str>,
+    db: &Database,
+) -> Result<MediaItem, String> {
+    if content_store_service::find_by_kind_and_id(kind, collection_id, db)
+        .await
+        .is_none()
+    {
+        return Err(String::from("COLLECTION_NOT_FOUND"));
+    }
+
+    let media =
+        content_upload_service::save_asset(bytes, content_type, original_filename)?;
+    if !content_store_service::append_media(kind, collection_id, media.clone(), db).await {
+        return Err(String::from("MEDIA_UPDATE_FAILED"));
+    }
+    let _ = content_store_service::set_cover_url_if_empty(
+        kind,
+        collection_id,
+        &media.thumbnail_url,
+        db,
+    )
+    .await;
+    Ok(media)
 }
 
 fn list_from_env(env_key: &str) -> ContentListResponse {

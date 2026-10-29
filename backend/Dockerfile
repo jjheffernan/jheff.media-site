@@ -1,4 +1,4 @@
-FROM rust:latest
+FROM rust:1.85-bookworm
 ENV RUST_LOG=info
 WORKDIR /usr/src/workspace
 RUN cargo install cargo-watch

@@ -10,7 +10,6 @@ pub mod ui;
 
 pub use contact::ContactForm;
 pub use feed::MediaFeedScroll;
-pub use feed::PhotoFeed;
 pub use home::Hero;
 pub use home::InstagramFeaturedCard;
 pub use layout::Layout;

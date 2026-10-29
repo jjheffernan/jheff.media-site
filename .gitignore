@@ -42,6 +42,7 @@ frontend/pkg/
 
 # Local dev runtime (scripts/dev.sh)
 .dev/
+uploads/
 
 # MacOS
 
