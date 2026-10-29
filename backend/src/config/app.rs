@@ -126,6 +126,15 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         "/prints/orders/{id}",
                         web::patch().to(print_controller::admin_update_order),
                     )
+                    .route("/contacts", web::get().to(contact_controller::list))
+                    .route(
+                        "/contacts/{id}",
+                        web::patch().to(contact_controller::set_status),
+                    )
+                    .route(
+                        "/contacts/{id}",
+                        web::delete().to(contact_controller::remove),
+                    ),
             )
             .service(
                 web::scope("/auth")

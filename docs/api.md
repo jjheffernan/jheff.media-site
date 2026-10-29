@@ -368,7 +368,7 @@ Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SM
 | `website` | string | no |
 | `kind` | string | no |
 
-`kind` is `booking` for a booking request and `contact` otherwise. A missing or unknown value is stored as `contact`. Booking mail uses the subject prefix `Booking:`.
+`kind` is `booking` for a booking request and `contact` otherwise. A missing or unknown value is stored as `contact`. Booking mail uses the subject prefix `Booking:`. New documents store `status` as `new`. Older documents with no `status` are treated as `new` when listed.
 
 `website` is a honeypot. Leave it empty. A non-empty value returns the success envelope and is not stored.
 
@@ -391,6 +391,30 @@ Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SM
 | `YEW_FULLSTACK_SMTP_PASSWORD` | empty | Optional auth |
 | `YEW_FULLSTACK_SMTP_FROM` | contact email | From address |
 | `YEW_FULLSTACK_CONTACT_EMAIL` | empty | Recipient. Skip email when empty |
+
+### `GET /api/admin/contacts`
+
+Admin JWT. Newest `contacts` first. Documents missing `status` come back as `new`.
+
+**Success** `200` — JSON array. Each item has `id`, `kind`, `name`, `email`, `subject`, `message`, `createdAt` (RFC3339), and `status`.
+
+**Errors** `401` `UNAUTHORIZED`. `403` `FORBIDDEN`.
+
+### `PATCH /api/admin/contacts/{id}`
+
+Admin JWT. Body: `{ "status": "read" }`. `status` is any non-empty string up to 32 characters (`new`, `read`, and `archived` are the ones the account inbox offers).
+
+**Success** `200` `{ "message": "UPDATED" }`.
+
+**Errors** `400` `INVALID_ID` or `INVALID_STATUS`. `404` `NOT_FOUND`. `401` `UNAUTHORIZED`. `403` `FORBIDDEN`.
+
+### `DELETE /api/admin/contacts/{id}`
+
+Admin JWT. Removes that contact document.
+
+**Success** `200` `{ "message": "REMOVED" }`.
+
+**Errors** `400` `INVALID_ID`. `404` `NOT_FOUND`. `401` `UNAUTHORIZED`. `403` `FORBIDDEN`.
 
 ### `GET /api/account/prints`
 

@@ -31,6 +31,7 @@ scripts/dev.sh logs trunk     # watch WASM compile
 - [x] **Role-gated admin UI**
 - [x] **Schedule dates** — future public Mongo events on Schedule and Booking. Admin panel can add, edit, and delete a date
 - [x] **Contact** — honeypot, per-IP limit, best-effort SMTP
+- [x] **Contact inbox** — admin list, status, and delete on the account page (`/api/admin/contacts`)
 - [x] **Feed filter** — `instagram`, `youtube`, `gallery`, `shoot`
 - [x] **Print request** — detail pages can select stills; checkout stores one size and an unpaid total
 - [x] Docker tags `jheffmedia-*`

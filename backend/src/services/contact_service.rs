@@ -3,9 +3,9 @@ use crate::{
     models::content::ContactSubmission,
 };
 use actix_web::http::StatusCode;
-use bson::{doc, DateTime};
+use bson::{doc, oid::ObjectId, DateTime};
 use mongodb::Database;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -14,15 +14,36 @@ const CONTACTS_COLLECTION: &str = "contacts";
 const RATE_LIMIT: usize = 5;
 const RATE_WINDOW: Duration = Duration::from_secs(10 * 60);
 
-#[derive(Serialize)]
+fn default_status() -> String {
+    "new".into()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ContactRecord {
+    #[serde(rename = "_id", default, skip_serializing_if = "Option::is_none")]
+    id: Option<ObjectId>,
     name: String,
     email: String,
     subject: String,
     message: String,
     kind: String,
+    #[serde(default = "default_status")]
+    status: String,
     created_at: DateTime,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContactView {
+    pub id: String,
+    pub kind: String,
+    pub name: String,
+    pub email: String,
+    pub subject: String,
+    pub message: String,
+    pub created_at: String,
+    pub status: String,
 }
 
 fn allow_submission(ip: &str) -> bool {
@@ -72,24 +93,19 @@ pub async fn submit_contact(
         "contact"
     };
     let record = ContactRecord {
+        id: None,
         name: form.name.trim().to_string(),
         email: form.email.trim().to_string(),
         subject: form.subject.trim().to_string(),
         message: form.message.trim().to_string(),
         kind: kind.to_string(),
+        status: default_status(),
         created_at: DateTime::now(),
     };
 
-    let collection = db.collection(CONTACTS_COLLECTION);
+    let collection = db.collection::<ContactRecord>(CONTACTS_COLLECTION);
     collection
-        .insert_one(doc! {
-            "name": &record.name,
-            "email": &record.email,
-            "subject": &record.subject,
-            "message": &record.message,
-            "kind": &record.kind,
-            "createdAt": record.created_at,
-        })
+        .insert_one(&record)
         .await
         .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
 
@@ -112,10 +128,86 @@ pub async fn submit_contact(
     ))
 }
 
+pub async fn list_contacts(db: &Database) -> ServiceResult<Vec<ContactView>> {
+    let coll = db.collection::<ContactRecord>(CONTACTS_COLLECTION);
+    let mut cursor = coll
+        .find(doc! {})
+        .sort(doc! { "createdAt": -1 })
+        .await
+        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    let mut items = Vec::new();
+    while cursor.advance().await.map_err(|err| {
+        ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string())
+    })? {
+        if let Ok(record) = cursor.deserialize_current() {
+            if let Some(view) = contact_view(record) {
+                items.push(view);
+            }
+        }
+    }
+    Ok(items)
+}
+
+pub async fn set_status(id: &str, status: &str, db: &Database) -> ServiceResult<()> {
+    let oid = ObjectId::parse_str(id)
+        .map_err(|_| ServiceError::new(StatusCode::BAD_REQUEST, "INVALID_ID"))?;
+    let status = clean_status(status)?;
+    let coll = db.collection::<ContactRecord>(CONTACTS_COLLECTION);
+    let result = coll
+        .update_one(doc! { "_id": oid }, doc! { "$set": { "status": &status } })
+        .await
+        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    if result.matched_count == 0 {
+        return Err(ServiceError::new(StatusCode::NOT_FOUND, "NOT_FOUND"));
+    }
+    Ok(())
+}
+
+pub async fn delete_contact(id: &str, db: &Database) -> ServiceResult<()> {
+    let oid = ObjectId::parse_str(id)
+        .map_err(|_| ServiceError::new(StatusCode::BAD_REQUEST, "INVALID_ID"))?;
+    let coll = db.collection::<ContactRecord>(CONTACTS_COLLECTION);
+    let result = coll
+        .delete_one(doc! { "_id": oid })
+        .await
+        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    if result.deleted_count == 0 {
+        return Err(ServiceError::new(StatusCode::NOT_FOUND, "NOT_FOUND"));
+    }
+    Ok(())
+}
+
+fn contact_view(record: ContactRecord) -> Option<ContactView> {
+    let id = record.id.map(|oid| oid.to_hex())?;
+    let created_at = record
+        .created_at
+        .try_to_rfc3339_string()
+        .unwrap_or_else(|_| record.created_at.timestamp_millis().to_string());
+    Some(ContactView {
+        id,
+        kind: record.kind,
+        name: record.name,
+        email: record.email,
+        subject: record.subject,
+        message: record.message,
+        created_at,
+        status: record.status,
+    })
+}
+
+fn clean_status(status: &str) -> ServiceResult<String> {
+    let status = status.trim();
+    if status.is_empty() || status.len() > 32 {
+        return Err(ServiceError::new(StatusCode::BAD_REQUEST, "INVALID_STATUS"));
+    }
+    Ok(status.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::allow_submission;
     use crate::models::content::ContactSubmission;
+    use bson::{doc, DateTime};
 
     #[test]
     fn missing_kind_defaults_to_contact() {
@@ -133,5 +225,27 @@ mod tests {
             assert!(allow_submission(&ip));
         }
         assert!(!allow_submission(&ip));
+    }
+
+    #[test]
+    fn missing_status_defaults_to_new() {
+        let record: super::ContactRecord = bson::from_document(doc! {
+            "name": "A",
+            "email": "a@b.c",
+            "subject": "Hi",
+            "message": "Hello",
+            "kind": "booking",
+            "createdAt": DateTime::now(),
+        })
+        .unwrap();
+        assert_eq!(record.status, "new");
+        assert!(record.id.is_none());
+    }
+
+    #[test]
+    fn clean_status_rejects_blank() {
+        assert!(super::clean_status(" read ").is_ok());
+        assert!(super::clean_status("  ").is_err());
+        assert!(super::clean_status(&"x".repeat(33)).is_err());
     }
 }

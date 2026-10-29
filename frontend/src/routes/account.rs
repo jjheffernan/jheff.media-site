@@ -1,6 +1,6 @@
 use crate::{
     components::{
-        admin::ContentAdmin,
+        admin::{ContactAdmin, ContentAdmin},
         ui::{Heading, HeadingLevel, LazyImage, Text, TextTone},
     },
     context::AuthContext,
@@ -606,6 +606,7 @@ pub fn account() -> Html {
                 { orders_list }
             </section>
 
+            <ContactAdmin />
             <ContentAdmin />
 
             <button
