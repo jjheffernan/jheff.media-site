@@ -16,6 +16,7 @@ pub struct Props {
     pub api_path: String,
     pub back_route: crate::routes::AppRoutes,
     pub back_label: String,
+    pub collection_kind: String,
 }
 
 #[derive(Clone, PartialEq)]
@@ -105,11 +106,16 @@ pub fn content_detail(props: &Props) -> Html {
                             { "No media in this collection yet." }
                         </Text>
                     } else {
-                        <PhotoGrid items={feed_items} />
+                        <PhotoGrid
+                            items={feed_items}
+                            collection_id={collection.id.clone()}
+                            collection_kind={props.collection_kind.clone()}
+                            collection_title={collection.title.clone()}
+                        />
                     }
                 </div>
             }
-        },
+        }
     };
 
     let title = match &*state {

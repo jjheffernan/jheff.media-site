@@ -15,6 +15,7 @@ pub fn shoot_detail(props: &Props) -> Html {
             api_path="/api/shoots"
             back_route={AppRoutes::Shoots}
             back_label="Shoots"
+            collection_kind="shoot"
         />
     }
 }

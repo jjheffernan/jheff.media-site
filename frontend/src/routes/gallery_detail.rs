@@ -15,6 +15,7 @@ pub fn gallery_detail(props: &Props) -> Html {
             api_path="/api/galleries"
             back_route={AppRoutes::Galleries}
             back_label="Galleries"
+            collection_kind="gallery"
         />
     }
 }
