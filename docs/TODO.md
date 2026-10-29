@@ -41,7 +41,7 @@ Decisions are recorded in [design.md](./design.md#decided).
 
 ### Content
 
-- [ ] **Gallery and shoot maintenance** — edit, delete, reorder, and multi-file upload. Env JSON collections still cannot take uploads
+- [x] **Gallery and shoot maintenance** — edit, delete, reorder, and multi-file upload. Env JSON collections still cannot take uploads
 - [x] **Schedule delete in the admin panel**
 - [x] **Explicit covers and featured tag** — cover changes only when the upload asks. Featured is stored on the media item. Cards no longer invent a placeholder image. Sample env JSON may still point at picsum
 - [x] **Legal pages** — titles and body use the design classes

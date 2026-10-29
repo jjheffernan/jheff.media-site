@@ -29,6 +29,23 @@ pub struct ContentCollection {
     pub media: Vec<MediaItem>,
 }
 
+/// Partial update for gallery/shoot metadata (Mongo only).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateContentCollection {
+    pub title: Option<String>,
+    pub summary: Option<String>,
+    pub status: Option<String>,
+    pub date: Option<String>,
+    pub location: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReorderMediaRequest {
+    pub media_ids: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContentListResponse {

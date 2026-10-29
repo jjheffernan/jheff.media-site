@@ -1,5 +1,6 @@
 use crate::models::content::{
     ContentCollection, ContentCollectionSummary, ContentListResponse, MediaItem,
+    UpdateContentCollection,
 };
 use crate::models::social::SocialHubResponse;
 use crate::services::{content_store_service, content_upload_service, social_service};
@@ -129,6 +130,91 @@ pub async fn create_collection(collection: ContentCollection, kind: &str, db: &D
     content_store_service::insert(collection, db).await
 }
 
+fn env_key_for_kind(kind: &str) -> Option<&'static str> {
+    match kind {
+        "gallery" => Some("YEW_FULLSTACK_GALLERIES_JSON"),
+        "shoot" => Some("YEW_FULLSTACK_SHOOTS_JSON"),
+        _ => None,
+    }
+}
+
+fn is_env_only_id(kind: &str, id: &str) -> bool {
+    env_key_for_kind(kind)
+        .map(|key| parse_collections(key).iter().any(|c| c.id == id))
+        .unwrap_or(false)
+}
+
+/// Mongo collections only. Env JSON ids return `ENV_ONLY_COLLECTION`.
+async fn require_mongo_collection(
+    kind: &str,
+    collection_id: &str,
+    db: &Database,
+) -> Result<ContentCollection, String> {
+    if let Some(c) = content_store_service::find_by_kind_and_id(kind, collection_id, db).await {
+        return Ok(c);
+    }
+    if is_env_only_id(kind, collection_id) {
+        return Err(String::from("ENV_ONLY_COLLECTION"));
+    }
+    Err(String::from("COLLECTION_NOT_FOUND"))
+}
+
+pub async fn update_collection(
+    kind: &str,
+    collection_id: &str,
+    patch: UpdateContentCollection,
+    db: &Database,
+) -> Result<(), String> {
+    require_mongo_collection(kind, collection_id, db).await?;
+    if content_store_service::update_metadata(kind, collection_id, patch, db).await {
+        Ok(())
+    } else {
+        Err(String::from("UPDATE_FAILED"))
+    }
+}
+
+pub async fn delete_collection(kind: &str, collection_id: &str, db: &Database) -> Result<(), String> {
+    require_mongo_collection(kind, collection_id, db).await?;
+    let Some(removed) = content_store_service::delete_collection(kind, collection_id, db).await
+    else {
+        return Err(String::from("DELETE_FAILED"));
+    };
+    for media in &removed.media {
+        let _ = content_upload_service::delete_asset(&media.id);
+    }
+    Ok(())
+}
+
+pub async fn delete_media(
+    kind: &str,
+    collection_id: &str,
+    asset_id: &str,
+    db: &Database,
+) -> Result<(), String> {
+    require_mongo_collection(kind, collection_id, db).await?;
+    let Some(_removed) =
+        content_store_service::remove_media(kind, collection_id, asset_id, db).await
+    else {
+        return Err(String::from("MEDIA_NOT_FOUND"));
+    };
+    let _ = content_upload_service::delete_asset(asset_id);
+    Ok(())
+}
+
+pub async fn reorder_media(
+    kind: &str,
+    collection_id: &str,
+    media_ids: &[String],
+    db: &Database,
+) -> Result<(), String> {
+    require_mongo_collection(kind, collection_id, db).await?;
+    if content_store_service::reorder_media(kind, collection_id, media_ids, db).await {
+        Ok(())
+    } else {
+        Err(String::from("REORDER_FAILED"))
+    }
+}
+
 pub async fn upload_media(
     kind: &str,
     collection_id: &str,
@@ -139,16 +225,12 @@ pub async fn upload_media(
     set_as_cover: bool,
     db: &Database,
 ) -> Result<MediaItem, String> {
-    if content_store_service::find_by_kind_and_id(kind, collection_id, db)
-        .await
-        .is_none()
-    {
-        return Err(String::from("COLLECTION_NOT_FOUND"));
-    }
+    require_mongo_collection(kind, collection_id, db).await?;
 
     let mut media = content_upload_service::save_asset(bytes, content_type, original_filename)?;
     media.featured = featured;
     if !content_store_service::append_media(kind, collection_id, media.clone(), db).await {
+        let _ = content_upload_service::delete_asset(&media.id);
         return Err(String::from("MEDIA_UPDATE_FAILED"));
     }
     if set_as_cover

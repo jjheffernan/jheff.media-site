@@ -40,7 +40,7 @@ fn cors_from_env() -> Cors {
     let origins = env::var("YEW_FULLSTACK_CORS_ORIGINS").unwrap_or(default_origin);
 
     let mut cors = Cors::default()
-        .allowed_methods(vec!["GET", "POST", "PUT", "DELETE"])
+        .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE"])
         .allowed_headers(vec![
             http::header::AUTHORIZATION,
             http::header::ACCEPT,

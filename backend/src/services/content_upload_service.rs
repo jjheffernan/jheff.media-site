@@ -108,6 +108,14 @@ pub fn find_asset_path(dir: &Path, asset_id: &str) -> Option<PathBuf> {
     None
 }
 
+/// Best-effort delete of an uploaded asset file under the content upload dir.
+pub fn delete_asset(asset_id: &str) -> bool {
+    let Some(path) = find_asset_path(&upload_dir(), asset_id) else {
+        return false;
+    };
+    std::fs::remove_file(path).is_ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

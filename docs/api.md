@@ -273,26 +273,60 @@ Create a gallery collection (admin JWT required).
 
 Create a shoot collection (admin JWT required). Same shape as gallery create.
 
+### `PATCH /api/admin/galleries/{id}` / `PATCH /api/admin/shoots/{id}`
+
+Update MongoDB collection metadata. Admin JWT required.
+
+**Request body** (all fields optional): `{ "title", "summary", "date", "location", "status" }`
+
+**Success** `200` — `{ "message": "UPDATED" }`
+
+**Errors** `404` — `COLLECTION_NOT_FOUND` or `ENV_ONLY_COLLECTION` (env JSON collections cannot be edited here)
+
+### `DELETE /api/admin/galleries/{id}` / `DELETE /api/admin/shoots/{id}`
+
+Delete a MongoDB collection and best-effort remove its uploaded files under the content upload dir.
+
+**Success** `200` — `{ "message": "REMOVED" }`
+
+**Errors** `404` — `COLLECTION_NOT_FOUND` or `ENV_ONLY_COLLECTION`
+
+### `DELETE /api/admin/galleries/{id}/media/{asset_id}` / shoots equivalent
+
+Remove one media item from a MongoDB collection and delete its file on disk when present.
+
+**Success** `200` — `{ "message": "REMOVED" }`
+
+**Errors** `404` — `COLLECTION_NOT_FOUND`, `ENV_ONLY_COLLECTION`, or `MEDIA_NOT_FOUND`
+
+### `PUT /api/admin/galleries/{id}/media/order` / shoots equivalent
+
+Reorder media. Body: `{ "mediaIds": ["id1", "id2", ...] }`. Listed ids are placed first in that order; any remaining items keep relative order at the end.
+
+**Success** `200` — `{ "message": "REORDERED" }`
+
 ### `POST /api/admin/galleries/{id}/media`
 
-Upload an image to an existing MongoDB gallery. Admin JWT required.
+Upload one or more images to an existing MongoDB gallery. Admin JWT required. Env JSON galleries cannot take uploads.
 
 **Headers:** `Authorization: bearer <jwt>`
 
-**Request:** `multipart/form-data` with field `file` (JPEG, PNG, WebP, or GIF; default max 10 MB). Optional text fields `setAsCover` and `featured` (`true` sets the collection cover or tags the new item). Cover is unchanged when `setAsCover` is omitted.
+**Request:** `multipart/form-data` with one or more `file` (or `files`) parts — JPEG, PNG, WebP, or GIF; default max 10 MB each. Optional text fields `setAsCover` and `featured`. `setAsCover` applies only to the first file; `featured` applies to every file in the request. Cover is unchanged when `setAsCover` is omitted.
 
 **Success** `200`
 
 ```json
 {
   "message": "UPLOADED",
-  "data": {
-    "id": "<asset-uuid>",
-    "thumbnailUrl": "/api/content/media/<asset-uuid>",
-    "mediaUrl": "/api/content/media/<asset-uuid>",
-    "mediaType": "image/jpeg",
-    "featured": false
-  }
+  "data": [
+    {
+      "id": "<asset-uuid>",
+      "thumbnailUrl": "/api/content/media/<asset-uuid>",
+      "mediaUrl": "/api/content/media/<asset-uuid>",
+      "mediaType": "image/jpeg",
+      "featured": false
+    }
+  ]
 }
 ```
 
@@ -303,13 +337,14 @@ Upload an image to an existing MongoDB gallery. Admin JWT required.
 | 401 | `UNAUTHORIZED` | Missing/invalid JWT |
 | 403 | `FORBIDDEN` | Not admin |
 | 404 | `COLLECTION_NOT_FOUND` | Gallery id not in MongoDB |
-| 400 | `MISSING_FILE` | No `file` field |
+| 404 | `ENV_ONLY_COLLECTION` | Id exists only in env JSON |
+| 400 | `MISSING_FILE` | No `file`/`files` field |
 | 400 | `UNSUPPORTED_MEDIA_TYPE` | Not an allowed image type |
 | 400 | `FILE_TOO_LARGE: max N bytes` | Over size limit |
 
 ### `POST /api/admin/shoots/{id}/media`
 
-Upload an image to an existing MongoDB shoot. Same contract as gallery media upload.
+Upload one or more images to an existing MongoDB shoot. Same contract as gallery media upload.
 
 **Env (optional)**
 
@@ -408,7 +443,7 @@ Auth required. Newest print requests first.
 
 ## CORS
 
-Allowed methods: `GET`, `POST`, `PUT`, `DELETE`.  
+Allowed methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`.  
 Allowed headers include `Authorization`, `Accept`, `Content-Type`.  
 Origins come from `YEW_FULLSTACK_CORS_ORIGINS`.
 

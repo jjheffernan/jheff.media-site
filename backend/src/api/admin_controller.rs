@@ -1,6 +1,9 @@
 use crate::{
     error::ServiceError,
-    models::{content::ContentCollection, response::ResponseBody},
+    models::{
+        content::{ContentCollection, ReorderMediaRequest, UpdateContentCollection},
+        response::ResponseBody,
+    },
     services::content_service,
     utils::auth::require_admin,
 };
@@ -47,6 +50,146 @@ pub async fn create_shoot(
     }
 }
 
+pub async fn update_gallery(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateContentCollection>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    update_collection(req, path, body, db, "gallery").await
+}
+
+pub async fn update_shoot(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateContentCollection>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    update_collection(req, path, body, db, "shoot").await
+}
+
+async fn update_collection(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdateContentCollection>,
+    db: web::Data<Database>,
+    kind: &str,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match content_service::update_collection(kind, &path.into_inner(), body.0, &db).await {
+        Ok(()) => Ok(HttpResponse::Ok().json(serde_json::json!({"message":"UPDATED"}))),
+        Err(msg) => Ok(mongo_op_error(&msg)),
+    }
+}
+
+pub async fn delete_gallery(
+    req: HttpRequest,
+    path: web::Path<String>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    delete_collection(req, path, db, "gallery").await
+}
+
+pub async fn delete_shoot(
+    req: HttpRequest,
+    path: web::Path<String>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    delete_collection(req, path, db, "shoot").await
+}
+
+async fn delete_collection(
+    req: HttpRequest,
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    kind: &str,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match content_service::delete_collection(kind, &path.into_inner(), &db).await {
+        Ok(()) => Ok(HttpResponse::Ok().json(serde_json::json!({"message":"REMOVED"}))),
+        Err(msg) => Ok(mongo_op_error(&msg)),
+    }
+}
+
+pub async fn delete_gallery_media(
+    req: HttpRequest,
+    path: web::Path<(String, String)>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    delete_media(req, path, db, "gallery").await
+}
+
+pub async fn delete_shoot_media(
+    req: HttpRequest,
+    path: web::Path<(String, String)>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    delete_media(req, path, db, "shoot").await
+}
+
+async fn delete_media(
+    req: HttpRequest,
+    path: web::Path<(String, String)>,
+    db: web::Data<Database>,
+    kind: &str,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    let (collection_id, asset_id) = path.into_inner();
+    match content_service::delete_media(kind, &collection_id, &asset_id, &db).await {
+        Ok(()) => Ok(HttpResponse::Ok().json(serde_json::json!({"message":"REMOVED"}))),
+        Err(msg) if msg == "MEDIA_NOT_FOUND" => {
+            Ok(ServiceError::new(actix_web::http::StatusCode::NOT_FOUND, &msg).response())
+        }
+        Err(msg) => Ok(mongo_op_error(&msg)),
+    }
+}
+
+pub async fn reorder_gallery_media(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<ReorderMediaRequest>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    reorder_media(req, path, body, db, "gallery").await
+}
+
+pub async fn reorder_shoot_media(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<ReorderMediaRequest>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    reorder_media(req, path, body, db, "shoot").await
+}
+
+async fn reorder_media(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<ReorderMediaRequest>,
+    db: web::Data<Database>,
+    kind: &str,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match content_service::reorder_media(kind, &path.into_inner(), &body.media_ids, &db).await {
+        Ok(()) => Ok(HttpResponse::Ok().json(serde_json::json!({"message":"REORDERED"}))),
+        Err(msg) => Ok(mongo_op_error(&msg)),
+    }
+}
+
+struct IncomingFile {
+    bytes: Vec<u8>,
+    content_type: String,
+    filename: Option<String>,
+}
+
 async fn upload_collection_media(
     req: HttpRequest,
     path: web::Path<String>,
@@ -59,9 +202,7 @@ async fn upload_collection_media(
     }
 
     let collection_id = path.into_inner();
-    let mut file_bytes: Option<Vec<u8>> = None;
-    let mut content_type = String::from("image/jpeg");
-    let mut filename: Option<String> = None;
+    let mut files: Vec<IncomingFile> = Vec::new();
     let mut featured = false;
     let mut set_as_cover = false;
 
@@ -82,7 +223,10 @@ async fn upload_collection_media(
             .content_disposition()
             .and_then(|d| d.get_name().map(str::to_string))
             .unwrap_or_default();
-        if field_name == "file" && file_bytes.is_none() {
+
+        let mut content_type = String::from("image/jpeg");
+        let mut filename: Option<String> = None;
+        if field_name == "file" || field_name == "files" {
             if let Some(ct) = field.content_type().map(|m| m.to_string()) {
                 content_type = ct;
             }
@@ -110,41 +254,63 @@ async fn upload_collection_media(
         }
 
         match field_name.as_str() {
-            "file" if file_bytes.is_none() => file_bytes = Some(bytes),
+            "file" | "files" => files.push(IncomingFile {
+                bytes,
+                content_type,
+                filename,
+            }),
             "featured" => featured = checked_flag(&String::from_utf8_lossy(&bytes)),
             "setAsCover" => set_as_cover = checked_flag(&String::from_utf8_lossy(&bytes)),
             _ => {}
         }
     }
 
-    let Some(bytes) = file_bytes else {
+    if files.is_empty() {
         return Ok(
             ServiceError::new(actix_web::http::StatusCode::BAD_REQUEST, "MISSING_FILE").response(),
         );
-    };
+    }
 
-    match content_service::upload_media(
-        kind,
-        &collection_id,
-        &bytes,
-        &content_type,
-        filename.as_deref(),
-        featured,
-        set_as_cover,
-        &db,
-    )
-    .await
-    {
-        Ok(media) => Ok(HttpResponse::Ok().json(ResponseBody::new("UPLOADED", media))),
-        Err(msg) if msg == "COLLECTION_NOT_FOUND" => {
-            Ok(ServiceError::new(actix_web::http::StatusCode::NOT_FOUND, &msg).response())
+    let mut uploaded = Vec::with_capacity(files.len());
+    for (i, file) in files.into_iter().enumerate() {
+        // setAsCover only first file; featured applies to every file in the request
+        let cover = set_as_cover && i == 0;
+        match content_service::upload_media(
+            kind,
+            &collection_id,
+            &file.bytes,
+            &file.content_type,
+            file.filename.as_deref(),
+            featured,
+            cover,
+            &db,
+        )
+        .await
+        {
+            Ok(media) => uploaded.push(media),
+            Err(msg) => return Ok(upload_error(&msg)),
         }
-        Err(msg) if msg.starts_with("FILE_TOO_LARGE") || msg == "UNSUPPORTED_MEDIA_TYPE" => {
-            Ok(ServiceError::new(actix_web::http::StatusCode::BAD_REQUEST, &msg).response())
+    }
+
+    Ok(HttpResponse::Ok().json(ResponseBody::new("UPLOADED", uploaded)))
+}
+
+fn upload_error(msg: &str) -> HttpResponse {
+    if msg == "COLLECTION_NOT_FOUND" || msg == "ENV_ONLY_COLLECTION" {
+        ServiceError::new(actix_web::http::StatusCode::NOT_FOUND, msg).response()
+    } else if msg.starts_with("FILE_TOO_LARGE") || msg == "UNSUPPORTED_MEDIA_TYPE" {
+        ServiceError::new(actix_web::http::StatusCode::BAD_REQUEST, msg).response()
+    } else {
+        ServiceError::new(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, msg).response()
+    }
+}
+
+fn mongo_op_error(msg: &str) -> HttpResponse {
+    match msg {
+        "COLLECTION_NOT_FOUND" | "ENV_ONLY_COLLECTION" => {
+            ServiceError::new(actix_web::http::StatusCode::NOT_FOUND, msg).response()
         }
-        Err(msg) => Ok(
-            ServiceError::new(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, &msg).response(),
-        ),
+        _ => ServiceError::new(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR, msg).response(),
     }
 }
 
