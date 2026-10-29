@@ -61,6 +61,8 @@ pub struct ContactSubmission {
     pub email: String,
     pub subject: String,
     pub message: String,
+    #[serde(default)]
+    pub website: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

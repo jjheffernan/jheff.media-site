@@ -55,6 +55,9 @@ pub struct ContactSubmission {
     pub email: String,
     pub subject: String,
     pub message: String,
+    /// Honeypot. Humans leave this empty; filled values are dropped.
+    #[serde(default)]
+    pub website: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

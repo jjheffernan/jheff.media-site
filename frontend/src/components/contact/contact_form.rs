@@ -20,6 +20,7 @@ pub fn contact_form() -> Html {
     let email = use_state(String::new);
     let subject = use_state(String::new);
     let message = use_state(String::new);
+    let website = use_state(String::new);
     let submit_state = use_state(|| SubmitState::Idle);
 
     let on_name = {
@@ -51,15 +52,26 @@ pub fn contact_form() -> Html {
         })
     };
 
+    let on_website = {
+        let website = website.clone();
+        Callback::from(move |e: InputEvent| {
+            let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
+            website.set(input.value());
+        })
+    };
+
     let on_submit = {
         let name = name.clone();
         let email = email.clone();
         let subject = subject.clone();
         let message = message.clone();
+        let website = website.clone();
         let submit_state = submit_state.clone();
         Callback::from(move |e: MouseEvent| {
             e.prevent_default();
-            if (*name).trim().is_empty() || (*email).trim().is_empty() || (*message).trim().is_empty()
+            if (*name).trim().is_empty()
+                || (*email).trim().is_empty()
+                || (*message).trim().is_empty()
             {
                 submit_state.set(SubmitState::Error(
                     "Name, email, and message are required.".into(),
@@ -72,6 +84,7 @@ pub fn contact_form() -> Html {
                 email: (*email).clone(),
                 subject: (*subject).clone(),
                 message: (*message).clone(),
+                website: (*website).clone(),
             };
             let submit_state = submit_state.clone();
             spawn_local(async move {
@@ -95,7 +108,12 @@ pub fn contact_form() -> Html {
                     }
                     Ok(resp) => {
                         if let Ok(body) = resp.json::<ServerResponse<String>>().await {
-                            submit_state.set(SubmitState::Error(body.data));
+                            let text = if body.data.is_empty() {
+                                body.message
+                            } else {
+                                body.data
+                            };
+                            submit_state.set(SubmitState::Error(text));
                         } else {
                             submit_state.set(SubmitState::Error("Could not send message.".into()));
                         }
@@ -123,7 +141,19 @@ pub fn contact_form() -> Html {
     };
 
     html! {
-        <form class="space-y-4" onsubmit={Callback::from(|e: SubmitEvent| e.prevent_default())}>
+        <form class="relative space-y-4" onsubmit={Callback::from(|e: SubmitEvent| e.prevent_default())}>
+            <div class="absolute -left-[9999px] h-px w-px overflow-hidden" aria-hidden="true">
+                <label>
+                    { "Website" }
+                    <input
+                        type="text"
+                        tabindex="-1"
+                        autocomplete="off"
+                        value={(*website).clone()}
+                        oninput={on_website}
+                    />
+                </label>
+            </div>
             <div class="grid gap-4 sm:grid-cols-2">
                 <label class="block space-y-1">
                     <span class="text-sm font-medium text-foreground">{ "Name" }</span>
