@@ -10,6 +10,56 @@ use wasm_bindgen_futures::spawn_local;
 use web_sys::{FormData, HtmlInputElement};
 use yew::prelude::*;
 
+fn starts_at_with_offset(value: &str) -> String {
+    let value = value.trim();
+    if value.len() < 16 || value.contains('Z') || value.contains('+') || value[10..].contains('-') {
+        return value.to_string();
+    }
+    let date = js_sys::Date::new(&JsValue::from_str(value));
+    if date.get_time().is_nan() {
+        return value.to_string();
+    }
+    let offset_min = date.get_timezone_offset() as i32;
+    let sign = if offset_min > 0 { '-' } else { '+' };
+    let abs = offset_min.unsigned_abs();
+    let stamp = if value.len() == 16 {
+        format!("{value}:00")
+    } else {
+        value.to_string()
+    };
+    format!("{stamp}{sign}{:02}:{:02}", abs / 60, abs % 60)
+}
+
+async fn create_schedule_event(jwt: &str, payload: serde_json::Value) -> Result<String, String> {
+    let auth_val = auth_header(jwt);
+    let req = Request::post("/api/admin/schedule")
+        .header("Authorization", auth_val.as_str())
+        .header("Content-Type", "application/json")
+        .body(payload.to_string())
+        .map_err(|e| e.to_string())?;
+    let resp = req.send().await.map_err(|e| e.to_string())?;
+    if resp.ok() {
+        let body = resp
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|_| "Could not read response.".to_string())?;
+        body.get("data")
+            .and_then(|data| data.get("id"))
+            .and_then(|id| id.as_str())
+            .filter(|id| !id.is_empty())
+            .map(str::to_string)
+            .ok_or_else(|| "Failed to add date.".to_string())
+    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
+        Err(body
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("Failed to add date.")
+            .to_string())
+    } else {
+        Err("Failed to add date.".into())
+    }
+}
+
 async fn upload_collection_media(
     jwt: &str,
     kind: &str,
@@ -54,6 +104,10 @@ pub fn content_admin() -> Html {
     let gallery_title = use_state(String::new);
     let shoot_id = use_state(String::new);
     let shoot_title = use_state(String::new);
+    let date_title = use_state(String::new);
+    let date_starts = use_state(String::new);
+    let date_location = use_state(String::new);
+    let date_kind = use_state(|| String::from("shoot"));
 
     if auth_ctx.auth.as_ref().map(|a| a.user.role.as_str()) != Some("admin") {
         return html! {};
@@ -88,7 +142,9 @@ pub fn content_admin() -> Html {
                         if let Ok(req) = result {
                             if let Ok(resp) = req.send().await {
                                 if resp.ok() {
-                                    message.set(Some("Gallery created. You can upload images below.".into()));
+                                    message.set(Some(
+                                        "Gallery created. You can upload images below.".into(),
+                                    ));
                                 } else {
                                     message.set(Some("Failed to create gallery.".into()));
                                 }
@@ -129,7 +185,9 @@ pub fn content_admin() -> Html {
                         if let Ok(req) = result {
                             if let Ok(resp) = req.send().await {
                                 if resp.ok() {
-                                    message.set(Some("Shoot created. You can upload images below.".into()));
+                                    message.set(Some(
+                                        "Shoot created. You can upload images below.".into(),
+                                    ));
                                 } else {
                                     message.set(Some("Failed to create shoot.".into()));
                                 }
@@ -202,6 +260,63 @@ pub fn content_admin() -> Html {
                 });
             }
             input.set_value("");
+        })
+    };
+
+    let on_add_date = {
+        let auth_ctx = auth_ctx.clone();
+        let date_title = date_title.clone();
+        let date_starts = date_starts.clone();
+        let date_location = date_location.clone();
+        let date_kind = date_kind.clone();
+        let message = message.clone();
+        Callback::from(move |_| {
+            let title = date_title.trim().to_string();
+            let starts_at = starts_at_with_offset(&date_starts);
+            let location = date_location.trim().to_string();
+            let kind = if date_kind.trim().is_empty() {
+                "shoot".to_string()
+            } else {
+                date_kind.trim().to_string()
+            };
+            if title.is_empty() || starts_at.is_empty() {
+                message.set(Some("Title and start time are required.".into()));
+                return;
+            }
+            let Some(auth) = &auth_ctx.auth else {
+                return;
+            };
+            let mut payload = serde_json::json!({
+                "title": title,
+                "startsAt": starts_at,
+                "kind": kind,
+            });
+            if !location.is_empty() {
+                payload["location"] = serde_json::Value::String(location);
+            }
+            let jwt = auth.jwt.clone();
+            let message = message.clone();
+            let date_title = date_title.clone();
+            let date_starts = date_starts.clone();
+            let date_location = date_location.clone();
+            spawn_local(async move {
+                match create_schedule_event(&jwt, payload).await {
+                    Ok(id) => {
+                        date_title.set(String::new());
+                        date_starts.set(String::new());
+                        date_location.set(String::new());
+                        message.set(Some(format!("Date added: {id}")));
+                    }
+                    Err(err) => message.set(Some(err)),
+                }
+            });
+        })
+    };
+
+    let on_kind = {
+        let date_kind = date_kind.clone();
+        Callback::from(move |e: Event| {
+            date_kind.set(e.target_unchecked_into::<HtmlInputElement>().value());
         })
     };
 
@@ -303,6 +418,67 @@ pub fn content_admin() -> Html {
                         />
                     </label>
                 </div>
+            </div>
+
+            <div class="space-y-3">
+                <Text tone={TextTone::Muted}>{ "Add date" }</Text>
+                <input
+                    type="text"
+                    placeholder="Title"
+                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    value={(*date_title).clone()}
+                    oninput={{
+                        let date_title = date_title.clone();
+                        Callback::from(move |e: InputEvent| {
+                            date_title.set(e.target_unchecked_into::<HtmlInputElement>().value());
+                        })
+                    }}
+                />
+                <label class="block space-y-1">
+                    <Text tone={TextTone::Muted}>{ "Starts" }</Text>
+                    <input
+                        type="datetime-local"
+                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        value={(*date_starts).clone()}
+                        oninput={{
+                            let date_starts = date_starts.clone();
+                            Callback::from(move |e: InputEvent| {
+                                date_starts.set(e.target_unchecked_into::<HtmlInputElement>().value());
+                            })
+                        }}
+                    />
+                </label>
+                <input
+                    type="text"
+                    placeholder="Location"
+                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    value={(*date_location).clone()}
+                    oninput={{
+                        let date_location = date_location.clone();
+                        Callback::from(move |e: InputEvent| {
+                            date_location.set(e.target_unchecked_into::<HtmlInputElement>().value());
+                        })
+                    }}
+                />
+                <label class="block space-y-1">
+                    <Text tone={TextTone::Muted}>{ "Kind" }</Text>
+                    <select
+                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        value={(*date_kind).clone()}
+                        onchange={on_kind}
+                    >
+                        <option value="shoot">{ "Shoot" }</option>
+                        <option value="instruction">{ "Instruction" }</option>
+                        <option value="other">{ "Other" }</option>
+                    </select>
+                </label>
+                <button
+                    type="button"
+                    class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950"
+                    onclick={on_add_date}
+                >
+                    { "Add date" }
+                </button>
             </div>
         </section>
     }

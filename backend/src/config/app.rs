@@ -78,6 +78,11 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                     .route(
                         "/shoots/{id}/media",
                         web::post().to(admin_controller::upload_shoot_media),
+                    )
+                    .route("/schedule", web::post().to(schedule_controller::create_event))
+                    .route(
+                        "/schedule/{id}",
+                        web::delete().to(schedule_controller::delete_event),
                     ),
             )
             .service(

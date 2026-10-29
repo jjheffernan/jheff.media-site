@@ -1,17 +1,31 @@
 use crate::{
     components::ui::{Heading, HeadingLevel, Spinner, Text, TextTone},
     model::ServerResponse,
+    routes::AppRoutes,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+use yew_router::prelude::*;
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct ScheduleEvent {
+    title: String,
+    starts_at: String,
+    #[serde(default)]
+    location: Option<String>,
+    kind: String,
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct ScheduleConfig {
     embed_url: Option<String>,
     source: String,
+    #[serde(default)]
+    events: Vec<ScheduleEvent>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -19,6 +33,29 @@ enum LoadState {
     Loading,
     Ready(ScheduleConfig),
     Error(String),
+}
+
+fn event_list(events: &[ScheduleEvent]) -> Html {
+    if events.is_empty() {
+        return Html::default();
+    }
+    html! {
+        <ul class="space-y-3">
+            { for events.iter().map(|event| {
+                let location = event.location.clone().filter(|value| !value.is_empty());
+                html! {
+                    <li class="space-y-1 rounded-2xl border border-border bg-surface-elevated p-4">
+                        <p class="font-medium text-foreground">{ event.title.clone() }</p>
+                        <p class="text-sm text-muted">{ event.kind.clone() }</p>
+                        <p class="text-sm text-muted">{ event.starts_at.clone() }</p>
+                        if let Some(location) = location {
+                            <p class="text-sm text-muted">{ location }</p>
+                        }
+                    </li>
+                }
+            }) }
+        </ul>
+    }
 }
 
 #[function_component(Schedule)]
@@ -57,28 +94,47 @@ pub fn schedule() -> Html {
         LoadState::Error(msg) => html! {
             <p class="text-sm text-muted">{ format!("Schedule unavailable: {}", msg) }</p>
         },
-        LoadState::Ready(config) if config.embed_url.is_none() => html! {
-            <Text tone={TextTone::Muted}>
-                { "No schedule embed configured. Set YEW_FULLSTACK_SCHEDULE_EMBED_URL on the backend." }
-            </Text>
-        },
-        LoadState::Ready(config) => html! {
-            <div class="overflow-hidden rounded-2xl border border-border bg-surface-elevated">
-                <iframe
-                    class="min-h-[min(70vh,720px)] w-full border-0 bg-surface"
-                    src={config.embed_url.clone().unwrap_or_default()}
-                    title="Shoot schedule"
-                    loading="lazy"
-                />
-            </div>
-        },
+        LoadState::Ready(config) => {
+            let panel = if config.embed_url.is_none() {
+                html! {
+                    <div class="space-y-4 rounded-2xl border border-border bg-surface-elevated p-6">
+                        <Text tone={TextTone::Muted}>
+                            { "Shoot dates aren't published here yet. Send a booking note and we'll line up the calendar." }
+                        </Text>
+                        <Link<AppRoutes>
+                            to={AppRoutes::Contact}
+                            classes="inline-flex rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-accent-hover"
+                        >
+                            { "Contact & book" }
+                        </Link<AppRoutes>>
+                    </div>
+                }
+            } else {
+                html! {
+                    <div class="overflow-hidden rounded-2xl border border-border bg-surface-elevated">
+                        <iframe
+                            class="min-h-[min(70vh,720px)] w-full border-0 bg-surface"
+                            src={config.embed_url.clone().unwrap_or_default()}
+                            title="Shoot schedule"
+                            loading="lazy"
+                        />
+                    </div>
+                }
+            };
+            html! {
+                <>
+                    { event_list(&config.events) }
+                    { panel }
+                </>
+            }
+        }
     };
 
     html! {
         <div class="space-y-6">
             <Heading
                 level={HeadingLevel::H1}
-                subtitle="Shoot locations and dates load from your external scheduling service — nothing is hardcoded here."
+                subtitle="Published shoot dates, or a note to book if the calendar isn't live yet."
             >
                 { "Schedule" }
             </Heading>
