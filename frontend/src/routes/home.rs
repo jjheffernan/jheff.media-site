@@ -1,6 +1,7 @@
-use crate::components::{Hero, Grid, InstagramFeaturedCard, LinkCard, MediaFeedScroll, Stack, Text, TextTone};
+use crate::components::{Hero, Grid, InstagramFeaturedCard, LinkCard, MediaFeedScroll, Stack};
 use crate::routes::AppRoutes;
 use yew::prelude::*;
+use yew_router::prelude::*;
 
 /// Public homepage — media-first hub for @jheffmedia.
 pub struct Home {}
@@ -16,11 +17,15 @@ impl Component for Home {
     fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
             <Stack>
+                <MediaFeedScroll title="Feed" limit={24} />
+
+                <Link<AppRoutes> to={AppRoutes::Content} classes="btn btn-primary">
+                    { "Content hub" }
+                </Link<AppRoutes>>
+
                 <Hero />
 
                 <InstagramFeaturedCard />
-
-                <MediaFeedScroll title="Feed" limit={24} />
 
                 <Grid cols_sm={1} cols_lg={3}>
                     <LinkCard route={AppRoutes::Content} title="Content hub">
@@ -30,9 +35,7 @@ impl Component for Home {
                         { "Request track instruction, media shoots, or race engineering sessions." }
                     </LinkCard>
                     <LinkCard route={AppRoutes::Contact} title="Contact">
-                        <Text tone={TextTone::Muted}>
-                            { "Questions, collaborations, and booking inquiries." }
-                        </Text>
+                        { "General questions and collaborations." }
                     </LinkCard>
                 </Grid>
             </Stack>

@@ -53,7 +53,7 @@ Production: `trunk build --release` → `frontend/dist/` (served by Actix in pro
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Home — hero, featured post, `/api/media/feed` |
+| `/` | Home — photo feed first, content hub call to action, `/api/media/feed` |
 | `/content` | Hub from `GET /api/content/hub` |
 | `/shoots`, `/galleries` | Mongo and env collections, detail grids, print select |
 | `/schedule`, `/booking` | Future public dates, optional embed |
