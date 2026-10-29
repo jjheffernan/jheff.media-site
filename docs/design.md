@@ -21,7 +21,7 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, theme
 | `/social` | Real posts only. Empty keys show one muted line. No demo embed |
 | `/galleries`, `/shoots` | Showcase, not a shop. Print select stays secondary. Covers are explicit. Images can be tagged featured |
 | `/booking` | A request form. Not the general contact form |
-| `/schedule` | Limited public dates, framed as event availability. Optional embed stays |
+| `/schedule` | Month calendar of public dates is the default view. Optional embed stays under it |
 | `/contact` | General questions only. Booking requests belong on `/booking` |
 | `/account` | Password, 2FA, print size and unpaid total. Admins also get inbox, content CRUD, schedule, and print-order status. Email change is not offered |
 | `/profile` | Signed-in welcome card. Signed-out visitors go home |
