@@ -445,6 +445,14 @@ Admin JWT. Same body as create: `title`, `startsAt`, optional `location`, `kind`
 
 Auth required. Newest print requests first.
 
+### `GET /api/admin/prints/orders`
+
+Admin JWT. Every print order, newest first. Each row has the account order fields plus `userId`, `email` and `username` when that user still exists, and `items` (the photos on the request).
+
+### `PATCH /api/admin/prints/orders/{id}`
+
+Admin JWT. Body: `status` (`requested`, `fulfilled`, or `cancelled`) and optional `paymentStatus` (`unpaid`, `invoiced`, or `paid`). This records status only and does not charge a card. Success `200` is the updated order in the admin list shape. `400` `INVALID_ID`, `INVALID_STATUS`, or `INVALID_PAYMENT_STATUS`. `404` `NOT_FOUND`.
+
 ## CORS
 
 Allowed methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`.  

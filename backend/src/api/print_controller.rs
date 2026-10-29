@@ -1,7 +1,9 @@
 use crate::{
-    models::media::{PrintCheckoutInput, PrintOrderView, PrintSelectionInput, PrintSelectionView},
+    models::media::{
+        PrintCheckoutInput, PrintOrderView, PrintSelectionInput, PrintSelectionView, UpdatePrintOrder,
+    },
     services::print_service,
-    utils::auth::require_auth,
+    utils::auth::{require_admin, require_auth},
 };
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use mongodb::Database;
@@ -69,6 +71,28 @@ pub async fn checkout(
             "message": "PRINT_REQUESTED",
             "data": order
         }))),
+        Err(err) => Ok(err.response()),
+    }
+}
+
+pub async fn admin_list_orders(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    Ok(HttpResponse::Ok().json(print_service::list_admin_orders(&db).await))
+}
+
+pub async fn admin_update_order(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<UpdatePrintOrder>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match print_service::update_order(&path.into_inner(), body.0, &db).await {
+        Ok(order) => Ok(HttpResponse::Ok().json(order)),
         Err(err) => Ok(err.response()),
     }
 }

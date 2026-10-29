@@ -68,6 +68,36 @@ pub struct PrintSelectionInput {
     pub collection_title: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AdminPrintOrderItem {
+    #[serde(default)]
+    pub item_id: String,
+    #[serde(default)]
+    pub title: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct AdminPrintOrder {
+    pub id: String,
+    pub user_id: String,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub username: Option<String>,
+    pub status: String,
+    pub payment_status: String,
+    #[serde(default)]
+    pub size: String,
+    #[serde(default)]
+    pub total_cents: i64,
+    #[serde(default)]
+    pub item_count: usize,
+    #[serde(default)]
+    pub items: Vec<AdminPrintOrderItem>,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PrintOrder {

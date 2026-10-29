@@ -165,3 +165,32 @@ pub struct PrintCheckoutInput {
     #[serde(default)]
     pub note: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdminPrintOrderView {
+    pub id: String,
+    pub user_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    pub status: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+    pub item_count: usize,
+    pub items: Vec<PrintOrderItem>,
+    pub created_at: String,
+    pub size: String,
+    pub unit_price_cents: i64,
+    pub total_cents: i64,
+    pub payment_status: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePrintOrder {
+    pub status: String,
+    #[serde(default)]
+    pub payment_status: Option<String>,
+}

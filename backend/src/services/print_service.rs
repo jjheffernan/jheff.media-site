@@ -1,8 +1,11 @@
 use crate::{
     error::{ServiceError, ServiceResult},
-    models::media::{
-        PrintCheckoutInput, PrintOrder, PrintOrderItem, PrintOrderView, PrintSelection,
-        PrintSelectionInput,
+    models::{
+        media::{
+            AdminPrintOrderView, PrintCheckoutInput, PrintOrder, PrintOrderItem, PrintOrderView,
+            PrintSelection, PrintSelectionInput, UpdatePrintOrder,
+        },
+        user::User,
     },
     utils::auth::AuthUser,
 };
@@ -122,6 +125,129 @@ pub async fn list_orders(auth: &AuthUser, db: &Database) -> Vec<PrintOrderView> 
     orders.into_iter().map(order_view).collect()
 }
 
+fn normalize_order_status(value: &str) -> Option<&'static str> {
+    match value.trim() {
+        "requested" => Some("requested"),
+        "fulfilled" => Some("fulfilled"),
+        "cancelled" => Some("cancelled"),
+        _ => None,
+    }
+}
+
+fn normalize_payment_status(value: &str) -> Option<&'static str> {
+    match value.trim() {
+        "unpaid" => Some("unpaid"),
+        "invoiced" => Some("invoiced"),
+        "paid" => Some("paid"),
+        _ => None,
+    }
+}
+
+fn admin_order_view(
+    order: PrintOrder,
+    email: Option<String>,
+    username: Option<String>,
+) -> AdminPrintOrderView {
+    let user_id = order.user_id.to_hex();
+    let items = order.items.clone();
+    let view = order_view(order);
+    AdminPrintOrderView {
+        id: view.id,
+        user_id,
+        email,
+        username,
+        status: view.status,
+        note: view.note,
+        item_count: view.item_count,
+        items,
+        created_at: view.created_at,
+        size: view.size,
+        unit_price_cents: view.unit_price_cents,
+        total_cents: view.total_cents,
+        payment_status: view.payment_status,
+    }
+}
+
+async fn user_identity(user_id: &bson::oid::ObjectId, db: &Database) -> (Option<String>, Option<String>) {
+    match User::find_by_id(user_id, db).await {
+        Some(user) => (Some(user.email), Some(user.username)),
+        None => (None, None),
+    }
+}
+
+pub async fn list_admin_orders(db: &Database) -> Vec<AdminPrintOrderView> {
+    let coll = db.collection::<PrintOrder>(ORDERS_COLLECTION);
+    let mut orders = vec![];
+    if let Ok(mut cursor) = coll.find(doc! {}).await {
+        while cursor.advance().await.unwrap_or(false) {
+            if let Ok(order) = cursor.deserialize_current() {
+                orders.push(order);
+            }
+        }
+    }
+    orders.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    let mut names: std::collections::HashMap<
+        bson::oid::ObjectId,
+        (Option<String>, Option<String>),
+    > = std::collections::HashMap::new();
+    let mut views = Vec::with_capacity(orders.len());
+    for order in orders {
+        let user_id = order.user_id;
+        let (email, username) = if let Some(pair) = names.get(&user_id) {
+            pair.clone()
+        } else {
+            let pair = user_identity(&user_id, db).await;
+            names.insert(user_id, pair.clone());
+            pair
+        };
+        views.push(admin_order_view(order, email, username));
+    }
+    views
+}
+
+pub async fn update_order(
+    id: &str,
+    input: UpdatePrintOrder,
+    db: &Database,
+) -> ServiceResult<AdminPrintOrderView> {
+    let Some(status) = normalize_order_status(&input.status) else {
+        return Err(ServiceError::new(StatusCode::BAD_REQUEST, "INVALID_STATUS"));
+    };
+    let payment = match input.payment_status.as_deref() {
+        Some(value) if !value.trim().is_empty() => Some(
+            normalize_payment_status(value).ok_or_else(|| {
+                ServiceError::new(StatusCode::BAD_REQUEST, "INVALID_PAYMENT_STATUS")
+            })?,
+        ),
+        _ => None,
+    };
+    let oid = ObjectId::parse_str(id)
+        .map_err(|_| ServiceError::new(StatusCode::BAD_REQUEST, "INVALID_ID"))?;
+    let coll = db.collection::<PrintOrder>(ORDERS_COLLECTION);
+    let Some(mut order) = coll
+        .find_one(doc! { "_id": oid })
+        .await
+        .map_err(|e| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?
+    else {
+        return Err(ServiceError::new(StatusCode::NOT_FOUND, "NOT_FOUND"));
+    };
+    order.status = status.to_string();
+    let mut set = doc! { "status": status };
+    if let Some(payment) = payment {
+        order.payment_status = payment.to_string();
+        set.insert("paymentStatus", payment);
+    }
+    let result = coll
+        .update_one(doc! { "_id": oid }, doc! { "$set": set })
+        .await
+        .map_err(|e| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    if result.matched_count == 0 {
+        return Err(ServiceError::new(StatusCode::NOT_FOUND, "NOT_FOUND"));
+    }
+    let (email, username) = user_identity(&order.user_id, db).await;
+    Ok(admin_order_view(order, email, username))
+}
+
 pub async fn checkout(
     auth: &AuthUser,
     input: PrintCheckoutInput,
@@ -173,6 +299,18 @@ mod tests {
     use super::unit_price_cents;
     use crate::models::media::PrintOrder;
     use bson::{doc, oid::ObjectId, DateTime};
+
+    #[test]
+    fn admin_status_strings_match_print_order_fields() {
+        let input: crate::models::media::UpdatePrintOrder =
+            serde_json::from_str(r#"{"status":"fulfilled"}"#).unwrap();
+        assert!(input.payment_status.is_none());
+        assert_eq!(super::normalize_order_status(&input.status), Some("fulfilled"));
+        assert_eq!(super::normalize_order_status(" cancelled "), Some("cancelled"));
+        assert_eq!(super::normalize_order_status("shipped"), None);
+        assert_eq!(super::normalize_payment_status("invoiced"), Some("invoiced"));
+        assert_eq!(super::normalize_payment_status("refunded"), None);
+    }
 
     #[test]
     fn fixed_sizes_are_integer_cents() {

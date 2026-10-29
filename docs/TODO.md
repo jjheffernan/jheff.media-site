@@ -54,6 +54,7 @@ Decisions are recorded in [design.md](./design.md#decided).
 - [x] **Remove email change** from the account page. The backend route stays
 - [x] **2FA enrollment** — otpauth URL and secret are enough. No QR image
 - [x] **Print payment** — shelved. Invoices or another service later. Keep the unpaid request
+- [x] **Print order admin** — list every request and set `status` or `paymentStatus`. No card charge
 
 ### API client
 

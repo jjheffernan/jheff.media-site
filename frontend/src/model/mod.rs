@@ -16,7 +16,8 @@ pub use content::{
 };
 pub use feed::{FeedItem, FeedResponse};
 pub use media::{
-    ChangePassword, EmailChange, InstagramFeatured, MediaFeedItem, MediaFeedResponse, PrintOrder,
+    AdminPrintOrder, ChangePassword, EmailChange, InstagramFeatured, MediaFeedItem,
+    MediaFeedResponse, PrintOrder,
     PrintSelection, PrintSelectionInput, TotpEnrollResponse, TotpVerify,
 };
 pub use social::{SocialAccount, SocialHubResponse, SocialPost};

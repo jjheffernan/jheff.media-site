@@ -1,7 +1,7 @@
 use crate::{
     components::ui::{Heading, HeadingLevel, Text, TextTone},
     context::AuthContext,
-    model::ContentCollection,
+    model::{AdminPrintOrder, ContentCollection},
     services::auth_header,
 };
 use gloo_net::http::Request;
@@ -1005,7 +1005,215 @@ pub fn content_admin() -> Html {
                 </button>
             </div>
 
+            <PrintOrdersAdmin />
         </section>
     }
 }
 
+fn order_who(order: &AdminPrintOrder) -> String {
+    match (&order.email, &order.username) {
+        (Some(email), Some(username)) => format!("{email} ({username})"),
+        (Some(email), None) => email.clone(),
+        (None, Some(username)) => username.clone(),
+        (None, None) => order.user_id.clone(),
+    }
+}
+
+async fn load_print_orders(jwt: &str) -> Result<Vec<AdminPrintOrder>, String> {
+    let auth_val = auth_header(jwt);
+    let resp = Request::get("/api/admin/prints/orders")
+        .header("Authorization", auth_val.as_str())
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    if resp.ok() {
+        resp.json().await.map_err(|_| "Could not read orders.".to_string())
+    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
+        Err(body
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("Could not load orders.")
+            .to_string())
+    } else {
+        Err("Could not load orders.".into())
+    }
+}
+
+async fn patch_print_order(
+    jwt: &str,
+    id: &str,
+    status: &str,
+    payment_status: &str,
+) -> Result<AdminPrintOrder, String> {
+    let url = format!("/api/admin/prints/orders/{id}");
+    let payload = serde_json::json!({
+        "status": status,
+        "paymentStatus": payment_status,
+    });
+    let auth_val = auth_header(jwt);
+    let req = Request::patch(&url)
+        .header("Authorization", auth_val.as_str())
+        .header("Content-Type", "application/json")
+        .body(payload.to_string())
+        .map_err(|e| e.to_string())?;
+    let resp = req.send().await.map_err(|e| e.to_string())?;
+    if resp.ok() {
+        resp.json().await.map_err(|_| "Could not read order.".to_string())
+    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
+        Err(body
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("Could not update order.")
+            .to_string())
+    } else {
+        Err("Could not update order.".into())
+    }
+}
+
+#[function_component(PrintOrdersAdmin)]
+fn print_orders_admin() -> Html {
+    let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
+    let orders = use_state(|| None::<Vec<AdminPrintOrder>>);
+    let note = use_state(|| None::<String>);
+    let jwt = auth_ctx
+        .auth
+        .as_ref()
+        .map(|auth| auth.jwt.clone())
+        .unwrap_or_default();
+
+    {
+        let orders = orders.clone();
+        let note = note.clone();
+        use_effect_with(jwt.clone(), move |jwt| {
+            if !jwt.is_empty() {
+                let jwt = jwt.clone();
+                spawn_local(async move {
+                    match load_print_orders(&jwt).await {
+                        Ok(items) => orders.set(Some(items)),
+                        Err(err) => {
+                            orders.set(Some(Vec::new()));
+                            note.set(Some(err));
+                        }
+                    }
+                });
+            }
+            || ()
+        });
+    }
+
+    let list = match &*orders {
+        None => {
+            return html! {
+                <div class="space-y-3">
+                    <Text tone={TextTone::Muted}>{ "Print orders" }</Text>
+                    <p class="text-sm text-muted">{ "Loading orders…" }</p>
+                </div>
+            };
+        }
+        Some(list) => list.clone(),
+    };
+
+    html! {
+        <div class="space-y-3">
+            <Text tone={TextTone::Muted}>{ "Print orders" }</Text>
+            if let Some(msg) = &*note {
+                <p class="text-sm text-accent">{ msg }</p>
+            }
+            if list.is_empty() {
+                <p class="text-sm text-muted">{ "No print orders." }</p>
+            }
+            { for list.iter().map(|order| {
+                let id = order.id.clone();
+                let on_status = {
+                    let id = id.clone();
+                    let orders = orders.clone();
+                    Callback::from(move |e: Event| {
+                        let value = e.target_unchecked_into::<HtmlInputElement>().value();
+                        let mut next = (*orders).clone().unwrap_or_default();
+                        if let Some(order) = next.iter_mut().find(|order| order.id == id) {
+                            order.status = value;
+                        }
+                        orders.set(Some(next));
+                    })
+                };
+                let on_payment = {
+                    let id = id.clone();
+                    let orders = orders.clone();
+                    Callback::from(move |e: Event| {
+                        let value = e.target_unchecked_into::<HtmlInputElement>().value();
+                        let mut next = (*orders).clone().unwrap_or_default();
+                        if let Some(order) = next.iter_mut().find(|order| order.id == id) {
+                            order.payment_status = value;
+                        }
+                        orders.set(Some(next));
+                    })
+                };
+                let on_save = {
+                    let id = id.clone();
+                    let orders = orders.clone();
+                    let jwt = jwt.clone();
+                    let note = note.clone();
+                    Callback::from(move |_| {
+                        let Some(current) = (*orders).clone() else { return };
+                        let Some(order) = current.iter().find(|order| order.id == id) else { return };
+                        let status = order.status.clone();
+                        let payment = order.payment_status.clone();
+                        let id = id.clone();
+                        let jwt = jwt.clone();
+                        let orders = orders.clone();
+                        let note = note.clone();
+                        spawn_local(async move {
+                            match patch_print_order(&jwt, &id, &status, &payment).await {
+                                Ok(updated) => {
+                                    let mut next = (*orders).clone().unwrap_or_default();
+                                    if let Some(slot) = next.iter_mut().find(|order| order.id == updated.id) {
+                                        *slot = updated;
+                                    }
+                                    orders.set(Some(next));
+                                    note.set(Some("Order updated.".into()));
+                                }
+                                Err(err) => note.set(Some(err)),
+                            }
+                        });
+                    })
+                };
+                let photos = {
+                    let titles: Vec<&str> = order
+                        .items
+                        .iter()
+                        .filter_map(|item| item.title.as_deref().filter(|title| !title.is_empty()))
+                        .collect();
+                    if titles.is_empty() {
+                        format!("{} photos", order.item_count)
+                    } else {
+                        titles.join(", ")
+                    }
+                };
+                html! {
+                    <div key={order.id.clone()} class="space-y-2">
+                        <p class="text-sm text-muted">
+                            { format!(
+                                "{} · {} · ${} · {}",
+                                order_who(order),
+                                order.size,
+                                order.total_cents / 100,
+                                photos
+                            ) }
+                        </p>
+                        <select class="field" value={order.status.clone()} onchange={on_status}>
+                            <option value="requested" selected={order.status == "requested"}>{ "requested" }</option>
+                            <option value="fulfilled" selected={order.status == "fulfilled"}>{ "fulfilled" }</option>
+                            <option value="cancelled" selected={order.status == "cancelled"}>{ "cancelled" }</option>
+                        </select>
+                        <select class="field" value={order.payment_status.clone()} onchange={on_payment}>
+                            <option value="unpaid" selected={order.payment_status == "unpaid"}>{ "unpaid" }</option>
+                            <option value="invoiced" selected={order.payment_status == "invoiced"}>{ "invoiced" }</option>
+                            <option value="paid" selected={order.payment_status == "paid"}>{ "paid" }</option>
+                        </select>
+                        <button type="button" class="btn btn-quiet" onclick={on_save}>{ "Save" }</button>
+                    </div>
+                }
+            }) }
+        </div>
+    }
+}

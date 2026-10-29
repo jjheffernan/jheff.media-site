@@ -118,6 +118,14 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                             .route(web::patch().to(schedule_controller::update_event))
                             .route(web::delete().to(schedule_controller::delete_event)),
                     )
+                    .route(
+                        "/prints/orders",
+                        web::get().to(print_controller::admin_list_orders),
+                    )
+                    .route(
+                        "/prints/orders/{id}",
+                        web::patch().to(print_controller::admin_update_order),
+                    )
             )
             .service(
                 web::scope("/auth")
