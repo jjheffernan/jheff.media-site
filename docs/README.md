@@ -14,6 +14,7 @@ Human-readable guides for jheff.media-site. Start here or from [README](../READM
 | [api.md](./api.md) | REST endpoints, request/response shapes, errors |
 | [backend.md](./backend.md) | Actix server, features, env vars, MongoDB |
 | [frontend.md](./frontend.md) | Yew app, routing, auth bus, Trunk build |
+| [design.md](./design.md) | Current page behavior, visual system, and open design questions |
 | [development.md](./development.md) | Local setup, troubleshooting |
 | [TODO.md](./TODO.md) | Setup checklist and open work |
 | [readiness-rubric.md](./readiness-rubric.md) | Release readiness scores (security, UX, tests, 12 factor, performance) |

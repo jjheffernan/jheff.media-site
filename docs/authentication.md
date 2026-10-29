@@ -70,7 +70,7 @@ Signup does **not** log the user in automatically—the header still shows login
 | No session | Login + Signup forms |
 | Session in storage | `AuthControls` (greeting + logout link) |
 
-`Header` bridges `AuthEventBus` and re-renders on auth changes. Profile route is not gated yet (placeholder page).
+`Header` bridges `AuthEventBus` and re-renders on auth changes. `/profile` shows the signed-in welcome card and sends signed-out visitors home. Account settings live on `/account`.
 
 ## Security notes
 
@@ -81,7 +81,7 @@ Signup does **not** log the user in automatically—the header still shows login
 - Passwords never returned in API responses (`PublicUserDTO` only has email, username, role, totpEnabled).
 - Signup and password change require at least 8 characters; passwords stored as bcrypt hashes.
 - Protected routes use `Authorization: bearer <jwt>` with server-side session validation.
-- Email-change tokens are not logged; wire a mailer before enabling email change in production.
+- Email change stores a pending address and does not send mail. The account button says to check an inbox. Wire SMTP before treating that flow as live.
 - Client stores JWT in **session storage** (tab-scoped). Any XSS in the WASM app could exfiltrate tokens — keep dependencies patched and avoid inline third-party scripts.
 - TOTP disable requires a valid code when 2FA is enabled.
 - Admin role is assigned at signup via `YEW_FULLSTACK_ADMIN_EMAILS`; review admin list carefully.

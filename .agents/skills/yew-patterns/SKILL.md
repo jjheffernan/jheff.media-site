@@ -53,11 +53,13 @@ Production: `trunk build --release` → `frontend/dist/` (served by Actix in pro
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Home — hero, Immich/static photo feed, feature cards |
-| `/shoots` | Session planning placeholder |
-| `/galleries` | Client gallery placeholder |
-| `/profile` | Account placeholder |
+| `/` | Home — hero, featured post, `/api/media/feed` |
+| `/content` | Hub from `GET /api/content/hub` |
+| `/shoots`, `/galleries` | Mongo and env collections, detail grids, print select |
+| `/schedule`, `/booking` | Future public dates, optional embed |
+| `/account` | Password, 2FA, prints, admin tools |
+| `/profile` | Signed-in welcome card |
 
-Backend API unchanged: `/api/auth/*` on same origin via :8080 proxy.
+API is same-origin through the Actix proxy on `:8080`.
 
-**Docs:** [docs/frontend.md](../../docs/frontend.md) · [.agents/rules/frontend.md](../../.agents/rules/frontend.md)
+**Docs:** [docs/frontend.md](../../docs/frontend.md) · [docs/design.md](../../docs/design.md) · [.agents/rules/frontend.md](../../.agents/rules/frontend.md)

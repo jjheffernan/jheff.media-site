@@ -17,40 +17,62 @@ scripts/dev.sh logs trunk     # watch WASM compile
 
 ## CI / quality
 
-- [x] Backend unit tests (20)
+- [x] Backend unit tests (21)
 - [x] Frontend serde tests in `frontend/src/model/mod.rs`
 - [x] GitHub Actions — Trunk build + backend with `forward-frontend`
 - [x] Add `cargo test -p jheffmedia-site-frontend` to CI (host target, not wasm32)
-- [ ] Fix backend clippy warnings (12 — unused fields, redundant `Error::from`)
 - [x] Pin `backend/Dockerfile` Rust image (`rust:1.85-bookworm`)
 - [x] Refresh stale docs still mentioning webpack (`architecture.md`, `deployment-dev.md`, `version-matrix.md`)
 
-## Frontend ↔ backend split
+## Done in the product
 
-**Healthy today:** frontend = UI + fetch; backend = auth, MongoDB, external APIs (Immich/Instagram/YouTube), feed merge, thumbnails.
+- [x] **Content hub** — `GET /api/content/hub`
+- [x] **Auth helper** — `require_auth()` / `require_admin()`
+- [x] **Role-gated admin UI**
+- [x] **Schedule dates** — future public Mongo events on Schedule and Booking. Delete is still curl-only
+- [x] **Contact** — honeypot, per-IP limit, best-effort SMTP
+- [x] **Feed filter** — `instagram`, `youtube`, `gallery`, `shoot`
+- [x] **Print request** — detail pages can select stills; checkout stores one size and an unpaid total
+- [x] Docker tags `jheffmedia-*`
 
-- [ ] **Shared API client** — thin `frontend/src/services/api.rs` wrapper around gloo-net (auth header, JSON parse, error map); remove copy-paste in ~15 components
-- [x] **Content hub bundle** — `GET /api/content/hub` returns social (3), shoots (2), and galleries (2) in one response
-- [ ] **Deprecate `/api/feed`** — legacy Immich/static grid; home uses `/api/media/feed`. Keep Immich via unified feed or document env migration, then remove `feed_service` when unused
-- [x] **Auth middleware helper** — `require_auth()` / `require_admin()` in `backend/src/utils/auth.rs`
-- [x] **Role-gated UI** — admin panel renders only when `role == admin`; backend still enforces `/api/admin/*`
+Decisions are recorded in [design.md](./design.md#decided).
 
-## Site functionality
+## Action items
 
-- [ ] **Shoots / galleries** — image upload + public detail display (admin upload UI + `/api/content/media`); still missing edit/delete, multi-file batch UX
-- [ ] **Print selection UX** — gallery and shoot pages can select stills; account requests one size (8×10, 11×14, 16×20) and stores an unpaid total. Still no card charge
-- [x] **Schedule page** — future public dates in Mongo, listed on Schedule and Booking; optional embed when `YEW_FULLSTACK_SCHEDULE_EMBED_URL` is set. Delete is curl-only
-- [x] **Contact form** — honeypot, per-IP rate limit, and best-effort SMTP when host and contact email are set. A failed send still returns success
-- [ ] **2FA enrollment UI** — login requires the code when 2FA is on. Enrollment shows the otpauth URL and secret. A QR image still needs a crate
-- [ ] **Immich production feed** — set `YEW_FULLSTACK_FEED_PROVIDER=immich` + env vars; verify thumbnail proxy under load
-- [ ] **YouTube/Instagram live** — empty config hides the featured card and embed widget. Live posts still need API keys or `YEW_FULLSTACK_YOUTUBE_STATIC_JSON`
-- [ ] **E2E smoke test** — `scripts/smoke.sh` covers homepage + login; extend `frontend/tests/web.rs` for route render
-- [x] **Search / filter** — home feed filters by `instagram`, `youtube`, `gallery`, or `shoot`. An unknown source is `400 UNKNOWN_SOURCE`
+### Content
 
-## Infra / naming
+- [ ] **Gallery and shoot maintenance** — edit, delete, reorder, and multi-file upload. Env JSON collections still cannot take uploads
+- [ ] **Schedule delete in the admin panel** — `DELETE /api/admin/schedule/{id}` is curl-only
+- [ ] **Explicit covers and featured tag** — admin sets the cover. Media can be tagged featured. Drop the picsum fallback
+- [ ] **Legal pages** — `prose` classes are unused. The typography plugin is not installed
+- [ ] **Homepage** — photo feed leads. Content hub is the primary call to action
+- [ ] **Booking request** — booking page is its own form. Contact is general questions only. Schedule copy frames dates as availability
 
-- [x] Rename legacy docker project tags (`yew-fullstack-dev` → `jheffmedia-dev`)
-- [ ] Proxmox install path — finish [install/](../install/README.md) docs alignment
+### Account
+
+- [ ] **Remove email change** from the account page. The flow is skipped
+- [x] **2FA enrollment** — otpauth URL and secret are enough. No QR image
+- [x] **Print payment** — shelved. Invoices or another service later. Keep the unpaid request
+
+### API client
+
+- [ ] **Shared fetch helper** — `frontend/src/services/api.rs` is only `auth_header`. The same gloo-net parse pattern is copied across pages
+- [ ] **Retire `GET /api/feed`** — homepage uses `/api/media/feed`. Remove `feed_service` after Immich thumbnails go through the unified feed, or document why the legacy route stays
+
+### Hardening
+
+- [ ] **Content-Security-Policy** for WASM and embeds
+- [ ] **Health check** plus a Compose healthcheck
+- [ ] **Cache-Control** on static files and the thumbnail proxy (`serve_frontend.rs` still has an ETag TODO)
+- [ ] **Clippy** — backend warnings, then `cargo clippy` in CI
+- [ ] **Browser test** — `frontend/tests/web.rs` is `1 + 1 == 2`. `scripts/smoke.sh` only checks the homepage and login reachability
+- [ ] **Commit `Cargo.lock`** — it is gitignored, so builds are not pinned
+
+### Operator setup
+
+- [ ] **Immich feed** — set `YEW_FULLSTACK_FEED_PROVIDER=immich` and confirm the thumbnail proxy
+- [ ] **Live social** — Instagram and YouTube posts still need keys or `YEW_FULLSTACK_YOUTUBE_STATIC_JSON`
+- [ ] **Proxmox path** — confirm [install/README.md](../install/README.md) matches [deployment-proxmox.md](./deployment-proxmox.md)
 
 ## Fixes applied
 

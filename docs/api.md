@@ -113,7 +113,9 @@ Invalidate server session for the token.
 
 ### `GET /api/feed`
 
-Public photo feed metadata for the homepage grid. Images are **not** stored in the site repo — thumbnails are proxied from Immich (or static URLs).
+Legacy Immich or static grid. The homepage uses `GET /api/media/feed`. This route remains for the old feed provider.
+
+Public photo feed metadata. Images are **not** stored in the site repo — thumbnails are proxied from Immich (or static URLs).
 
 **Query**
 
@@ -150,7 +152,61 @@ Proxies a preview thumbnail from Immich for use in `<img src="...">`. Only avail
 
 **Success** `200` — image bytes (`image/jpeg` or `image/webp`).
 
-**Success** `200` — image bytes (`image/jpeg`, `image/png`, `image/webp`, or `image/gif`).
+### `GET /api/media/feed`
+
+Homepage feed. Merges Instagram, YouTube, galleries, and shoots. Direct JSON, not the auth envelope.
+
+**Query**
+
+| Param | Type | Default | Purpose |
+|-------|------|---------|---------|
+| `limit` | integer | `24` | Max items (1–48) |
+| `source` | string | empty | `instagram`, `youtube`, `gallery`, or `shoot`. Empty returns every source |
+
+**Success** `200`
+
+```json
+{
+  "items": [
+    {
+      "id": "post-or-asset",
+      "source": "gallery",
+      "mediaType": "image",
+      "title": "Optional",
+      "thumbnailUrl": "/api/content/media/uuid",
+      "mediaUrl": null,
+      "linkUrl": "/galleries/my-gallery",
+      "collectionId": "my-gallery",
+      "collectionKind": "gallery",
+      "collectionTitle": "Track Day",
+      "featured": false
+    }
+  ],
+  "sources": ["instagram", "gallery"]
+}
+```
+
+**Errors** `400` `UNKNOWN_SOURCE` for any other `source`.
+
+### `GET /api/media/instagram/featured`
+
+**Success** `200` — featured post JSON when `YEW_FULLSTACK_INSTAGRAM_FEATURED_POST_URL` is set.
+
+**Success** `204` — empty body when that URL is missing. The home card renders nothing.
+
+### `GET /api/content/hub`
+
+Public bundle for the content page. Direct JSON:
+
+```json
+{
+  "social": { "accounts": [], "posts": [], "source": "none" },
+  "shoots": { "items": [], "source": "config" },
+  "galleries": { "items": [], "source": "config" }
+}
+```
+
+Counts are trimmed to 3 posts, 2 shoots, and 2 galleries. Nested shapes match `GET /api/social/hub`, `GET /api/shoots`, and `GET /api/galleries`.
 
 ### `GET /api/galleries`
 

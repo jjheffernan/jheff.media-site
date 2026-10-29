@@ -2,7 +2,7 @@
 
 Structured assessment for jheff.media-site. Re-score after major milestones.
 
-**Last assessed:** 2026-07-08
+**Last assessed:** 2026-10-29
 
 ## Scoring scale (1–5)
 
@@ -23,8 +23,8 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 | Category | Score | % | Summary |
 |----------|-------|---|---------|
 | **Security** | 3 | 60% | Solid JWT+bcrypt+session auth, in-memory auth and contact limits, and login-time 2FA. CSP is still missing |
-| **UX** | 3 | 60% | Rich route shell and media feed; shoots/galleries lack upload assets, checkout incomplete, stale placeholder docs |
-| **Tests** | 2 | 40% | 10 unit tests + CI compile; no integration/E2E/API contract coverage |
+| **UX** | 3 | 60% | Feed, print select, and owned dates work. Galleries still lack edit/delete, and checkout does not charge a card |
+| **Tests** | 2 | 40% | Backend unit tests and both suites in CI. No HTTP tests against Mongo and no real browser test |
 | **12 Factor** | 4 | 80% | Docker + env config; runtime JWT secret; pinned Rust images; `jheffmedia-*` docker tags |
 | **Performance** | 3 | 60% | Actix + async Mongo appropriate; WASM payload, no caching, thumbnail proxy untested under load |
 
@@ -96,7 +96,7 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 
 ### To reach 4
 
-- [ ] Real shoot/gallery media upload and detail pages with assets
+- [x] Real shoot/gallery media upload and detail pages with assets
 - [ ] Immich or static feed configured for production homepage
 - [x] Contact notification (email or webhook)
 - [x] Schedule page lists owned dates; external calendar embed stays optional
@@ -104,7 +104,7 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 ### To reach 5
 
 - [ ] Print checkout end-to-end (size and unpaid total exist; card payment does not)
-- [ ] Search/filter unified feed
+- [x] Search/filter unified feed
 - [ ] Polish 2FA enrollment UX (QR display)
 
 ---
@@ -125,13 +125,13 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 ### Evidence
 
 ```bash
-cargo test -p jheffmedia-site-backend   # binary crate; last green run was 20 passed
+cargo test -p jheffmedia-site-backend   # binary crate; last green run was 21 passed
 cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 ```
 
 ### To reach 3
 
-- [ ] Add frontend tests to CI (already in workflow)
+- [x] Add frontend tests to CI (host `cargo test` in `.github/workflows/rust.yml`)
 - [ ] Fix clippy warnings; add `cargo clippy` to CI
 - [ ] One smoke test per critical API (`login`, `media/feed`) — `scripts/smoke.sh` covers homepage + login reachability
 
@@ -147,12 +147,12 @@ cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 
 ---
 
-## 12 Factor (3 / 5)
+## 12 Factor (4 / 5)
 
 | Factor | Status | Notes |
 |--------|--------|-------|
 | I Codebase | ✅ | Single repo, Cargo workspace |
-| II Dependencies | ✅ | `Cargo.lock`, `package-lock.json` |
+| II Dependencies | ⚠️ | `package-lock.json` is committed. `Cargo.lock` is gitignored |
 | III Config | ✅ | `YEW_FULLSTACK_*` env vars; runtime JWT secret |
 | IV Backing services | ✅ | MongoDB as attachable service in Compose |
 | V Build/release | ✅ | Multi-stage `Dockerfile`, `scripts/prod.sh` |
@@ -222,6 +222,7 @@ Per [rust-web-framework-comparison](https://github.com/flosse/rust-web-framework
 ## Related docs
 
 - [TODO.md](./TODO.md) — actionable backlog
+- [design.md](./design.md) — page behavior and open questions
 - [architecture.md](./architecture.md) — system layout
 - [deployment-proxmox.md](./deployment-proxmox.md) — production deploy
 - [authentication.md](./authentication.md) — auth security notes
