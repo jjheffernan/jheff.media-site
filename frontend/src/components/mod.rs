@@ -14,4 +14,4 @@ pub use home::Hero;
 pub use home::InstagramFeaturedCard;
 pub use layout::Layout;
 pub use social::SocialHub;
-pub use ui::{Card, Grid, Heading, LinkCard, NavLink, Stack, Text, TextTone};
+pub use ui::{Card, Grid, Heading, LinkCard, NavLink, Stack, StackGap, Text, TextTone};

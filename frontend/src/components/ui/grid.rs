@@ -17,11 +17,11 @@ pub fn grid(props: &Props) -> Html {
     let cols_sm = props.cols_sm.clamp(1, 4);
     let cols_lg = props.cols_lg.clamp(1, 6);
     let grid_class = match (cols_sm, cols_lg) {
-        (1, 3) => "grid gap-4 sm:grid-cols-1 lg:grid-cols-3",
-        (2, 3) => "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
-        (2, 4) => "grid gap-4 sm:grid-cols-2 lg:grid-cols-4",
-        (1, 2) => "grid gap-4 sm:grid-cols-1 lg:grid-cols-2",
-        _ => "grid gap-4 sm:grid-cols-2 lg:grid-cols-3",
+        (1, 3) => "grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3",
+        (2, 3) => "grid gap-3 grid-cols-2 md:grid-cols-3",
+        (2, 4) => "grid gap-3 grid-cols-2 md:grid-cols-4",
+        (1, 2) => "grid gap-3 grid-cols-1 sm:grid-cols-2",
+        _ => "grid gap-3 grid-cols-2 md:grid-cols-3",
     };
 
     html! {

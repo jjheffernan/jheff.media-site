@@ -79,7 +79,7 @@ pub fn photo_grid(props: &Props) -> Html {
 
     html! {
         <div class={format!(
-            "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 {}",
+            "grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-4 {}",
             props.class
         )}>
             { for props.items.iter().map(|item| {

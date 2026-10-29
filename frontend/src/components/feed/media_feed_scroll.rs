@@ -168,11 +168,11 @@ pub fn media_feed_scroll(props: &Props) -> Html {
         FeedState::Ready(feed) => {
             let sources = feed.sources.join(", ");
             html! {
-                <div class="space-y-6">
+                <div class="feed-block">
                     <p class="text-xs text-muted">
                         { format!("Sources: {}", sources) }
                     </p>
-                    <div class="columns-1 gap-4 sm:columns-2 lg:columns-3">
+                    <div class="columns-2 gap-3 md:columns-3">
                         { for feed.items.iter().map(|item| html! {
                             <FeedCard
                                 key={item.id.clone()}

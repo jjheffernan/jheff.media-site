@@ -1,4 +1,4 @@
-use crate::components::{Hero, Grid, InstagramFeaturedCard, LinkCard, MediaFeedScroll, Stack};
+use crate::components::{Hero, InstagramFeaturedCard, LinkCard, MediaFeedScroll, Stack, StackGap};
 use crate::routes::AppRoutes;
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -16,18 +16,19 @@ impl Component for Home {
 
     fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
-            <Stack>
+            <Stack gap={StackGap::Sm}>
                 <MediaFeedScroll title="Feed" limit={24} />
 
-                <Link<AppRoutes> to={AppRoutes::Content} classes="btn btn-primary">
-                    { "Content hub" }
-                </Link<AppRoutes>>
-
-                <Hero />
+                <div class="home-intro">
+                    <Hero />
+                    <Link<AppRoutes> to={AppRoutes::Content} classes="btn btn-primary">
+                        { "Content hub" }
+                    </Link<AppRoutes>>
+                </div>
 
                 <InstagramFeaturedCard />
 
-                <Grid cols_sm={1} cols_lg={3}>
+                <div class="home-actions">
                     <LinkCard route={AppRoutes::Content} title="Content hub">
                         { "Social posts, shoots, and galleries — everything @jheffmedia in one view." }
                     </LinkCard>
@@ -37,7 +38,7 @@ impl Component for Home {
                     <LinkCard route={AppRoutes::Contact} title="Contact">
                         { "General questions and collaborations." }
                     </LinkCard>
-                </Grid>
+                </div>
             </Stack>
         }
     }

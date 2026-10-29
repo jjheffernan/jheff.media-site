@@ -48,33 +48,29 @@ pub fn instagram_featured_card() -> Html {
                 .unwrap_or_else(|| "Latest from Instagram".to_string());
             html! {
                 <section class="card card-flat overflow-hidden">
-                    <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                    <div class="featured-post">
                         if let Some(thumb) = &featured.thumbnail_url {
                             <a
                                 href={featured.post_url.clone()}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="block shrink-0 overflow-hidden rounded-xl sm:w-48"
+                                class="featured-thumb"
                             >
                                 <LazyImage src={thumb.clone()} alt={title.clone()} />
                             </a>
                         }
-                        <div class="flex-1 space-y-3">
-                            <p class="kicker">
-                                { "Instagram" }
-                            </p>
+                        <div class="featured-body">
+                            <p class="kicker">{ "Instagram" }</p>
                             <a
                                 href={featured.post_url.clone()}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="text-xl font-semibold text-foreground hover:text-accent"
+                                class="featured-title"
                             >
                                 { title }
                             </a>
-                            <p class="text-sm text-muted">
-                                { format!("See the latest post on {}", featured.handle) }
-                            </p>
-                            <div class="flex flex-wrap gap-3">
+                            <p class="muted">{ format!("See the latest post on {}", featured.handle) }</p>
+                            <div class="featured-actions">
                                 <a
                                     href={featured.post_url.clone()}
                                     target="_blank"
@@ -83,10 +79,7 @@ pub fn instagram_featured_card() -> Html {
                                 >
                                     { "View post" }
                                 </a>
-                                <Link<AppRoutes>
-                                    to={AppRoutes::Social}
-                                    classes="btn btn-quiet"
-                                >
+                                <Link<AppRoutes> to={AppRoutes::Social} classes="btn btn-quiet">
                                     { "All social →" }
                                 </Link<AppRoutes>>
                             </div>
