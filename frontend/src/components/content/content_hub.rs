@@ -4,7 +4,7 @@ use crate::{
         social::PostCard,
         ui::{Grid, Heading, HeadingLevel, Spinner, Text, TextTone},
     },
-    model::{ContentListResponse, SocialHubResponse},
+    model::{ContentHubResponse, ContentListResponse, SocialHubResponse},
     routes::AppRoutes,
 };
 use gloo_net::http::Request;
@@ -31,61 +31,36 @@ pub fn content_hub() -> Html {
 
     {
         let social = social.clone();
-        use_effect_with((), move |_| {
-            spawn_local(async move {
-                let result = Request::get("/api/social/hub").send().await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(hub) = resp.json::<SocialHubResponse>().await {
-                            social.set(SliceState::Ready(hub));
-                        } else {
-                            social.set(SliceState::Error("Could not parse social feed.".into()));
-                        }
-                    }
-                    Ok(_) => social.set(SliceState::Error("Social feed unavailable.".into())),
-                    Err(err) => social.set(SliceState::Error(err.to_string())),
-                }
-            });
-            || ()
-        });
-    }
-
-    {
         let shoots = shoots.clone();
-        use_effect_with((), move |_| {
-            spawn_local(async move {
-                let result = Request::get("/api/shoots").send().await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(data) = resp.json::<ContentListResponse>().await {
-                            shoots.set(SliceState::Ready(data));
-                        } else {
-                            shoots.set(SliceState::Error("Could not parse shoots.".into()));
-                        }
-                    }
-                    Ok(_) => shoots.set(SliceState::Error("Shoots unavailable.".into())),
-                    Err(err) => shoots.set(SliceState::Error(err.to_string())),
-                }
-            });
-            || ()
-        });
-    }
-
-    {
         let galleries = galleries.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let result = Request::get("/api/galleries").send().await;
+                let result = Request::get("/api/content/hub").send().await;
                 match result {
                     Ok(resp) if resp.ok() => {
-                        if let Ok(data) = resp.json::<ContentListResponse>().await {
-                            galleries.set(SliceState::Ready(data));
+                        if let Ok(hub) = resp.json::<ContentHubResponse>().await {
+                            social.set(SliceState::Ready(hub.social));
+                            shoots.set(SliceState::Ready(hub.shoots));
+                            galleries.set(SliceState::Ready(hub.galleries));
                         } else {
-                            galleries.set(SliceState::Error("Could not parse galleries.".into()));
+                            social.set(SliceState::Error("Could not parse social feed.".into()));
+                            shoots.set(SliceState::Error("Could not parse shoots.".into()));
+                            galleries.set(SliceState::Error(
+                                "Could not parse galleries.".into(),
+                            ));
                         }
                     }
-                    Ok(_) => galleries.set(SliceState::Error("Galleries unavailable.".into())),
-                    Err(err) => galleries.set(SliceState::Error(err.to_string())),
+                    Ok(_) => {
+                        social.set(SliceState::Error("Social feed unavailable.".into()));
+                        shoots.set(SliceState::Error("Shoots unavailable.".into()));
+                        galleries.set(SliceState::Error("Galleries unavailable.".into()));
+                    }
+                    Err(err) => {
+                        let msg = err.to_string();
+                        social.set(SliceState::Error(msg.clone()));
+                        shoots.set(SliceState::Error(msg.clone()));
+                        galleries.set(SliceState::Error(msg));
+                    }
                 }
             });
             || ()

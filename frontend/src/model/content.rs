@@ -1,3 +1,4 @@
+use super::social::SocialHubResponse;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -44,6 +45,14 @@ pub struct ContentCollectionSummary {
 pub struct ContentListResponse {
     pub items: Vec<ContentCollectionSummary>,
     pub source: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ContentHubResponse {
+    pub social: SocialHubResponse,
+    pub shoots: ContentListResponse,
+    pub galleries: ContentListResponse,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

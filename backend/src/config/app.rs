@@ -27,6 +27,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
             )
             .service(
                 web::scope("/content")
+                    .route("/hub", web::get().to(content_controller::hub))
                     .route("/media/{asset_id}", web::get().to(content_controller::serve_media)),
             )
             .service(

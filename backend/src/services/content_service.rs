@@ -1,9 +1,41 @@
 use crate::models::content::{
     ContentCollection, ContentCollectionSummary, ContentListResponse, MediaItem,
 };
-use crate::services::{content_store_service, content_upload_service};
+use crate::models::social::SocialHubResponse;
+use crate::services::{content_store_service, content_upload_service, social_service};
+use awc::Client;
+use futures_util::future::join3;
 use mongodb::Database;
+use serde::Serialize;
 use std::env;
+
+const HUB_SOCIAL_LIMIT: usize = 3;
+const HUB_SHOOT_LIMIT: usize = 2;
+const HUB_GALLERY_LIMIT: usize = 2;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ContentHubResponse {
+    pub social: SocialHubResponse,
+    pub shoots: ContentListResponse,
+    pub galleries: ContentListResponse,
+}
+
+pub async fn hub(db: &Database, client: &Client) -> ContentHubResponse {
+    let (mut social, mut shoots, mut galleries) = join3(
+        social_service::hub_config(client),
+        list_shoots_merged(db),
+        list_galleries_merged(db),
+    )
+    .await;
+    social.posts.truncate(HUB_SOCIAL_LIMIT);
+    shoots.items.truncate(HUB_SHOOT_LIMIT);
+    galleries.items.truncate(HUB_GALLERY_LIMIT);
+    ContentHubResponse {
+        social,
+        shoots,
+        galleries,
+    }
+}
 
 fn parse_collections(env_key: &str) -> Vec<ContentCollection> {
     let json = env::var(env_key).unwrap_or_default();
@@ -92,11 +124,7 @@ pub async fn get_shoot_merged(id: &str, db: &Database) -> Option<ContentCollecti
         .find(|c| c.id == id)
 }
 
-pub async fn create_collection(
-    collection: ContentCollection,
-    kind: &str,
-    db: &Database,
-) -> bool {
+pub async fn create_collection(collection: ContentCollection, kind: &str, db: &Database) -> bool {
     let collection = ContentCollection {
         kind: Some(kind.to_string()),
         ..collection
@@ -119,8 +147,7 @@ pub async fn upload_media(
         return Err(String::from("COLLECTION_NOT_FOUND"));
     }
 
-    let media =
-        content_upload_service::save_asset(bytes, content_type, original_filename)?;
+    let media = content_upload_service::save_asset(bytes, content_type, original_filename)?;
     if !content_store_service::append_media(kind, collection_id, media.clone(), db).await {
         return Err(String::from("MEDIA_UPDATE_FAILED"));
     }

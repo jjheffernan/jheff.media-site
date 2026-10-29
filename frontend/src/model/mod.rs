@@ -12,7 +12,7 @@ pub use auth::Signup;
 pub use auth::User;
 pub use content::{
     BookingConfig, ContactSubmission, ContentCollection, ContentCollectionSummary,
-    ContentListResponse, MediaItem, OtherSite, OtherSitesResponse,
+    ContentHubResponse, ContentListResponse, MediaItem, OtherSite, OtherSitesResponse,
 };
 pub use feed::{FeedItem, FeedResponse};
 pub use media::{
