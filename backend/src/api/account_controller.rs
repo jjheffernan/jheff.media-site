@@ -9,9 +9,20 @@ use crate::{
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use mongodb::Database;
 
+fn client_ip(req: &HttpRequest) -> String {
+    req.connection_info()
+        .realip_remote_addr()
+        .unwrap_or("unknown")
+        .to_string()
+}
+
 // POST api/auth/signup
-pub async fn signup(user_dto: web::Json<User>, db: web::Data<Database>) -> Result<HttpResponse> {
-    match account_service::signup(user_dto.0, &db).await {
+pub async fn signup(
+    req: HttpRequest,
+    user_dto: web::Json<User>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    match account_service::signup(user_dto.0, &client_ip(&req), &db).await {
         Ok(data) => Ok(HttpResponse::Ok().json(ResponseBody::new("SUCCESS", &data))),
         Err(err) => Ok(err.response()),
     }
@@ -19,10 +30,11 @@ pub async fn signup(user_dto: web::Json<User>, db: web::Data<Database>) -> Resul
 
 // POST api/auth/login
 pub async fn login(
+    req: HttpRequest,
     login_dto: web::Json<LoginDTO>,
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
-    match account_service::login(&login_dto.0, &db).await {
+    match account_service::login(&login_dto.0, &client_ip(&req), &db).await {
         Ok(token_res) => Ok(HttpResponse::Ok().json(ResponseBody::new("LOGIN_SUCCESS", token_res))),
         Err(err) => Ok(err.response()),
     }

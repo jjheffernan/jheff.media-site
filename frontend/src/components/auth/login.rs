@@ -10,6 +10,9 @@ pub struct Login {
     form_data: Model,
     username_error: Option<String>,
     password_error: Option<String>,
+    totp_error: Option<String>,
+    form_error: Option<String>,
+    show_totp: bool,
     submitting: bool,
 }
 
@@ -25,12 +28,16 @@ pub struct Props {
 pub enum LoginFailure {
     BadUsername,
     BadPassword,
+    TotpRequired,
+    TotpInvalid,
+    RateLimited,
     Other,
 }
 
 pub enum Msg {
     UpdateEmailOrUsername(String),
     UpdatePassword(String),
+    UpdateTotp(String),
     Request,
     Response(Result<String, LoginFailure>),
 }
@@ -45,6 +52,9 @@ impl Component for Login {
             form_data: Model::default(),
             username_error: None,
             password_error: None,
+            totp_error: None,
+            form_error: None,
+            show_totp: false,
             submitting: false,
         }
     }
@@ -71,8 +81,18 @@ impl Component for Login {
                 };
                 self.form_data.password = password;
             }
+            Msg::UpdateTotp(code) => {
+                self.totp_error = None;
+                self.form_data.totp_code = Some(code);
+            }
             Msg::Request => {
                 self.submitting = true;
+                self.form_error = None;
+                if !self.show_totp {
+                    self.form_data.totp_code = None;
+                } else if self.form_data.totp_code.is_none() {
+                    self.form_data.totp_code = Some(String::new());
+                }
                 let body = serde_json::to_string(&self.form_data).unwrap_or_default();
                 let link = ctx.link().clone();
                 spawn_local(async move {
@@ -81,12 +101,26 @@ impl Component for Login {
                         .body(body)
                     {
                         Ok(req) => match req.send().await {
-                            Ok(resp) if resp.ok() => {
-                                Ok(resp.text().await.unwrap_or_default())
+                            Ok(resp) => {
+                                let status = resp.status();
+                                let text = resp.text().await.unwrap_or_default();
+                                if resp.ok() {
+                                    Ok(text)
+                                } else if status == 401 && text.contains("TOTP_REQUIRED") {
+                                    Err(LoginFailure::TotpRequired)
+                                } else if status == 400 && text.contains("TOTP_INVALID") {
+                                    Err(LoginFailure::TotpInvalid)
+                                } else if status == 429 {
+                                    Err(LoginFailure::RateLimited)
+                                } else if status == 404 {
+                                    Err(LoginFailure::BadUsername)
+                                } else if status == 400 {
+                                    Err(LoginFailure::BadPassword)
+                                } else {
+                                    Err(LoginFailure::Other)
+                                }
                             }
-                            Ok(resp) if resp.status() == 404 => Err(LoginFailure::BadUsername),
-                            Ok(resp) if resp.status() == 400 => Err(LoginFailure::BadPassword),
-                            Ok(_) | Err(_) => Err(LoginFailure::Other),
+                            Err(_) => Err(LoginFailure::Other),
                         },
                         Err(_) => Err(LoginFailure::Other),
                     };
@@ -111,6 +145,21 @@ impl Component for Login {
                         LoginFailure::BadPassword => {
                             self.password_error = Some("BAD_PASSWORD".to_string());
                         }
+                        LoginFailure::TotpRequired => {
+                            self.show_totp = true;
+                            self.totp_error = None;
+                            if self.form_data.totp_code.is_none() {
+                                self.form_data.totp_code = Some(String::new());
+                            }
+                        }
+                        LoginFailure::TotpInvalid => {
+                            self.show_totp = true;
+                            self.totp_error = Some("TOTP_INVALID".to_string());
+                        }
+                        LoginFailure::RateLimited => {
+                            self.form_error =
+                                Some("Too many attempts. Try again later.".to_string());
+                        }
                         LoginFailure::Other => {}
                     },
                 }
@@ -125,14 +174,16 @@ impl Component for Login {
             Msg::Request
         });
         let oninput_email_or_username = ctx.link().callback(|e: InputEvent| {
-            let value = e
-                .target_unchecked_into::<HtmlInputElement>()
-                .value();
+            let value = e.target_unchecked_into::<HtmlInputElement>().value();
             Msg::UpdateEmailOrUsername(value)
         });
         let oninput_password = ctx.link().callback(|e: InputEvent| {
             let value = e.target_unchecked_into::<HtmlInputElement>().value();
             Msg::UpdatePassword(value)
+        });
+        let oninput_totp = ctx.link().callback(|e: InputEvent| {
+            let value = e.target_unchecked_into::<HtmlInputElement>().value();
+            Msg::UpdateTotp(value)
         });
         let username_class = if self.username_error.is_some() {
             "rounded-lg border border-red-500 bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-red-500/30"
@@ -144,10 +195,18 @@ impl Component for Login {
         } else {
             "rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         };
+        let totp_class = if self.totp_error.is_some() {
+            "rounded-lg border border-red-500 bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-red-500/30"
+        } else {
+            "rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+        };
         let wrapper_class = if ctx.props().embedded {
             format!("p-0 {}", ctx.props().class)
         } else {
-            format!("rounded-xl border border-border bg-surface-elevated p-4 {}", ctx.props().class)
+            format!(
+                "rounded-xl border border-border bg-surface-elevated p-4 {}",
+                ctx.props().class
+            )
         };
         html! {
             <div class={wrapper_class}>
@@ -177,6 +236,27 @@ impl Component for Login {
                         oninput={oninput_password}
                         placeholder="Password"
                         spellcheck="false" />
+                    if self.show_totp {
+                        <p class="text-xs text-muted">
+                            { "Enter the code from your authenticator app." }
+                        </p>
+                        <input
+                            id={format!("{}-totp", self.id)}
+                            type="text"
+                            inputmode="numeric"
+                            autocomplete="one-time-code"
+                            maxlength="6"
+                            class={totp_class}
+                            value={self.form_data.totp_code.clone().unwrap_or_default()}
+                            oninput={oninput_totp}
+                            spellcheck="false" />
+                        if let Some(err) = &self.totp_error {
+                            <p class="text-xs text-red-600 dark:text-red-300">{ err.clone() }</p>
+                        }
+                    }
+                    if let Some(err) = &self.form_error {
+                        <p class="text-xs text-red-600 dark:text-red-300">{ err.clone() }</p>
+                    }
                     <button
                         type="submit"
                         disabled={self.submitting}

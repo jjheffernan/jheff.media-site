@@ -164,7 +164,7 @@ pub async fn totp_disable(
     Ok(String::from("Two-factor authentication disabled."))
 }
 
-fn verify_totp_code(secret_base32: &str, code: &str) -> bool {
+pub(crate) fn verify_totp_code(secret_base32: &str, code: &str) -> bool {
     let secret_bytes = BASE32.decode(secret_base32.to_uppercase().as_bytes()).unwrap_or_default();
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

@@ -66,6 +66,8 @@ pub struct UserDTO {
 pub struct LoginDTO {
     pub email_or_username: String,
     pub password: String,
+    #[serde(default)]
+    pub totp_code: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -164,6 +166,35 @@ impl User {
                 if !user_to_verify.password.is_empty()
                     && verify(&login.password, &user_to_verify.password).unwrap()
                 {
+                    if user_to_verify.totp_enabled {
+                        let code = login
+                            .totp_code
+                            .as_deref()
+                            .map(str::trim)
+                            .filter(|code| !code.is_empty());
+                        match code {
+                            None => {
+                                return Err(ServiceError::new(
+                                    StatusCode::UNAUTHORIZED,
+                                    "TOTP_REQUIRED",
+                                ));
+                            }
+                            Some(code) => {
+                                let valid =
+                                    user_to_verify.totp_secret.as_deref().is_some_and(|secret| {
+                                        crate::services::account_settings_service::verify_totp_code(
+                                            secret, code,
+                                        )
+                                    });
+                                if !valid {
+                                    return Err(ServiceError::new(
+                                        StatusCode::BAD_REQUEST,
+                                        "TOTP_INVALID",
+                                    ));
+                                }
+                            }
+                        }
+                    }
                     let login_session_str = User::generate_login_session();
                     if User::update_login_session(
                         &user_to_verify.id.unwrap(),
@@ -337,6 +368,16 @@ mod tests {
             serde_json::from_str(r#"{"emailOrUsername":"alice","password":"secret"}"#).unwrap();
         assert_eq!(dto.email_or_username, "alice");
         assert_eq!(dto.password, "secret");
+        assert!(dto.totp_code.is_none());
+    }
+
+    #[test]
+    fn login_dto_deserializes_totp_code() {
+        let dto: LoginDTO = serde_json::from_str(
+            r#"{"emailOrUsername":"alice","password":"secret","totpCode":"123456"}"#,
+        )
+        .unwrap();
+        assert_eq!(dto.totp_code.as_deref(), Some("123456"));
     }
 
     #[test]

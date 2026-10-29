@@ -30,4 +30,6 @@ pub struct Signup {
 pub struct Login {
     pub email_or_username: String,
     pub password: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub totp_code: Option<String>,
 }

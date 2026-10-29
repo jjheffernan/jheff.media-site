@@ -10,6 +10,35 @@ use actix_web::{
 };
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+const AUTH_RATE_LIMIT: usize = 8;
+const AUTH_RATE_WINDOW: Duration = Duration::from_secs(10 * 60);
+
+fn allow(hits: &Mutex<Option<HashMap<String, Vec<Instant>>>>, ip: &str) -> bool {
+    let mut guard = hits.lock().unwrap_or_else(|err| err.into_inner());
+    let map = guard.get_or_insert_with(HashMap::new);
+    let now = Instant::now();
+    let recent = map.entry(ip.to_string()).or_default();
+    recent.retain(|at| now.duration_since(*at) < AUTH_RATE_WINDOW);
+    if recent.len() >= AUTH_RATE_LIMIT {
+        return false;
+    }
+    recent.push(now);
+    true
+}
+
+fn allow_login(ip: &str) -> bool {
+    static HITS: Mutex<Option<HashMap<String, Vec<Instant>>>> = Mutex::new(None);
+    allow(&HITS, ip)
+}
+
+fn allow_signup(ip: &str) -> bool {
+    static HITS: Mutex<Option<HashMap<String, Vec<Instant>>>> = Mutex::new(None);
+    allow(&HITS, ip)
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TokenBodyResponse {
@@ -18,7 +47,17 @@ pub struct TokenBodyResponse {
     pub user: PublicUserDTO,
 }
 
-pub async fn signup(user: User, db: &web::Data<Database>) -> Result<String, ServiceError> {
+pub async fn signup(
+    user: User,
+    client_ip: &str,
+    db: &web::Data<Database>,
+) -> Result<String, ServiceError> {
+    if !allow_signup(client_ip) {
+        return Err(ServiceError::new(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Too many attempts. Try again later.",
+        ));
+    }
     if user.password.len() < 8 {
         return Err(ServiceError::new(
             StatusCode::BAD_REQUEST,
@@ -36,8 +75,15 @@ pub async fn signup(user: User, db: &web::Data<Database>) -> Result<String, Serv
 
 pub async fn login(
     login: &LoginDTO,
+    client_ip: &str,
     db: &web::Data<Database>,
 ) -> Result<TokenBodyResponse, ServiceError> {
+    if !allow_login(client_ip) {
+        return Err(ServiceError::new(
+            StatusCode::TOO_MANY_REQUESTS,
+            "Too many attempts. Try again later.",
+        ));
+    }
     let logged_user = User::login(&login, db).await?;
     let public_user: PublicUserDTO = logged_user.clone().into();
     match serde_json::from_value(
@@ -77,4 +123,20 @@ pub async fn logout(authen_header: &HeaderValue, db: &web::Data<Database>) -> Re
         StatusCode::UNAUTHORIZED,
         "INVALID_TOKEN".to_string(),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{allow_login, allow_signup};
+
+    #[test]
+    fn rate_limit_is_eight_and_separate_per_action() {
+        let ip = format!("auth-test-{}", std::process::id());
+        for _ in 0..8 {
+            assert!(allow_login(&ip));
+            assert!(allow_signup(&ip));
+        }
+        assert!(!allow_login(&ip));
+        assert!(!allow_signup(&ip));
+    }
 }
