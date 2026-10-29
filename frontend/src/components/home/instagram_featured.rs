@@ -12,7 +12,7 @@ use yew_router::prelude::*;
 enum LoadState {
     Loading,
     Ready(InstagramFeatured),
-    Error(String),
+    Hidden,
 }
 
 #[function_component(InstagramFeaturedCard)]
@@ -24,15 +24,14 @@ pub fn instagram_featured_card() -> Html {
         use_effect_with((), move |_| {
             spawn_local(async move {
                 match Request::get("/api/media/instagram/featured").send().await {
-                    Ok(resp) if resp.ok() => {
+                    Ok(resp) if resp.status() == 200 => {
                         if let Ok(featured) = resp.json::<InstagramFeatured>().await {
                             state.set(LoadState::Ready(featured));
                             return;
                         }
-                        state.set(LoadState::Error("Could not parse featured post.".into()));
+                        state.set(LoadState::Hidden);
                     }
-                    Ok(_) => state.set(LoadState::Error("Featured post unavailable.".into())),
-                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                    _ => state.set(LoadState::Hidden),
                 }
             });
             || ()
@@ -41,9 +40,7 @@ pub fn instagram_featured_card() -> Html {
 
     match &*state {
         LoadState::Loading => html! { <Spinner label="Loading featured post…" /> },
-        LoadState::Error(msg) => html! {
-            <p class="text-sm text-muted">{ msg.clone() }</p>
-        },
+        LoadState::Hidden => html! {},
         LoadState::Ready(featured) => {
             let title = featured
                 .title
@@ -97,6 +94,6 @@ pub fn instagram_featured_card() -> Html {
                     </div>
                 </section>
             }
-        },
+        }
     }
 }

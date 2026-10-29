@@ -45,10 +45,7 @@ pub async fn unified_feed(client: &Client, db: &Database, limit: usize) -> Media
                     media_type: String::from("video"),
                     title: Some(post.title.clone()),
                     caption: None,
-                    thumbnail_url: post
-                        .thumbnail_url
-                        .clone()
-                        .unwrap_or_default(),
+                    thumbnail_url: post.thumbnail_url.clone().unwrap_or_default(),
                     media_url: Some(post.url.clone()),
                     link_url: Some(post.url.clone()),
                     published_at: post.published_at.clone(),
@@ -149,11 +146,10 @@ fn is_featured_instagram(url: &str) -> bool {
     url.contains(&featured) || featured.contains(url)
 }
 
-pub fn instagram_featured() -> InstagramFeatured {
+pub fn instagram_featured() -> Option<InstagramFeatured> {
     let post_url = env::var("YEW_FULLSTACK_INSTAGRAM_FEATURED_POST_URL")
         .ok()
-        .filter(|u| !u.is_empty())
-        .unwrap_or_else(|| String::from("https://www.instagram.com/p/example/"));
+        .filter(|u| !u.is_empty())?;
     let thumbnail = env::var("YEW_FULLSTACK_INSTAGRAM_FEATURED_THUMBNAIL")
         .ok()
         .filter(|u| !u.is_empty());
@@ -162,11 +158,11 @@ pub fn instagram_featured() -> InstagramFeatured {
         .filter(|t| !t.is_empty())
         .or_else(|| Some(String::from("Latest from @jheffmedia")));
 
-    InstagramFeatured {
+    Some(InstagramFeatured {
         post_url,
         thumbnail_url: thumbnail,
         title,
         profile_url: instagram_service::instagram_profile_url(),
         handle: instagram_service::instagram_handle(),
-    }
+    })
 }
