@@ -75,10 +75,7 @@ pub fn header(props: &Props) -> Html {
             if open {
                 <nav id="site-nav-panel" class="site-nav-panel" aria-label="Primary">
                     <NavLink route={AppRoutes::Home} label="Home" />
-                    <NavLink route={AppRoutes::Content} label="Content hub" />
-                    <NavLink route={AppRoutes::Galleries} label="Galleries" />
-                    <NavLink route={AppRoutes::Shoots} label="Shoots" />
-                    <NavLink route={AppRoutes::Social} label="Social" />
+                    <ContentNav inline={true} />
                     <NavLink route={AppRoutes::Booking} label="Booking" />
                     <NavLink route={AppRoutes::Schedule} label="Schedule" />
                 </nav>
