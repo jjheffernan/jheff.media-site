@@ -34,6 +34,7 @@ web-sys = { version = "0.3.102", features = [
     "HtmlElement",
     "DomTokenList",
     "HtmlInputElement",
+    "HtmlSelectElement",
     "MediaQueryList",
     "Window",
     "console",

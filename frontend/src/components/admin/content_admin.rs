@@ -1,4 +1,5 @@
 use crate::{
+    components::admin::library_import::LibraryImport,
     components::ui::{Heading, HeadingLevel, Text, TextTone},
     context::AuthContext,
     model::{AdminPrintOrder, ContentCollection},
@@ -937,6 +938,8 @@ pub fn content_admin() -> Html {
                     <button type="button" class="btn btn-quiet" onclick={on_reorder_shoot}>{ "Reorder media" }</button>
                 </div>
             </div>
+
+            <LibraryImport />
 
             <div class="space-y-3">
                 <Text tone={TextTone::Muted}>{ "Add date" }</Text>

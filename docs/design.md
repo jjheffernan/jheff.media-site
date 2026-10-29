@@ -47,3 +47,4 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule. On sm
 - 2FA enrollment with the otpauth URL and secret is enough. No QR image.
 - Email change is skipped. Do not offer it in the account UI.
 - Admins triage contact and booking messages, manage gallery and shoot media, and update print order status from the account page. Payment status is recorded only; the app does not charge cards.
+- Immich and Nextcloud copies are admin-only, at most 6 files, and only into a draft gallery or shoot. Draft collections stay off the public site. Library credentials stay on the server.

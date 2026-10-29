@@ -126,6 +126,15 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         "/prints/orders/{id}",
                         web::patch().to(print_controller::admin_update_order),
                     )
+                    .route("/library", web::get().to(admin_controller::library_sources))
+                    .route(
+                        "/library/{source}",
+                        web::get().to(admin_controller::library_list),
+                    )
+                    .route(
+                        "/library/{source}",
+                        web::post().to(admin_controller::library_import),
+                    )
                     .route("/contacts", web::get().to(contact_controller::list))
                     .route(
                         "/contacts/{id}",

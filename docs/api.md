@@ -346,6 +346,24 @@ Upload one or more images to an existing MongoDB gallery. Admin JWT required. En
 
 Upload one or more images to an existing MongoDB shoot. Same contract as gallery media upload.
 
+### `GET /api/admin/library`
+
+Admin JWT. Lists which library sources the server has configured. The response is only `immich` and/or `nextcloud`. API keys and passwords are not returned.
+
+### `GET /api/admin/library/{source}`
+
+Admin JWT. `source` is `immich` or `nextcloud`. Returns at most 12 file names and ids from the configured album or folder. The browser never talks to Immich or Nextcloud.
+
+### `POST /api/admin/library/{source}`
+
+Admin JWT. Copies up to 6 selected files into an existing Mongo gallery or shoot whose status is `draft`. Files are not marked featured and do not become the cover. Draft collections stay off the public lists, detail pages, and feed until the status changes.
+
+```json
+{ "kind": "gallery", "collectionId": "track-day", "assetIds": ["file-or-uuid"] }
+```
+
+**Errors** `400` — `NOT_DRAFT`, `TOO_MANY`, `BAD_ID`, `EMPTY_SELECTION`, `FILE_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`. `404` — `NOT_CONFIGURED`, `COLLECTION_NOT_FOUND`. `502` — `UPSTREAM`.
+
 **Env (optional)**
 
 | Variable | Default | Purpose |

@@ -8,6 +8,7 @@ pub mod feed_service;
 #[cfg(feature = "forward-frontend")]
 pub mod forward_frontend;
 pub mod instagram_service;
+pub mod library_import_service;
 pub mod mailer;
 pub mod media_feed_service;
 pub mod print_service;

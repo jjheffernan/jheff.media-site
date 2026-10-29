@@ -4,13 +4,15 @@ use crate::{
         content::{ContentCollection, ReorderMediaRequest, UpdateContentCollection},
         response::ResponseBody,
     },
-    services::content_service,
+    services::{content_service, library_import_service},
     utils::auth::require_admin,
 };
 use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse, Result};
+use awc::Client;
 use futures_util::StreamExt;
 use mongodb::Database;
+use serde::Deserialize;
 
 pub async fn create_gallery(
     req: HttpRequest,
@@ -337,6 +339,83 @@ pub async fn upload_shoot_media(
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
     upload_collection_media(req, path, payload, db, "shoot").await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LibraryImportRequest {
+    kind: String,
+    collection_id: String,
+    asset_ids: Vec<String>,
+}
+
+pub async fn library_sources(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    Ok(HttpResponse::Ok().json(ResponseBody::new(
+        "OK",
+        serde_json::json!({ "sources": library_import_service::configured_sources() }),
+    )))
+}
+
+pub async fn library_list(
+    req: HttpRequest,
+    path: web::Path<String>,
+    db: web::Data<Database>,
+    client: web::Data<Client>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    let source = path.into_inner();
+    match library_import_service::list_candidates(&client, &source).await {
+        Ok(items) => Ok(HttpResponse::Ok().json(ResponseBody::new("OK", items))),
+        Err(code) => Ok(library_error(code)),
+    }
+}
+
+pub async fn library_import(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<LibraryImportRequest>,
+    db: web::Data<Database>,
+    client: web::Data<Client>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    let source = path.into_inner();
+    match library_import_service::import_selected(
+        &client,
+        &db,
+        &source,
+        &body.kind,
+        &body.collection_id,
+        &body.asset_ids,
+    )
+    .await
+    {
+        Ok(copied) => Ok(HttpResponse::Ok().json(ResponseBody::new(
+            "IMPORTED",
+            serde_json::json!({ "copied": copied }),
+        ))),
+        Err(code) => Ok(library_error(code)),
+    }
+}
+
+fn library_error(code: &str) -> HttpResponse {
+    let status = match code {
+        "UNKNOWN_SOURCE" | "BAD_KIND" | "BAD_COLLECTION" | "EMPTY_SELECTION" | "TOO_MANY"
+        | "BAD_ID" | "NOT_DRAFT" | "FILE_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" => {
+            actix_web::http::StatusCode::BAD_REQUEST
+        }
+        "NOT_CONFIGURED" | "COLLECTION_NOT_FOUND" | "ENV_ONLY_COLLECTION" => {
+            actix_web::http::StatusCode::NOT_FOUND
+        }
+        _ => actix_web::http::StatusCode::BAD_GATEWAY,
+    };
+    ServiceError::new(status, code).response()
 }
 
 #[cfg(test)]

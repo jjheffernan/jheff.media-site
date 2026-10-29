@@ -32,6 +32,10 @@ Dev Docker and local watch use `forward-frontend`. Production binary serves bake
 | `YEW_FULLSTACK_IMMICH_API_KEY` | — | Immich API key (server-side only) |
 | `YEW_FULLSTACK_IMMICH_ALBUM_ID` | — | Album UUID for homepage feed |
 | `YEW_FULLSTACK_IMMICH_SHARED_KEY` | — | Optional shared-link key for thumbnails |
+| `YEW_FULLSTACK_NEXTCLOUD_URL` | — | Nextcloud base URL. Import stays off when empty |
+| `YEW_FULLSTACK_NEXTCLOUD_USER` | — | Nextcloud user for the app password |
+| `YEW_FULLSTACK_NEXTCLOUD_APP_PASSWORD` | — | Nextcloud app password. Server-side only |
+| `YEW_FULLSTACK_NEXTCLOUD_FOLDER` | — | Folder under that user's files. Required, and `..` is rejected |
 | `YEW_FULLSTACK_FEED_STATIC_JSON` | — | JSON array of `FeedItem` for `static` provider |
 | `YEW_FULLSTACK_CONTENT_UPLOAD_DIR` | `uploads/content` | On-disk storage for shoot/gallery uploads |
 | `YEW_FULLSTACK_CONTENT_UPLOAD_MAX_BYTES` | `10485760` | Max upload size per file (10 MB) |

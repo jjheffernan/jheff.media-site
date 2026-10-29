@@ -87,13 +87,15 @@ pub fn get_gallery(id: &str) -> Option<ContentCollection> {
 }
 
 pub async fn get_gallery_merged(id: &str, db: &Database) -> Option<ContentCollection> {
-    if let Some(c) = get_gallery(id) {
-        return Some(c);
-    }
-    content_store_service::list_by_kind("gallery", db)
-        .await
-        .into_iter()
-        .find(|c| c.id == id)
+    let found = if let Some(c) = get_gallery(id) {
+        Some(c)
+    } else {
+        content_store_service::list_by_kind("gallery", db)
+            .await
+            .into_iter()
+            .find(|c| c.id == id)
+    };
+    found.filter(is_public_collection)
 }
 
 pub fn list_shoots() -> ContentListResponse {
@@ -113,13 +115,15 @@ pub fn get_shoot(id: &str) -> Option<ContentCollection> {
 }
 
 pub async fn get_shoot_merged(id: &str, db: &Database) -> Option<ContentCollection> {
-    if let Some(c) = get_shoot(id) {
-        return Some(c);
-    }
-    content_store_service::list_by_kind("shoot", db)
-        .await
-        .into_iter()
-        .find(|c| c.id == id)
+    let found = if let Some(c) = get_shoot(id) {
+        Some(c)
+    } else {
+        content_store_service::list_by_kind("shoot", db)
+            .await
+            .into_iter()
+            .find(|c| c.id == id)
+    };
+    found.filter(is_public_collection)
 }
 
 pub async fn create_collection(collection: ContentCollection, kind: &str, db: &Database) -> bool {
@@ -246,9 +250,24 @@ fn list_from_env(env_key: &str) -> ContentListResponse {
     list_from_items(parse_collections(env_key))
 }
 
+pub fn is_public_collection(collection: &ContentCollection) -> bool {
+    !matches!(
+        collection
+            .status
+            .as_deref()
+            .map(|status| status.trim().to_ascii_lowercase())
+            .as_deref(),
+        Some("draft")
+    )
+}
+
 fn list_from_items(items: Vec<ContentCollection>) -> ContentListResponse {
     ContentListResponse {
-        items: items.iter().map(to_summary).collect(),
+        items: items
+            .iter()
+            .filter(|collection| is_public_collection(collection))
+            .map(to_summary)
+            .collect(),
         source: if items.is_empty() {
             String::from("none")
         } else {
@@ -319,6 +338,32 @@ mod tests {
         };
         assert!(to_summary(&collection).cover_url.is_none());
     }
+
+    #[test]
+    fn draft_collections_stay_off_the_public_site() {
+        let draft = ContentCollection {
+            id: "id".into(),
+            title: "Title".into(),
+            kind: None,
+            summary: None,
+            cover_url: None,
+            status: Some("draft".into()),
+            date: None,
+            location: None,
+            media: vec![],
+        };
+        assert!(!is_public_collection(&draft));
+        let published = ContentCollection {
+            status: Some("published".into()),
+            ..draft.clone()
+        };
+        assert!(is_public_collection(&published));
+        let open = ContentCollection {
+            status: None,
+            ..draft
+        };
+        assert!(is_public_collection(&open));
+    }
 }
 
 pub fn other_sites() -> crate::models::content::OtherSitesResponse {
@@ -344,3 +389,4 @@ pub fn other_sites() -> crate::models::content::OtherSitesResponse {
         }
     }
 }
+
