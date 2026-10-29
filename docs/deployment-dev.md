@@ -168,7 +168,7 @@ CI runs the same backend tests on push. See `.github/workflows/rust.yml`.
 
 | Symptom | Fix |
 |---------|-----|
-| `secret.key` compile error | `scripts/dev.sh setup` or `openssl rand ...` |
+| Backend exits: JWT secret missing | `scripts/dev.sh setup` or `openssl rand -out backend/src/secret.key 32` |
 | `docker-compose` not found | Scripts use `scripts/docker-compose.sh` |
 | Trunk not found | `scripts/dev.sh setup` or `cargo install --locked trunk` |
 | API fails from :8000 | Use :8080 (backend proxy) |

@@ -35,6 +35,13 @@ Dev Docker and local watch use `forward-frontend`. Production binary serves bake
 | `YEW_FULLSTACK_FEED_STATIC_JSON` | — | JSON array of `FeedItem` for `static` provider |
 | `YEW_FULLSTACK_CONTENT_UPLOAD_DIR` | `uploads/content` | On-disk storage for shoot/gallery uploads |
 | `YEW_FULLSTACK_CONTENT_UPLOAD_MAX_BYTES` | `10485760` | Max upload size per file (10 MB) |
+| `YEW_FULLSTACK_CONTACT_EMAIL` | empty | Contact-form recipient. Email is skipped when empty |
+| `YEW_FULLSTACK_SMTP_HOST` | empty | SMTP host. Email is skipped when empty |
+| `YEW_FULLSTACK_SMTP_PORT` | `587` | STARTTLS port |
+| `YEW_FULLSTACK_SMTP_USERNAME` | empty | Optional SMTP auth |
+| `YEW_FULLSTACK_SMTP_PASSWORD` | empty | Optional SMTP auth |
+| `YEW_FULLSTACK_SMTP_FROM` | contact email | From address |
+| `YEW_FULLSTACK_SCHEDULE_EMBED_URL` | empty | Optional calendar embed. Owned dates still list without it |
 
 Dev values are set in `scripts/docker-compose.dev.yml`.
 

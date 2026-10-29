@@ -9,7 +9,7 @@ See also: [api.md](./api.md), [backend.md](./backend.md), [frontend.md](./fronte
 | Layer | Mechanism |
 |-------|-----------|
 | Password storage | bcrypt hash in `users` collection |
-| Token | JWT (HS256) signed with `backend/src/secret.key` (32 bytes, gitignored) |
+| Token | JWT (HS256). Production reads `YEW_FULLSTACK_JWT_SECRET_FILE` or hex `YEW_FULLSTACK_JWT_SECRET`. Dev falls back to `backend/src/secret.key` at startup |
 | Session | Random `loginSession` field on user document, embedded in JWT |
 | Client storage | Browser session storage via Yew `StorageService` |
 
@@ -22,16 +22,18 @@ See also: [api.md](./api.md), [backend.md](./backend.md), [frontend.md](./fronte
 | `user` | Username string |
 | `login_session` | Server session id (must match DB) |
 
-Signing key: `backend/src/models/user_token.rs` reads `backend/src/secret.key`.
+Signing key: `backend/src/config/jwt.rs` loads the key once at startup. `user_token.rs` signs with that key.
 
 ## Login flow
 
-1. Client `POST /api/auth/login` with `emailOrUsername` + `password` (camelCase JSON).
-2. Backend finds user by email or username.
-3. bcrypt verifies password.
-4. New `loginSession` generated (`Uuid`) and stored on the user document.
-5. JWT minted containing username + `login_session`.
-6. Response: `LOGIN_SUCCESS` with `token`, `token_type` (`bearer`), and public user (`email`, `username`).
+1. Client `POST /api/auth/login` with `emailOrUsername` + `password`, and `totpCode` when 2FA is already enabled (camelCase JSON).
+2. The attempt is counted first: 8 login attempts per IP per 10 minutes, separate from signup. Over the limit returns `429`.
+3. Backend finds user by email or username.
+4. bcrypt verifies password.
+5. If `totp_enabled` and the code is missing, the response is `401` `TOTP_REQUIRED` and no session is written. A wrong code is `400` `TOTP_INVALID`, also with no session.
+6. New `loginSession` generated (`Uuid`) and stored on the user document.
+7. JWT minted containing username + `login_session`.
+8. Response: `LOGIN_SUCCESS` with `token`, `token_type` (`bearer`), and public user (`email`, `username`).
 
 Frontend (`login.rs`) parses the response, then `AuthEventBus` stores `{ jwt, user }` in session storage under key `Auth`.
 
@@ -86,8 +88,6 @@ Signup does **not** log the user in automatically—the header still shows login
 
 ### Hardening backlog
 
-- Rate limiting on `/api/auth/*` (brute-force protection).
-- Require TOTP on login when `totp_enabled` (enrollment exists; login step not yet enforced).
 - Content-Security-Policy header tuned for WASM + any embeds (Instagram/YouTube).
 - HTTPS termination and HSTS at the reverse proxy (Caddy/nginx).
 

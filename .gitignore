@@ -44,6 +44,9 @@ frontend/pkg/
 .dev/
 uploads/
 
+# Local design working files. Not the published spec.
+local/
+
 # MacOS
 
 ## General

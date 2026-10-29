@@ -22,7 +22,7 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 
 | Category | Score | % | Summary |
 |----------|-------|---|---------|
-| **Security** | 3 | 60% | Solid JWT+bcrypt+session auth and security headers; missing rate limits, CSP, login-time 2FA enforcement |
+| **Security** | 3 | 60% | Solid JWT+bcrypt+session auth, in-memory auth and contact limits, and login-time 2FA. CSP is still missing |
 | **UX** | 3 | 60% | Rich route shell and media feed; shoots/galleries lack upload assets, checkout incomplete, stale placeholder docs |
 | **Tests** | 2 | 40% | 10 unit tests + CI compile; no integration/E2E/API contract coverage |
 | **12 Factor** | 4 | 80% | Docker + env config; runtime JWT secret; pinned Rust images; `jheffmedia-*` docker tags |
@@ -40,12 +40,12 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 |-----------|--------|--------|-------|
 | Authentication | High | ✅ | JWT (HS256) + server-side `loginSession` in MongoDB |
 | Password storage | High | ✅ | bcrypt; min 8 chars |
-| Authorization | High | ⚠️ | Admin routes enforce role; profile not gated; client admin UI visible to all |
+| Authorization | High | ⚠️ | Admin routes enforce role; profile not gated; admin panel is hidden unless `role == admin` |
 | Transport / edge | High | ⚠️ | HTTPS/HSTS documented for reverse proxy, not enforced in app |
 | Headers | Medium | ✅ | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` in `main.rs` |
 | CORS | Medium | ✅ | Explicit origins via `YEW_FULLSTACK_CORS_ORIGINS` (not wildcard) |
-| 2FA | Medium | ⚠️ | Enroll/confirm/disable API; login does not require TOTP when enabled |
-| Abuse resistance | Medium | ❌ | No rate limiting on `/api/auth/*` or contact form |
+| 2FA | Medium | ✅ | Enroll/confirm/disable API; login requires a valid code before creating a session |
+| Abuse resistance | Medium | ⚠️ | In-memory limits: 8 auth attempts and 5 contact posts per IP per 10 minutes. Resets on process restart |
 | CSP / XSS | Medium | ❌ | JWT in session storage; no Content-Security-Policy |
 | Secrets management | High | ✅ | Runtime JWT via `YEW_FULLSTACK_JWT_SECRET_FILE` or hex env; dev `secret.key` fallback |
 
@@ -58,10 +58,10 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 ### To reach 4
 
 - [x] Runtime JWT secret (env/volume mount, not compile-time embed)
-- [ ] Rate limiting on auth + contact endpoints
-- [ ] Enforce TOTP at login when `totp_enabled`
+- [x] Rate limiting on auth + contact endpoints
+- [x] Enforce TOTP at login when `totp_enabled`
 - [ ] CSP tuned for WASM + embeds
-- [ ] Hide admin UI unless `role == admin`
+- [x] Hide admin UI unless `role == admin`
 
 ### To reach 5
 
@@ -81,10 +81,10 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 | Visual design | Medium | ✅ | Tailwind v4, shared UI components |
 | Homepage / feed | High | ✅ | `MediaFeedScroll` + `/api/media/feed` |
 | Auth UX | High | ✅ | Login, signup, logout, account settings |
-| Shoots / galleries | High | ⚠️ | Mongo CRUD + admin create; no image upload; env JSON fallbacks |
-| Client delivery | High | ⚠️ | Print selection persists; checkout flow incomplete |
-| Social integrations | Medium | ⚠️ | Instagram/YouTube demo fallbacks without API keys |
-| Contact / booking | Medium | ⚠️ | Contact stores to Mongo; no email notify; schedule config-only |
+| Shoots / galleries | High | ⚠️ | Admin image upload and detail pages; still no edit/delete or batch upload |
+| Client delivery | High | ⚠️ | Detail pages can select stills; checkout stores one size and an unpaid total. No card charge |
+| Social integrations | Medium | ⚠️ | Empty Instagram config returns 204 and the embed widget is gone. Live posts still need keys or static JSON |
+| Contact / booking | Medium | ⚠️ | Contact emails when SMTP is set; schedule lists future Mongo dates and can still embed a calendar |
 | Accessibility / mobile | Low | ⚠️ | Not formally assessed |
 | Error / loading states | Medium | ⚠️ | Spinners exist; inconsistent across pages |
 
@@ -98,12 +98,12 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 
 - [ ] Real shoot/gallery media upload and detail pages with assets
 - [ ] Immich or static feed configured for production homepage
-- [ ] Contact notification (email or webhook)
-- [ ] Schedule page wired to external calendar URL
+- [x] Contact notification (email or webhook)
+- [x] Schedule page lists owned dates; external calendar embed stays optional
 
 ### To reach 5
 
-- [ ] Print checkout end-to-end
+- [ ] Print checkout end-to-end (size and unpaid total exist; card payment does not)
 - [ ] Search/filter unified feed
 - [ ] Polish 2FA enrollment UX (QR display)
 
@@ -115,7 +115,7 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 
 | Criterion | Weight | Status | Notes |
 |-----------|--------|--------|-------|
-| Unit tests | High | ⚠️ | 7 backend + 3 frontend serde/auth tests |
+| Unit tests | High | ⚠️ | Backend suite covers contact, auth, print prices, and schedule filtering. No HTTP tests against Mongo |
 | CI | High | ✅ | Trunk build, backend build, both test suites in `.github/workflows/rust.yml` |
 | Integration tests | High | ❌ | No HTTP handler tests against test MongoDB |
 | E2E / browser | Medium | ❌ | `frontend/tests/web.rs` is placeholder (`1+1==2`) |
@@ -125,7 +125,7 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 ### Evidence
 
 ```bash
-cargo test -p jheffmedia-site-backend   # 7 passed
+cargo test -p jheffmedia-site-backend   # binary crate; last green run was 20 passed
 cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 ```
 

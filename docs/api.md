@@ -55,6 +55,7 @@ Authenticate and receive a JWT.
 |-------|------|----------|
 | `emailOrUsername` | string | yes |
 | `password` | string | yes |
+| `totpCode` | string | when 2FA is enabled |
 
 **Success** `200`
 
@@ -78,8 +79,11 @@ Authenticate and receive a JWT.
 |--------|-----------|------|
 | 404 | `USER_NOT_FOUND` | No matching email/username |
 | 400 | `BAD_PASSWORD` | Wrong password or session update failed |
+| 401 | `TOTP_REQUIRED` | Password matched and 2FA is on, but no code was sent. No session or JWT is issued |
+| 400 | `TOTP_INVALID` | 2FA code did not match. No session or JWT is issued |
+| 429 | `Too many attempts. Try again later.` | More than 8 login attempts from one IP in 10 minutes |
 
-Frontend maps 404 → bad username field, 400 → bad password field.
+Signup uses the same 429 limit on its own counter. Frontend maps 404 → bad username field, 400 `BAD_PASSWORD` → bad password field, and shows the authenticator step on `TOTP_REQUIRED`.
 
 ### `POST /api/auth/logout`
 
@@ -257,11 +261,96 @@ Upload an image to an existing MongoDB shoot. Same contract as gallery media upl
 | `YEW_FULLSTACK_CONTENT_UPLOAD_DIR` | `uploads/content` | On-disk image storage |
 | `YEW_FULLSTACK_CONTENT_UPLOAD_MAX_BYTES` | `10485760` | Per-file upload limit |
 
+### `POST /api/contact`
+
+Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SMTP_HOST` and `YEW_FULLSTACK_CONTACT_EMAIL` are set, the backend also sends one plain-text email. A skipped or failed send still returns success.
+
+**Request body**
+
+| Field | Type | Required |
+|-------|------|----------|
+| `name` | string | yes |
+| `email` | string | yes |
+| `subject` | string | no |
+| `message` | string | yes |
+| `website` | string | no |
+
+`website` is a honeypot. Leave it empty. A non-empty value returns the success envelope and is not stored.
+
+**Success** `200` — `{ "message": "CONTACT_SUCCESS", "data": "Message received. We'll get back to you soon." }`
+
+**Errors**
+
+| Status | `message` | When |
+|--------|-----------|------|
+| 400 | `Name, email, and message are required.` | Blank required field |
+| 429 | `Too many messages. Try again later.` | More than 5 submissions from one IP in 10 minutes |
+
+**Env (optional)**
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `YEW_FULLSTACK_SMTP_HOST` | empty | Skip email when empty |
+| `YEW_FULLSTACK_SMTP_PORT` | `587` | STARTTLS |
+| `YEW_FULLSTACK_SMTP_USERNAME` | empty | Optional auth |
+| `YEW_FULLSTACK_SMTP_PASSWORD` | empty | Optional auth |
+| `YEW_FULLSTACK_SMTP_FROM` | contact email | From address |
+| `YEW_FULLSTACK_CONTACT_EMAIL` | empty | Recipient. Skip email when empty |
+
+### `GET /api/account/prints`
+
+Auth required. Current print selections, including `collectionId`, `collectionKind`, and `collectionTitle` when the feed item had them.
+
+### `POST /api/account/prints/checkout`
+
+Auth required. Snapshots the current selections into `print_orders` with status `requested`. Does not charge a card and does not clear the selection list.
+
+**Request body:** `{ "size": "8x10", "note": "optional delivery note" }`
+
+`size` is required: `8x10` (2500 cents), `11x14` (4500), or `16x20` (7500). One size applies to every photo. `totalCents` is the unit price times the photo count. `paymentStatus` is `unpaid`.
+
+**Success** `200`
+
+```json
+{
+  "message": "PRINT_REQUESTED",
+  "data": {
+    "id": "<objectId>",
+    "status": "requested",
+    "note": "11x14, matte",
+    "itemCount": 2,
+    "createdAt": "2026-10-29T00:00:00Z",
+    "size": "8x10",
+    "unitPriceCents": 2500,
+    "totalCents": 5000,
+    "paymentStatus": "unpaid"
+  }
+}
+```
+
+**Errors** `400` `NO_SELECTIONS` when the list is empty. `400` `UNKNOWN_SIZE` for any other size. `401` `UNAUTHORIZED`.
+
+### `GET /api/schedule`
+
+Public. `embedUrl` and `source` stay as before. `events` lists public `schedule_events` whose `startsAt` is in the future, oldest first. Each event has `id`, `title`, `startsAt`, `kind` (`shoot`, `instruction`, or `other`), and optional `location`.
+
+### `POST /api/admin/schedule`
+
+Admin JWT. Body: `title`, `startsAt`, optional `location`, `kind`. Success `200` `{ "message": "CREATED", "data": { "id": "<objectId>" } }`. `400` `INVALID_EVENT` when the title, start, or kind is unusable.
+
+### `DELETE /api/admin/schedule/{id}`
+
+Admin JWT. Success `200` `{ "message": "REMOVED" }`.
+
+### `GET /api/account/prints/orders`
+
+Auth required. Newest print requests first.
+
 ## CORS
 
 Allowed methods: `GET`, `POST`, `PUT`, `DELETE`.  
 Allowed headers include `Authorization`, `Accept`, `Content-Type`.  
-Wildcard origin in current config.
+Origins come from `YEW_FULLSTACK_CORS_ORIGINS`.
 
 ## MongoDB
 

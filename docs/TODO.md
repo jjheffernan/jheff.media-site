@@ -17,8 +17,8 @@ scripts/dev.sh logs trunk     # watch WASM compile
 
 ## CI / quality
 
-- [x] Backend unit tests (9)
-- [x] Frontend serde tests in `frontend/src/model/mod.rs` (2)
+- [x] Backend unit tests (20)
+- [x] Frontend serde tests in `frontend/src/model/mod.rs`
 - [x] GitHub Actions — Trunk build + backend with `forward-frontend`
 - [ ] Add `cargo test -p jheffmedia-site-frontend` to CI (host target, not wasm32)
 - [ ] Fix backend clippy warnings (12 — unused fields, redundant `Error::from`)
@@ -33,17 +33,17 @@ scripts/dev.sh logs trunk     # watch WASM compile
 - [ ] **Content hub bundle** — optional `GET /api/content/hub` returning social + shoots + galleries slices (ContentHub currently fires 3 requests)
 - [ ] **Deprecate `/api/feed`** — legacy Immich/static grid; home uses `/api/media/feed`. Keep Immich via unified feed or document env migration, then remove `feed_service` when unused
 - [ ] **Auth middleware helper** — extract `require_auth()` / `require_admin()` in backend to DRY controllers (account, print, admin)
-- [ ] **Role-gated UI** — hide admin panel client-side when `role != admin` (backend already enforces on `/api/admin/*`)
+- [x] **Role-gated UI** — admin panel renders only when `role == admin`; backend still enforces `/api/admin/*`
 
 ## Site functionality
 
 - [ ] **Shoots / galleries** — image upload + public detail display (admin upload UI + `/api/content/media`); still missing edit/delete, multi-file batch UX
-- [ ] **Print selection UX** — persist works; add gallery/shoot context and checkout flow
-- [ ] **Schedule page** — wire external calendar URL from `/api/schedule` (config-only today)
-- [ ] **Contact form** — backend stores/sends; add rate limit + honeypot
-- [ ] **2FA enrollment UI** — API exists on `/api/auth/2fa/*`; polish QR/display on account page
+- [ ] **Print selection UX** — gallery and shoot pages can select stills; account requests one size (8×10, 11×14, 16×20) and stores an unpaid total. Still no card charge
+- [x] **Schedule page** — future public dates in Mongo, listed on Schedule and Booking; optional embed when `YEW_FULLSTACK_SCHEDULE_EMBED_URL` is set. Delete is curl-only
+- [x] **Contact form** — honeypot, per-IP rate limit, and best-effort SMTP when host and contact email are set. A failed send still returns success
+- [ ] **2FA enrollment UI** — login requires the code when 2FA is on. Enrollment still needs a clearer QR on the account page
 - [ ] **Immich production feed** — set `YEW_FULLSTACK_FEED_PROVIDER=immich` + env vars; verify thumbnail proxy under load
-- [ ] **YouTube/Instagram live** — replace demo fallbacks when API keys configured
+- [ ] **YouTube/Instagram live** — empty config hides the featured card and embed widget. Live posts still need API keys or `YEW_FULLSTACK_YOUTUBE_STATIC_JSON`
 - [ ] **E2E smoke test** — `scripts/smoke.sh` covers homepage + login; extend `frontend/tests/web.rs` for route render
 - [ ] **Search / filter** — unified feed filter by source (instagram, youtube, gallery, shoot)
 

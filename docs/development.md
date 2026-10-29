@@ -83,7 +83,7 @@ Auth smoke tests: [api.md](./api.md#examples).
 | Symptom | Likely fix |
 |---------|------------|
 | `docker-compose` not found | `scripts/docker-compose.sh` wraps `docker compose` v2 |
-| Backend compile: `secret.key` | `openssl rand -out backend/src/secret.key 32` |
+| Backend exits: JWT secret missing | `scripts/dev.sh setup` or `openssl rand -out backend/src/secret.key 32` |
 | Trunk not found | `scripts/dev.sh setup` (installs Trunk + wasm target) |
 | WASM build fails | `rustup target add wasm32-unknown-unknown` |
 | Mongo connection refused | Wait for `db` container; check compose env |
