@@ -17,7 +17,7 @@ scripts/dev.sh logs trunk     # watch WASM compile
 
 ## CI / quality
 
-- [x] Backend unit tests (21)
+- [x] Backend unit tests (25)
 - [x] Frontend serde tests in `frontend/src/model/mod.rs`
 - [x] GitHub Actions — Trunk build + backend with `forward-frontend`
 - [x] Add `cargo test -p jheffmedia-site-frontend` to CI (host target, not wasm32)
@@ -29,7 +29,7 @@ scripts/dev.sh logs trunk     # watch WASM compile
 - [x] **Content hub** — `GET /api/content/hub`
 - [x] **Auth helper** — `require_auth()` / `require_admin()`
 - [x] **Role-gated admin UI**
-- [x] **Schedule dates** — future public Mongo events on Schedule and Booking. Delete is still curl-only
+- [x] **Schedule dates** — future public Mongo events on Schedule and Booking. Admin panel can delete a date by id
 - [x] **Contact** — honeypot, per-IP limit, best-effort SMTP
 - [x] **Feed filter** — `instagram`, `youtube`, `gallery`, `shoot`
 - [x] **Print request** — detail pages can select stills; checkout stores one size and an unpaid total
@@ -42,15 +42,15 @@ Decisions are recorded in [design.md](./design.md#decided).
 ### Content
 
 - [ ] **Gallery and shoot maintenance** — edit, delete, reorder, and multi-file upload. Env JSON collections still cannot take uploads
-- [ ] **Schedule delete in the admin panel** — `DELETE /api/admin/schedule/{id}` is curl-only
-- [ ] **Explicit covers and featured tag** — admin sets the cover. Media can be tagged featured. Drop the picsum fallback
-- [ ] **Legal pages** — `prose` classes are unused. The typography plugin is not installed
-- [ ] **Homepage** — photo feed leads. Content hub is the primary call to action
-- [ ] **Booking request** — booking page is its own form. Contact is general questions only. Schedule copy frames dates as availability
+- [x] **Schedule delete in the admin panel**
+- [x] **Explicit covers and featured tag** — cover changes only when the upload asks. Featured is stored on the media item. Cards no longer invent a placeholder image. Sample env JSON may still point at picsum
+- [x] **Legal pages** — titles and body use the design classes
+- [x] **Homepage** — photo feed leads. Content hub is the primary call to action
+- [x] **Booking request** — booking page is its own form. Contact is general questions only. Schedule copy frames dates as availability
 
 ### Account
 
-- [ ] **Remove email change** from the account page. The flow is skipped
+- [x] **Remove email change** from the account page. The backend route stays
 - [x] **2FA enrollment** — otpauth URL and secret are enough. No QR image
 - [x] **Print payment** — shelved. Invoices or another service later. Keep the unpaid request
 
