@@ -5,7 +5,7 @@ use crate::{
     },
     context::AuthContext,
     model::{
-        ChangePassword, EmailChange, PrintOrder, PrintSelection, ServerResponse,
+        ChangePassword, PrintOrder, PrintSelection, ServerResponse,
         TotpEnrollResponse, TotpVerify, User,
     },
     routes::AppRoutes,
@@ -59,7 +59,6 @@ pub fn account() -> Html {
 
     let current_password = use_state(String::new);
     let new_password = use_state(String::new);
-    let new_email = use_state(String::new);
     let totp_code = use_state(String::new);
 
     if auth_ctx.auth.is_none() {
@@ -170,37 +169,6 @@ pub fn account() -> Html {
                         if let Ok(resp) = req.send().await {
                             if resp.ok() {
                                 message.set(Some("Password updated.".into()));
-                            } else if let Ok(err) = resp.json::<ServerResponse<String>>().await {
-                                message.set(Some(err.message));
-                            }
-                        }
-                    }
-                }
-            });
-        })
-    };
-
-    let on_request_email = {
-        let jwt = jwt.clone();
-        let new_email = new_email.clone();
-        let message = message.clone();
-        Callback::from(move |_| {
-            let jwt = jwt.clone();
-            let dto = EmailChange {
-                new_email: (*new_email).clone(),
-            };
-            let message = message.clone();
-            spawn_local(async move {
-                if let Ok(body) = serde_json::to_string(&dto) {
-                    let auth_val = auth_header(&jwt);
-                    if let Ok(req) = Request::post("/api/auth/email-change")
-                        .header("Authorization", auth_val.as_str())
-                        .header("Content-Type", "application/json")
-                        .body(body)
-                    {
-                        if let Ok(resp) = req.send().await {
-                            if resp.ok() {
-                                message.set(Some("Email change requested — check your inbox when mail is configured.".into()));
                             } else if let Ok(err) = resp.json::<ServerResponse<String>>().await {
                                 message.set(Some(err.message));
                             }
@@ -464,7 +432,7 @@ pub fn account() -> Html {
     html! {
         <div class="space-y-10">
             <div class="card">
-                <Heading level={HeadingLevel::H1} subtitle="Password, two-factor auth, email, and print selections.">
+                <Heading level={HeadingLevel::H1} subtitle="Password, two-factor auth, and print selections.">
                     { html! { { format!("Account — {}", display_user.username) } } }
                 </Heading>
                 <div class="mt-4 space-y-1 text-sm text-muted">
@@ -508,31 +476,6 @@ pub fn account() -> Html {
                     onclick={on_change_password}
                 >
                     { "Update password" }
-                </button>
-            </section>
-
-            <section class="card space-y-4">
-                <Heading level={HeadingLevel::H2}>{ "Change email" }</Heading>
-                <Text tone={TextTone::Muted}>
-                    { "Request a verification link for your new email address." }
-                </Text>
-                <input
-                    type="email"
-                    placeholder="New email"
-                    class="field"
-                    oninput={{
-                        let new_email = new_email.clone();
-                        Callback::from(move |e: InputEvent| {
-                            new_email.set(e.target_unchecked_into::<HtmlInputElement>().value());
-                        })
-                    }}
-                />
-                <button
-                    type="button"
-                    class="btn btn-quiet"
-                    onclick={on_request_email}
-                >
-                    { "Request email change" }
                 </button>
             </section>
 
