@@ -5,7 +5,7 @@ pub fn terms() -> Html {
     html! {
         <div class="max-w-3xl space-y-6">
             <h1 class="title">{ "Terms of use" }</h1>
-            <p class="muted">{ "Last updated: June 2026" }</p>
+            <p class="muted">{ "Last updated: October 2026" }</p>
 
             <section class="space-y-2">
                 <h2 class="title-sm">{ "Overview" }</h2>
@@ -50,33 +50,33 @@ pub fn privacy() -> Html {
     html! {
         <div class="max-w-3xl space-y-6">
             <h1 class="title">{ "Privacy policy" }</h1>
-            <p class="muted">{ "Last updated: June 2026" }</p>
+            <p class="muted">{ "Last updated: October 2026" }</p>
 
             <section class="space-y-2">
                 <h2 class="title-sm">{ "What we collect" }</h2>
                 <p>
-                    { "If you create an account we store your email, username, and hashed password. If you submit the contact form we store your name, email, subject, and message to respond to inquiries." }
+                    { "Accounts store email, username, and a hashed password; when you enroll in 2FA we also store the authenticator secret. Contact and booking forms store your submission (including kind). Signed-in print flow stores photo selections and unpaid print requests. The server keeps access logs." }
                 </p>
             </section>
 
             <section class="space-y-2">
                 <h2 class="title-sm">{ "How we use data" }</h2>
                 <p>
-                    { "Account data is used for authentication and future client-gallery features. Contact submissions are used solely to communicate about bookings and projects." }
+                    { "Account data is for authentication and account features. Contact and booking submissions are used to reply about projects and availability. Print selections and unpaid requests are used to fulfill print orders. Access logs support security and operations and stay on the server." }
                 </p>
             </section>
 
             <section class="space-y-2">
                 <h2 class="title-sm">{ "Third parties" }</h2>
                 <p>
-                    { "Embedded scheduling, booking, and social content may load from external providers (e.g. calendar or booking widgets). Those services have their own privacy policies." }
+                    { "Optional calendar or social embeds may load from external providers with their own policies. The site loads Inter from Google Fonts (fonts.googleapis.com). No third-party analytics or telemetry product is installed." }
                 </p>
             </section>
 
             <section class="space-y-2">
                 <h2 class="title-sm">{ "Your rights" }</h2>
                 <p>
-                    { "You may request deletion of your account or contact submissions by emailing the address listed on the contact page." }
+                    { "Request deletion of your account or contact/booking submissions by emailing the address on the contact page. There is no self-serve delete UI." }
                 </p>
             </section>
         </div>

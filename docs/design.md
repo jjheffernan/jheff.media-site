@@ -23,7 +23,7 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, theme
 | `/booking` | A request form. Not the general contact form |
 | `/schedule` | Limited public dates, framed as event availability. Optional embed stays |
 | `/contact` | General questions only. Booking requests belong on `/booking` |
-| `/account` | Password, 2FA, print size and unpaid total, admin tools for admins. Email change is not offered |
+| `/account` | Password, 2FA, print size and unpaid total. Admins also get inbox, content CRUD, schedule, and print-order status. Email change is not offered |
 | `/profile` | Signed-in welcome card. Signed-out visitors go home |
 | `/legal/terms`, `/legal/privacy` | Static copy |
 | `/other-sites` | Configured links |
@@ -46,3 +46,4 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, theme
 - Print payment is shelved. Invoices or another service will collect payment later. The site keeps the unpaid request.
 - 2FA enrollment with the otpauth URL and secret is enough. No QR image.
 - Email change is skipped. Do not offer it in the account UI.
+- Admins triage contact and booking messages, manage gallery and shoot media, and update print order status from the account page. Payment status is recorded only; the app does not charge cards.
