@@ -463,7 +463,7 @@ pub fn account() -> Html {
 
     html! {
         <div class="space-y-10">
-            <div class="rounded-2xl border border-border bg-surface-elevated p-6">
+            <div class="card">
                 <Heading level={HeadingLevel::H1} subtitle="Password, two-factor auth, email, and print selections.">
                     { html! { { format!("Account — {}", display_user.username) } } }
                 </Heading>
@@ -478,12 +478,12 @@ pub fn account() -> Html {
                 <p class="rounded-lg border border-accent/30 bg-accent/10 px-4 py-3 text-sm text-foreground">{ msg }</p>
             }
 
-            <section class="space-y-4 rounded-2xl border border-border bg-surface-elevated p-6">
+            <section class="card space-y-4">
                 <Heading level={HeadingLevel::H2}>{ "Change password" }</Heading>
                 <input
                     type="password"
                     placeholder="Current password"
-                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    class="field"
                     oninput={{
                         let current_password = current_password.clone();
                         Callback::from(move |e: InputEvent| {
@@ -494,7 +494,7 @@ pub fn account() -> Html {
                 <input
                     type="password"
                     placeholder="New password (min 8 characters)"
-                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    class="field"
                     oninput={{
                         let new_password = new_password.clone();
                         Callback::from(move |e: InputEvent| {
@@ -504,14 +504,14 @@ pub fn account() -> Html {
                 />
                 <button
                     type="button"
-                    class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950"
+                    class="btn btn-primary"
                     onclick={on_change_password}
                 >
                     { "Update password" }
                 </button>
             </section>
 
-            <section class="space-y-4 rounded-2xl border border-border bg-surface-elevated p-6">
+            <section class="card space-y-4">
                 <Heading level={HeadingLevel::H2}>{ "Change email" }</Heading>
                 <Text tone={TextTone::Muted}>
                     { "Request a verification link for your new email address." }
@@ -519,7 +519,7 @@ pub fn account() -> Html {
                 <input
                     type="email"
                     placeholder="New email"
-                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    class="field"
                     oninput={{
                         let new_email = new_email.clone();
                         Callback::from(move |e: InputEvent| {
@@ -529,21 +529,21 @@ pub fn account() -> Html {
                 />
                 <button
                     type="button"
-                    class="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:border-accent hover:text-accent"
+                    class="btn btn-quiet"
                     onclick={on_request_email}
                 >
                     { "Request email change" }
                 </button>
             </section>
 
-            <section class="space-y-4 rounded-2xl border border-border bg-surface-elevated p-6">
+            <section class="card space-y-4">
                 <Heading level={HeadingLevel::H2}>{ "Two-factor authentication" }</Heading>
                 if totp_enabled {
                     <Text tone={TextTone::Muted}>{ "Enter a code from your authenticator to disable 2FA." }</Text>
                     <input
                         type="text"
                         placeholder="6-digit code"
-                        class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                        class="field"
                         oninput={{
                             let totp_code = totp_code.clone();
                             Callback::from(move |e: InputEvent| {
@@ -553,7 +553,7 @@ pub fn account() -> Html {
                     />
                     <button
                         type="button"
-                        class="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:border-accent hover:text-accent"
+                        class="btn btn-quiet"
                         onclick={on_totp_disable}
                     >
                         { "Disable 2FA" }
@@ -561,26 +561,30 @@ pub fn account() -> Html {
                 } else {
                     <button
                         type="button"
-                        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950"
+                        class="btn btn-primary"
                         onclick={on_totp_enroll}
                     >
                         { "Enable 2FA" }
                     </button>
                     if let Some(setup) = &*totp_setup {
-                        <div class="space-y-2 rounded-lg border border-border bg-surface p-4 text-sm">
-                            <p class="text-muted">{ "Secret (manual entry):" }</p>
-                            <code class="block text-xs">{ setup.secret.clone() }</code>
-                            <a
-                                href={setup.otpauth_url.clone()}
-                                class="text-accent hover:underline"
-                            >
-                                { "Open in authenticator app" }
-                            </a>
-                        </div>
+                        // ponytail: QR needs a crate; paste the otpauth URL or secret into an authenticator
+                        if !setup.otpauth_url.is_empty() {
+                            <p class="muted">{ "otpauth URL" }</p>
+                            <input
+                                type="text"
+                                class="field"
+                                readonly=true
+                                value={setup.otpauth_url.clone()}
+                            />
+                        }
+                        if !setup.secret.is_empty() {
+                            <p class="muted">{ "Secret" }</p>
+                            <p><code>{ setup.secret.clone() }</code></p>
+                        }
                         <input
                             type="text"
                             placeholder="6-digit code to confirm"
-                            class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                            class="field"
                             oninput={{
                                 let totp_code = totp_code.clone();
                                 Callback::from(move |e: InputEvent| {
@@ -590,7 +594,7 @@ pub fn account() -> Html {
                         />
                         <button
                             type="button"
-                            class="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:border-accent hover:text-accent"
+                            class="btn btn-quiet"
                             onclick={on_totp_confirm}
                         >
                             { "Confirm 2FA" }
@@ -599,7 +603,7 @@ pub fn account() -> Html {
                 }
             </section>
 
-            <section class="space-y-4 rounded-2xl border border-border bg-surface-elevated p-6">
+            <section class="card space-y-4">
                 <Heading level={HeadingLevel::H2} subtitle="Photos you've marked for print purchase.">
                     { "Print selections" }
                 </Heading>
@@ -608,7 +612,7 @@ pub fn account() -> Html {
                     <label class="block space-y-1">
                         <span class="text-sm font-medium text-foreground">{ "Size" }</span>
                         <select
-                            class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                            class="field"
                             value={(*print_size).clone()}
                             onchange={{
                                 let print_size = print_size.clone();
@@ -634,7 +638,7 @@ pub fn account() -> Html {
                         <span class="text-sm font-medium text-foreground">{ "Note for this request" }</span>
                         <input
                             type="text"
-                            class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                            class="field"
                             placeholder="Sizes, paper, or delivery notes"
                             value={(*checkout_note).clone()}
                             oninput={{
@@ -647,7 +651,7 @@ pub fn account() -> Html {
                     </label>
                     <button
                         type="button"
-                        class="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-zinc-950 transition hover:bg-accent-hover"
+                        class="btn btn-primary"
                         onclick={on_checkout}
                     >
                         { "Request prints" }
@@ -663,7 +667,7 @@ pub fn account() -> Html {
 
             <button
                 type="button"
-                class="rounded-lg border border-border px-4 py-2 text-sm text-foreground transition hover:border-accent hover:text-accent"
+                class="btn btn-quiet"
                 onclick={{
                     let auth_ctx = auth_ctx.clone();
                     Callback::from(move |_| auth_ctx.logout.emit(()))
