@@ -38,3 +38,18 @@ pub async fn delete_event(
         Err(err) => Ok(err.response()),
     }
 }
+
+pub async fn update_event(
+    req: HttpRequest,
+    path: web::Path<String>,
+    body: web::Json<CreateScheduleEvent>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match schedule_service::update_event(&path.into_inner(), body.0, &db).await {
+        Ok(()) => Ok(HttpResponse::Ok().json(serde_json::json!({"message": "UPDATED"}))),
+        Err(err) => Ok(err.response()),
+    }
+}

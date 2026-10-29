@@ -437,6 +437,10 @@ Admin JWT. Body: `title`, `startsAt`, optional `location`, `kind`. Success `200`
 
 Admin JWT. Success `200` `{ "message": "REMOVED" }`.
 
+### `PATCH /api/admin/schedule/{id}`
+
+Admin JWT. Same body as create: `title`, `startsAt`, optional `location`, `kind`. Success `200` `{ "message": "UPDATED" }`. `400` `INVALID_ID` or `INVALID_EVENT`. `404` `NOT_FOUND`.
+
 ### `GET /api/account/prints/orders`
 
 Auth required. Newest print requests first.

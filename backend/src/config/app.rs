@@ -113,9 +113,10 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         web::delete().to(admin_controller::delete_shoot_media),
                     )
                     .route("/schedule", web::post().to(schedule_controller::create_event))
-                    .route(
-                        "/schedule/{id}",
-                        web::delete().to(schedule_controller::delete_event),
+                    .service(
+                        web::resource("/schedule/{id}")
+                            .route(web::patch().to(schedule_controller::update_event))
+                            .route(web::delete().to(schedule_controller::delete_event)),
                     )
             )
             .service(

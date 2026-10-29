@@ -63,6 +63,32 @@ pub async fn delete_event(id: &str, db: &Database) -> ServiceResult<()> {
     Ok(())
 }
 
+pub async fn update_event(id: &str, input: CreateScheduleEvent, db: &Database) -> ServiceResult<()> {
+    let oid = ObjectId::parse_str(id)
+        .map_err(|_| ServiceError::new(StatusCode::BAD_REQUEST, "INVALID_ID"))?;
+    let record = validate_event(input)?;
+    let mut set = doc! {
+        "title": record.title,
+        "startsAt": record.starts_at,
+        "kind": record.kind,
+    };
+    let update = if let Some(location) = record.location {
+        set.insert("location", location);
+        doc! { "$set": set }
+    } else {
+        doc! { "$set": set, "$unset": { "location": "" } }
+    };
+    let coll = db.collection::<ScheduleEventRecord>(SCHEDULE_EVENTS);
+    let result = coll
+        .update_one(doc! { "_id": oid }, update)
+        .await
+        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    if result.matched_count == 0 {
+        return Err(ServiceError::new(StatusCode::NOT_FOUND, "NOT_FOUND"));
+    }
+    Ok(())
+}
+
 fn validate_event(input: CreateScheduleEvent) -> ServiceResult<ScheduleEventRecord> {
     let title = input.title.trim().to_string();
     let starts_at = input.starts_at.trim().to_string();

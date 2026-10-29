@@ -35,7 +35,7 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, theme
 - Print sizes are 8×10 ($25), 11×14 ($45), and 16×20 ($75). One size per request. Status stays unpaid. No card charge in the app.
 - Detail pages reuse the existing print POST. Signed-out visitors see text and no new login modal.
 - An empty featured Instagram URL returns 204 and the card is absent. Operator static JSON stays.
-- Schedule dates are future public Mongo events. Embeds stay optional. Delete is curl-only until an admin control exists.
+- Schedule dates are future public Mongo events. Embeds stay optional. Admins add, edit, and delete dates from the account panel.
 - Login and signup allow 8 attempts per IP per 10 minutes. 2FA blocks the session until the code is valid.
 - Admin tools render only when `role` is `admin`.
 - The homepage leads with the photo feed. The primary call to action is the content hub.

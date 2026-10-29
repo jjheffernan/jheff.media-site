@@ -136,6 +136,36 @@ fn schedule_payload(
     Ok(payload)
 }
 
+async fn update_schedule_event(
+    jwt: &str,
+    id: &str,
+    payload: serde_json::Value,
+) -> Result<(), String> {
+    let id = id.trim();
+    if id.is_empty() {
+        return Err("Enter a date ID.".into());
+    }
+    let url = format!("/api/admin/schedule/{id}");
+    let auth_val = auth_header(jwt);
+    let req = Request::patch(&url)
+        .header("Authorization", auth_val.as_str())
+        .header("Content-Type", "application/json")
+        .body(payload.to_string())
+        .map_err(|e| e.to_string())?;
+    let resp = req.send().await.map_err(|e| e.to_string())?;
+    if resp.ok() {
+        Ok(())
+    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
+        Err(body
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("Failed to update date.")
+            .to_string())
+    } else {
+        Err("Failed to update date.".into())
+    }
+}
+
 async fn delete_schedule_event(jwt: &str, id: &str) -> Result<(), String> {
     let id = id.trim();
     if id.is_empty() {
@@ -766,6 +796,38 @@ pub fn content_admin() -> Html {
         })
     };
 
+    let on_save_date = {
+        let auth_ctx = auth_ctx.clone();
+        let date_title = date_title.clone();
+        let date_starts = date_starts.clone();
+        let date_location = date_location.clone();
+        let date_kind = date_kind.clone();
+        let date_id = date_id.clone();
+        let message = message.clone();
+        Callback::from(move |_| {
+            let payload = match schedule_payload(&date_title, &date_starts, &date_location, &date_kind)
+            {
+                Ok(payload) => payload,
+                Err(err) => {
+                    message.set(Some(err));
+                    return;
+                }
+            };
+            let id = (*date_id).clone();
+            let Some(auth) = &auth_ctx.auth else {
+                return;
+            };
+            let jwt = auth.jwt.clone();
+            let message = message.clone();
+            spawn_local(async move {
+                match update_schedule_event(&jwt, &id, payload).await {
+                    Ok(()) => message.set(Some("Date updated.".into())),
+                    Err(err) => message.set(Some(err)),
+                }
+            });
+        })
+    };
+
     let on_delete_date = {
         let auth_ctx = auth_ctx.clone();
         let date_id = date_id.clone();
@@ -927,6 +989,13 @@ pub fn content_admin() -> Html {
                     value={(*date_id).clone()}
                     oninput={bind_input(date_id.clone())}
                 />
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick={on_save_date}
+                >
+                    { "Save" }
+                </button>
                 <button
                     type="button"
                     class="btn btn-quiet"
