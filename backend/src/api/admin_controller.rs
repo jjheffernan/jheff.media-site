@@ -62,6 +62,8 @@ async fn upload_collection_media(
     let mut file_bytes: Option<Vec<u8>> = None;
     let mut content_type = String::from("image/jpeg");
     let mut filename: Option<String> = None;
+    let mut featured = false;
+    let mut set_as_cover = false;
 
     while let Some(item) = payload.next().await {
         let mut field = match item {
@@ -80,18 +82,16 @@ async fn upload_collection_media(
             .content_disposition()
             .and_then(|d| d.get_name().map(str::to_string))
             .unwrap_or_default();
-        if field_name != "file" {
-            continue;
-        }
-
-        if let Some(ct) = field.content_type().map(|m| m.to_string()) {
-            content_type = ct;
-        }
-        if let Some(name) = field
-            .content_disposition()
-            .and_then(|d| d.get_filename().map(str::to_string))
-        {
-            filename = Some(name);
+        if field_name == "file" && file_bytes.is_none() {
+            if let Some(ct) = field.content_type().map(|m| m.to_string()) {
+                content_type = ct;
+            }
+            if let Some(name) = field
+                .content_disposition()
+                .and_then(|d| d.get_filename().map(str::to_string))
+            {
+                filename = Some(name);
+            }
         }
 
         let mut bytes = Vec::new();
@@ -108,8 +108,13 @@ async fn upload_collection_media(
                 }
             }
         }
-        file_bytes = Some(bytes);
-        break;
+
+        match field_name.as_str() {
+            "file" if file_bytes.is_none() => file_bytes = Some(bytes),
+            "featured" => featured = checked_flag(&String::from_utf8_lossy(&bytes)),
+            "setAsCover" => set_as_cover = checked_flag(&String::from_utf8_lossy(&bytes)),
+            _ => {}
+        }
     }
 
     let Some(bytes) = file_bytes else {
@@ -124,6 +129,8 @@ async fn upload_collection_media(
         &bytes,
         &content_type,
         filename.as_deref(),
+        featured,
+        set_as_cover,
         &db,
     )
     .await
@@ -150,6 +157,13 @@ pub async fn upload_gallery_media(
     upload_collection_media(req, path, payload, db, "gallery").await
 }
 
+fn checked_flag(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "on" | "yes"
+    )
+}
+
 pub async fn upload_shoot_media(
     req: HttpRequest,
     path: web::Path<String>,
@@ -157,4 +171,17 @@ pub async fn upload_shoot_media(
     db: web::Data<Database>,
 ) -> Result<HttpResponse> {
     upload_collection_media(req, path, payload, db, "shoot").await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::checked_flag;
+
+    #[test]
+    fn checked_flag_accepts_common_truthy_values() {
+        assert!(checked_flag("true"));
+        assert!(checked_flag(" on "));
+        assert!(!checked_flag(""));
+        assert!(!checked_flag("false"));
+    }
 }

@@ -60,10 +60,7 @@ fn to_summary(collection: &ContentCollection) -> ContentCollectionSummary {
         id: collection.id.clone(),
         title: collection.title.clone(),
         summary: collection.summary.clone(),
-        cover_url: collection
-            .cover_url
-            .clone()
-            .or_else(|| collection.media.first().map(|m| m.thumbnail_url.clone())),
+        cover_url: collection.cover_url.clone().filter(|url| !url.is_empty()),
         status: collection.status.clone(),
         date: collection.date.clone(),
         location: collection.location.clone(),
@@ -138,6 +135,8 @@ pub async fn upload_media(
     bytes: &[u8],
     content_type: &str,
     original_filename: Option<&str>,
+    featured: bool,
+    set_as_cover: bool,
     db: &Database,
 ) -> Result<MediaItem, String> {
     if content_store_service::find_by_kind_and_id(kind, collection_id, db)
@@ -147,17 +146,17 @@ pub async fn upload_media(
         return Err(String::from("COLLECTION_NOT_FOUND"));
     }
 
-    let media = content_upload_service::save_asset(bytes, content_type, original_filename)?;
+    let mut media = content_upload_service::save_asset(bytes, content_type, original_filename)?;
+    media.featured = featured;
     if !content_store_service::append_media(kind, collection_id, media.clone(), db).await {
         return Err(String::from("MEDIA_UPDATE_FAILED"));
     }
-    let _ = content_store_service::set_cover_url_if_empty(
-        kind,
-        collection_id,
-        &media.thumbnail_url,
-        db,
-    )
-    .await;
+    if set_as_cover
+        && !content_store_service::set_cover_url(kind, collection_id, &media.thumbnail_url, db)
+            .await
+    {
+        return Err(String::from("COVER_UPDATE_FAILED"));
+    }
     Ok(media)
 }
 
@@ -207,6 +206,36 @@ pub fn booking_config() -> crate::models::content::BookingConfig {
         } else {
             String::from("none")
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn summary_leaves_cover_empty_until_set() {
+        let collection = ContentCollection {
+            id: "a".into(),
+            title: "A".into(),
+            kind: None,
+            summary: None,
+            cover_url: None,
+            status: None,
+            date: None,
+            location: None,
+            media: vec![MediaItem {
+                id: "m".into(),
+                title: None,
+                thumbnail_url: "https://example.test/thumb".into(),
+                media_url: None,
+                media_type: Some("image".into()),
+                width: None,
+                height: None,
+                featured: false,
+            }],
+        };
+        assert!(to_summary(&collection).cover_url.is_none());
     }
 }
 

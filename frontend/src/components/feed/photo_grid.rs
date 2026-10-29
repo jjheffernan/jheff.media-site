@@ -111,6 +111,9 @@ pub fn photo_grid(props: &Props) -> Html {
                 html! {
                     <div key={item.id.clone()} class="space-y-2">
                         <MediaCard item={item.clone()} />
+                        if item.featured {
+                            <p class="muted">{ "Featured" }</p>
+                        }
                         { control }
                     </div>
                 }

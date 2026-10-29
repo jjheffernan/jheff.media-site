@@ -36,25 +36,14 @@ pub async fn append_media(
         .unwrap_or(false)
 }
 
-pub async fn set_cover_url_if_empty(kind: &str, id: &str, cover_url: &str, db: &Database) -> bool {
+pub async fn set_cover_url(kind: &str, id: &str, cover_url: &str, db: &Database) -> bool {
     let coll = db.collection::<ContentCollection>(CONTENT_COLLECTION);
-    let update = doc! {
-        "$set": { "coverUrl": cover_url },
-    };
     coll.update_one(
-        doc! {
-            "kind": kind,
-            "id": id,
-            "$or": [
-                { "coverUrl": { "$exists": false } },
-                { "coverUrl": bson::Bson::Null },
-                { "coverUrl": "" },
-            ],
-        },
-        update,
+        doc! { "kind": kind, "id": id },
+        doc! { "$set": { "coverUrl": cover_url } },
     )
     .await
-    .map(|r| r.modified_count > 0)
+    .map(|r| r.matched_count > 0)
     .unwrap_or(false)
 }
 

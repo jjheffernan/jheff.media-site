@@ -60,11 +60,38 @@ async fn create_schedule_event(jwt: &str, payload: serde_json::Value) -> Result<
     }
 }
 
+async fn delete_schedule_event(jwt: &str, id: &str) -> Result<(), String> {
+    let id = id.trim();
+    if id.is_empty() {
+        return Err("Enter a date ID.".into());
+    }
+    let url = format!("/api/admin/schedule/{id}");
+    let auth_val = auth_header(jwt);
+    let resp = Request::delete(&url)
+        .header("Authorization", auth_val.as_str())
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    if resp.ok() {
+        Ok(())
+    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
+        Err(body
+            .get("message")
+            .and_then(|m| m.as_str())
+            .unwrap_or("Failed to delete date.")
+            .to_string())
+    } else {
+        Err("Failed to delete date.".into())
+    }
+}
+
 async fn upload_collection_media(
     jwt: &str,
     kind: &str,
     collection_id: &str,
     file: web_sys::File,
+    set_as_cover: bool,
+    featured: bool,
 ) -> Result<(), String> {
     if collection_id.trim().is_empty() {
         return Err("Enter a collection ID first.".into());
@@ -74,6 +101,16 @@ async fn upload_collection_media(
     form_data
         .append_with_blob("file", &file)
         .map_err(|_| "Could not attach file.".to_string())?;
+    if set_as_cover {
+        form_data
+            .append_with_str("setAsCover", "true")
+            .map_err(|_| "Could not attach cover flag.".to_string())?;
+    }
+    if featured {
+        form_data
+            .append_with_str("featured", "true")
+            .map_err(|_| "Could not attach featured flag.".to_string())?;
+    }
 
     let url = format!("/api/admin/{kind}/{collection_id}/media");
     let auth_val = auth_header(jwt);
@@ -108,6 +145,11 @@ pub fn content_admin() -> Html {
     let date_starts = use_state(String::new);
     let date_location = use_state(String::new);
     let date_kind = use_state(|| String::from("shoot"));
+    let date_id = use_state(String::new);
+    let gallery_cover = use_state(|| false);
+    let gallery_featured = use_state(|| false);
+    let shoot_cover = use_state(|| false);
+    let shoot_featured = use_state(|| false);
 
     if auth_ctx.auth.as_ref().map(|a| a.user.role.as_str()) != Some("admin") {
         return html! {};
@@ -203,6 +245,8 @@ pub fn content_admin() -> Html {
         let auth_ctx = auth_ctx.clone();
         let gallery_id = gallery_id.clone();
         let message = message.clone();
+        let gallery_cover = gallery_cover.clone();
+        let gallery_featured = gallery_featured.clone();
         Callback::from(move |e: Event| {
             let input = e.target_unchecked_into::<HtmlInputElement>();
             let Some(files) = input.files() else {
@@ -218,11 +262,28 @@ pub fn content_admin() -> Html {
                 let jwt = auth.jwt.clone();
                 let collection_id = (*gallery_id).clone();
                 let message = message.clone();
+                let set_as_cover = *gallery_cover;
+                let featured = *gallery_featured;
+                let gallery_cover = gallery_cover.clone();
+                let gallery_featured = gallery_featured.clone();
                 spawn_local(async move {
-                    match upload_collection_media(&jwt, "galleries", &collection_id, file).await {
-                        Ok(()) => message.set(Some(format!(
-                            "Uploaded image to gallery \"{collection_id}\"."
-                        ))),
+                    match upload_collection_media(
+                        &jwt,
+                        "galleries",
+                        &collection_id,
+                        file,
+                        set_as_cover,
+                        featured,
+                    )
+                    .await
+                    {
+                        Ok(()) => {
+                            gallery_cover.set(false);
+                            gallery_featured.set(false);
+                            message.set(Some(format!(
+                                "Uploaded image to gallery \"{collection_id}\"."
+                            )));
+                        }
                         Err(err) => message.set(Some(err)),
                     }
                 });
@@ -235,6 +296,8 @@ pub fn content_admin() -> Html {
         let auth_ctx = auth_ctx.clone();
         let shoot_id = shoot_id.clone();
         let message = message.clone();
+        let shoot_cover = shoot_cover.clone();
+        let shoot_featured = shoot_featured.clone();
         Callback::from(move |e: Event| {
             let input = e.target_unchecked_into::<HtmlInputElement>();
             let Some(files) = input.files() else {
@@ -250,11 +313,28 @@ pub fn content_admin() -> Html {
                 let jwt = auth.jwt.clone();
                 let collection_id = (*shoot_id).clone();
                 let message = message.clone();
+                let set_as_cover = *shoot_cover;
+                let featured = *shoot_featured;
+                let shoot_cover = shoot_cover.clone();
+                let shoot_featured = shoot_featured.clone();
                 spawn_local(async move {
-                    match upload_collection_media(&jwt, "shoots", &collection_id, file).await {
-                        Ok(()) => message.set(Some(format!(
-                            "Uploaded image to shoot \"{collection_id}\"."
-                        ))),
+                    match upload_collection_media(
+                        &jwt,
+                        "shoots",
+                        &collection_id,
+                        file,
+                        set_as_cover,
+                        featured,
+                    )
+                    .await
+                    {
+                        Ok(()) => {
+                            shoot_cover.set(false);
+                            shoot_featured.set(false);
+                            message.set(Some(format!(
+                                "Uploaded image to shoot \"{collection_id}\"."
+                            )));
+                        }
                         Err(err) => message.set(Some(err)),
                     }
                 });
@@ -320,6 +400,30 @@ pub fn content_admin() -> Html {
         })
     };
 
+    let on_delete_date = {
+        let auth_ctx = auth_ctx.clone();
+        let date_id = date_id.clone();
+        let message = message.clone();
+        Callback::from(move |_| {
+            let id = (*date_id).clone();
+            let Some(auth) = &auth_ctx.auth else {
+                return;
+            };
+            let jwt = auth.jwt.clone();
+            let message = message.clone();
+            let date_id = date_id.clone();
+            spawn_local(async move {
+                match delete_schedule_event(&jwt, &id).await {
+                    Ok(()) => {
+                        date_id.set(String::new());
+                        message.set(Some("Date removed.".into()));
+                    }
+                    Err(err) => message.set(Some(err)),
+                }
+            });
+        })
+    };
+
     html! {
         <section class="card space-y-6">
             <Heading level={HeadingLevel::H2} subtitle="Admin only — create collections and upload images.">
@@ -364,6 +468,36 @@ pub fn content_admin() -> Html {
                     >
                         { "Create gallery" }
                     </button>
+                    <label class="muted">
+                        <input
+                            type="checkbox"
+                            checked={*gallery_cover}
+                            onchange={{
+                                let gallery_cover = gallery_cover.clone();
+                                Callback::from(move |e: Event| {
+                                    gallery_cover.set(
+                                        e.target_unchecked_into::<HtmlInputElement>().checked(),
+                                    );
+                                })
+                            }}
+                        />
+                        { " Set as cover" }
+                    </label>
+                    <label class="muted">
+                        <input
+                            type="checkbox"
+                            checked={*gallery_featured}
+                            onchange={{
+                                let gallery_featured = gallery_featured.clone();
+                                Callback::from(move |e: Event| {
+                                    gallery_featured.set(
+                                        e.target_unchecked_into::<HtmlInputElement>().checked(),
+                                    );
+                                })
+                            }}
+                        />
+                        { " Featured" }
+                    </label>
                     <label class="block space-y-1">
                         <Text tone={TextTone::Muted}>{ "Upload images (uses ID above)" }</Text>
                         <input
@@ -408,6 +542,36 @@ pub fn content_admin() -> Html {
                     >
                         { "Create shoot" }
                     </button>
+                    <label class="muted">
+                        <input
+                            type="checkbox"
+                            checked={*shoot_cover}
+                            onchange={{
+                                let shoot_cover = shoot_cover.clone();
+                                Callback::from(move |e: Event| {
+                                    shoot_cover.set(
+                                        e.target_unchecked_into::<HtmlInputElement>().checked(),
+                                    );
+                                })
+                            }}
+                        />
+                        { " Set as cover" }
+                    </label>
+                    <label class="muted">
+                        <input
+                            type="checkbox"
+                            checked={*shoot_featured}
+                            onchange={{
+                                let shoot_featured = shoot_featured.clone();
+                                Callback::from(move |e: Event| {
+                                    shoot_featured.set(
+                                        e.target_unchecked_into::<HtmlInputElement>().checked(),
+                                    );
+                                })
+                            }}
+                        />
+                        { " Featured" }
+                    </label>
                     <label class="block space-y-1">
                         <Text tone={TextTone::Muted}>{ "Upload images (uses ID above)" }</Text>
                         <input
@@ -478,6 +642,25 @@ pub fn content_admin() -> Html {
                     onclick={on_add_date}
                 >
                     { "Add date" }
+                </button>
+                <input
+                    type="text"
+                    placeholder="Date ID"
+                    class="field"
+                    value={(*date_id).clone()}
+                    oninput={{
+                        let date_id = date_id.clone();
+                        Callback::from(move |e: InputEvent| {
+                            date_id.set(e.target_unchecked_into::<HtmlInputElement>().value());
+                        })
+                    }}
+                />
+                <button
+                    type="button"
+                    class="btn btn-quiet"
+                    onclick={on_delete_date}
+                >
+                    { "Delete" }
                 </button>
             </div>
         </section>

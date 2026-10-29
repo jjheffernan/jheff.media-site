@@ -76,6 +76,7 @@ pub fn content_detail(props: &Props) -> Html {
                     media_type: m.media_type.clone(),
                     width: m.width,
                     height: m.height,
+                    featured: m.featured,
                 })
                 .collect();
 
@@ -106,6 +107,7 @@ pub fn content_detail(props: &Props) -> Html {
                             { "No media in this collection yet." }
                         </Text>
                     } else {
+                        <p class="muted">{ "Prints are requested from your account." }</p>
                         <PhotoGrid
                             items={feed_items}
                             collection_id={collection.id.clone()}

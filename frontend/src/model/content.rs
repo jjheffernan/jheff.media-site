@@ -11,6 +11,8 @@ pub struct MediaItem {
     pub media_type: Option<String>,
     pub width: Option<u32>,
     pub height: Option<u32>,
+    #[serde(default)]
+    pub featured: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

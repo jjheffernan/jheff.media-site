@@ -77,6 +77,7 @@ pub fn save_asset(
         media_type: Some(content_type.to_string()),
         width: None,
         height: None,
+        featured: false,
     })
 }
 
@@ -133,6 +134,7 @@ mod tests {
             let (bytes, content_type) = load_asset(&item.id).unwrap();
             assert_eq!(bytes, b"fake-jpeg");
             assert!(content_type.starts_with("image/"));
+            assert!(!item.featured);
         });
     }
 

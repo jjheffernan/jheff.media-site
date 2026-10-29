@@ -279,7 +279,7 @@ Upload an image to an existing MongoDB gallery. Admin JWT required.
 
 **Headers:** `Authorization: bearer <jwt>`
 
-**Request:** `multipart/form-data` with field `file` (JPEG, PNG, WebP, or GIF; default max 10 MB).
+**Request:** `multipart/form-data` with field `file` (JPEG, PNG, WebP, or GIF; default max 10 MB). Optional text fields `setAsCover` and `featured` (`true` sets the collection cover or tags the new item). Cover is unchanged when `setAsCover` is omitted.
 
 **Success** `200`
 
@@ -290,7 +290,8 @@ Upload an image to an existing MongoDB gallery. Admin JWT required.
     "id": "<asset-uuid>",
     "thumbnailUrl": "/api/content/media/<asset-uuid>",
     "mediaUrl": "/api/content/media/<asset-uuid>",
-    "mediaType": "image/jpeg"
+    "mediaType": "image/jpeg",
+    "featured": false
   }
 }
 ```

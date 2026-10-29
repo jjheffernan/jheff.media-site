@@ -10,6 +10,8 @@ pub struct MediaItem {
     pub media_type: Option<String>,
     pub width: Option<u32>,
     pub height: Option<u32>,
+    #[serde(default)]
+    pub featured: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,4 +83,16 @@ pub struct OtherSite {
 pub struct OtherSitesResponse {
     pub sites: Vec<OtherSite>,
     pub source: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn media_item_featured_defaults_false() {
+        let item: MediaItem =
+            serde_json::from_str(r#"{"id":"a","thumbnailUrl":"/a"}"#).unwrap();
+        assert!(!item.featured);
+    }
 }
