@@ -140,8 +140,11 @@
     background: var(--surface-elevated);
     color: var(--fg);
   }
-  .content-nav { position: relative; }
-  .content-nav-trigger {
+  .content-nav,
+  .account-nav { position: relative; }
+  .account-nav { width: 100%; }
+  .content-nav-trigger,
+  .account-nav-trigger {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
@@ -153,7 +156,8 @@
     color: var(--muted);
   }
   .content-nav-trigger.is-active,
-  .content-nav-trigger:hover {
+  .content-nav-trigger:hover,
+  .account-nav-trigger:hover {
     background: var(--surface-elevated);
     color: var(--fg);
   }
@@ -165,7 +169,8 @@
     padding: 0;
     background: transparent;
   }
-  .content-nav-menu {
+  .content-nav-menu,
+  .account-nav-menu {
     position: absolute;
     top: 100%;
     left: 0;
@@ -188,23 +193,20 @@
   }
   .content-nav-item:hover { background: var(--surface); color: var(--accent); }
   .content-nav.is-inline { width: 100%; }
-  .content-nav.is-inline .content-nav-trigger {
+  .content-nav.is-inline .content-nav-trigger,
+  .account-nav-trigger {
     justify-content: space-between;
     width: 100%;
     padding: 0.75rem 0.875rem;
   }
-  .content-nav.is-inline .content-nav-menu {
+  .content-nav.is-inline .content-nav-menu,
+  .account-nav-menu {
     position: static;
+    display: grid;
+    gap: 0.35rem;
     width: 100%;
     margin-top: 0.25rem;
     box-shadow: none;
-  }
-  .menu-section {
-    display: grid;
-    gap: 0.85rem;
-    margin-top: 0.5rem;
-    padding-top: 0.85rem;
-    border-top: 1px solid var(--border);
   }
   .menu-label {
     font-size: 0.75rem;
@@ -213,8 +215,7 @@
     text-transform: uppercase;
     color: var(--muted);
   }
-  .menu-theme,
-  .menu-account { display: grid; gap: 0.35rem; }
+  .menu-theme { display: grid; gap: 0.35rem; }
   .menu-choice-row {
     display: grid;
     grid-template-columns: 1fr 1fr;

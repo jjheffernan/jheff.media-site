@@ -12,7 +12,7 @@ Tokens at the top of that file: `--bg`, `--fg`, `--surface`, `--accent`, `--radi
 
 ## Site map
 
-Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule. On small screens the menu also holds theme and account. Theme is the visitor's light or dark choice. Contact is in the footer, not the header.
+Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule. On small screens, theme and sign-in sit in an Account dropdown. Theme is the visitor's light or dark choice. Contact is in the footer, not the header.
 
 | Route | Behavior |
 |-------|----------|

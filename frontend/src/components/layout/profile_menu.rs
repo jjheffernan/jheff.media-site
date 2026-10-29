@@ -1,3 +1,4 @@
+use super::theme_toggle::ThemeToggle;
 use crate::{
     components::auth::{AuthModal, AuthModalKind},
     context::AuthContext,
@@ -104,7 +105,8 @@ pub fn profile_menu(props: &Props) -> Html {
     } else {
         "block w-full px-3 py-2 text-left text-sm text-foreground transition hover:bg-surface"
     };
-    let show_actions = props.inline || *panel == OpenPanel::Menu;
+    let menu_open = *panel == OpenPanel::Menu;
+    let show_actions = menu_open;
     let actions = if show_actions {
         Some(match &auth_ctx.auth {
             Some(auth) => html! {
@@ -170,9 +172,27 @@ pub fn profile_menu(props: &Props) -> Html {
 
     if props.inline {
         return html! {
-            <div class="menu-account">
-                <p class="menu-label">{ "Account" }</p>
-                { actions }
+            <div class="account-nav">
+                <button
+                    type="button"
+                    class="account-nav-trigger"
+                    aria-label="Account"
+                    aria-expanded={menu_open.to_string()}
+                    aria-haspopup="true"
+                    aria-controls="account-nav-menu"
+                    onclick={toggle_menu}
+                >
+                    { "Account" }
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                if menu_open {
+                    <div id="account-nav-menu" class="account-nav-menu">
+                        <ThemeToggle inline={true} />
+                        { actions }
+                    </div>
+                }
                 { modals }
             </div>
         };

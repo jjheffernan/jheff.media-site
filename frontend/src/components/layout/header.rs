@@ -80,10 +80,7 @@ pub fn header(props: &Props) -> Html {
                     <ContentNav inline={true} />
                     <NavLink route={AppRoutes::Booking} label="Booking" />
                     <NavLink route={AppRoutes::Schedule} label="Schedule" />
-                    <div class="menu-section">
-                        <ThemeToggle inline={true} />
-                        <ProfileMenu inline={true} />
-                    </div>
+                    <ProfileMenu inline={true} />
                 </nav>
             }
         </header>
