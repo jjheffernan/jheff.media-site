@@ -27,7 +27,7 @@ scripts/dev.sh setup
 ```
 
 - `backend/src/secret.key` (32 bytes)
-- Docker (for MongoDB in local mode, or full stack in `--docker` mode)
+- Docker or Podman (MongoDB in local mode, or the full stack with `--docker`). `CONTAINER_RUNTIME=podman` forces Podman.
 
 ## Start (recommended — local)
 

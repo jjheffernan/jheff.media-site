@@ -67,20 +67,28 @@ ensure_secret_key() {
 
 install_systemd() {
   local unit=/etc/systemd/system/site.service
+  local bin after requires
+  bin="$(command -v "$CONTAINER_BIN")"
+  after="network-online.target"
+  requires=""
+  if [[ "$CONTAINER_BIN" == docker ]]; then
+    after="docker.service network-online.target"
+    requires="Requires=docker.service"
+  fi
   cat >"$unit" <<EOF
 [Unit]
-Description=Site Docker stack
-After=docker.service network-online.target
+Description=Site container stack
+After=${after}
 Wants=network-online.target
-Requires=docker.service
+${requires}
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=${COMMON_DIR}
 Environment=HTTP_PORT=${HTTP_PORT}
-ExecStart=/usr/bin/docker compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
-ExecStop=/usr/bin/docker compose -f docker-compose.yml --env-file .env.production down
+ExecStart=${bin} compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
+ExecStop=${bin} compose -f docker-compose.yml --env-file .env.production down
 TimeoutStartSec=0
 
 [Install]
@@ -101,11 +109,14 @@ deploy_stack() {
   msg_info "Building application image (Rust + Trunk — may take several minutes)"
   cd "$compose_dir"
   export HTTP_PORT
-  $STD docker compose -f docker-compose.yml --env-file .env.production build
+  # shellcheck disable=SC1091
+  source "${INSTALL_DIR}/scripts/lib/container.sh"
+  require_container
+  $STD "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build
   msg_ok "Built application image"
 
   msg_info "Starting stack"
-  $STD docker compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
+  $STD "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
   msg_ok "Stack running on port ${HTTP_PORT}"
 
   install_systemd
@@ -124,8 +135,11 @@ update_stack() {
 
   cd "$compose_dir"
   export HTTP_PORT="${HTTP_PORT:-8080}"
-  $STD docker compose -f docker-compose.yml --env-file .env.production build
-  $STD docker compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
+  # shellcheck disable=SC1091
+  source "${INSTALL_DIR}/scripts/lib/container.sh"
+  require_container
+  $STD "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build
+  $STD "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
   systemctl restart site 2>/dev/null || true
   echo "${BRANCH}" >"${compose_dir}/.install-version"
   msg_ok "Stack updated"

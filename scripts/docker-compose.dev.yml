@@ -37,7 +37,7 @@ services:
       - frontend
 
   db:
-    image: "mongo:7.0"
+    image: "docker.io/library/mongo:7.0"
     container_name: "jheffmedia-database"
     environment:
       - MONGODB_INITDB_DATABASE=jheffmedia_dev

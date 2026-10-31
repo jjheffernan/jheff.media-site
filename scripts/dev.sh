@@ -79,7 +79,7 @@ cmd_build() {
   fi
 
   log_section "Docker dev image build (verbose — may take 10+ minutes first time)"
-  require_cmd docker
+  require_container
   export BUILDKIT_PROGRESS=plain
   export DOCKER_BUILDKIT=1
 
@@ -130,12 +130,12 @@ cmd_start_local() {
 
   [[ -f "$ROOT/backend/src/secret.key" ]] || die "Missing secret.key — run: scripts/dev.sh setup"
 
-  require_cmd docker
+  require_container
   require_cmd trunk
   require_cmd npm
   require_cmd cargo
 
-  log_section "MongoDB (Docker)"
+  log_section "MongoDB ($CONTAINER_BIN)"
   cd "$ROOT/scripts"
   "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" up -d db \
     2>&1 | tee -a "$LOG_DIR/docker-db.log"
@@ -184,11 +184,11 @@ cmd_start_docker() {
   local do_wait=${1:-false}
   log_section "Starting Docker dev stack (detached)"
   ensure_dev_dirs
-  require_cmd docker
+  require_container
   export BUILDKIT_PROGRESS=plain
 
   cd "$ROOT/scripts"
-  log "docker compose up -d --build"
+  log "$CONTAINER_BIN compose up -d --build"
   "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" up -d --build \
     2>&1 | tee "$LOG_DIR/docker-up.log"
 
@@ -211,9 +211,9 @@ cmd_stop() {
   stop_background backend
   stop_local_patterns
 
-  if command -v docker >/dev/null 2>&1; then
+  if container_runtime >/dev/null 2>&1; then
     cd "$ROOT/scripts"
-  "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" down --remove-orphans \
+    "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" down --remove-orphans \
       2>&1 | tee -a "$LOG_DIR/docker-down.log" || true
   fi
 
@@ -270,8 +270,8 @@ cmd_status() {
     fi
   done
 
-  if command -v docker >/dev/null 2>&1; then
-    log_section "Docker (jheffmedia-dev)"
+  if container_runtime >/dev/null 2>&1; then
+    log_section "Containers ($(container_runtime), jheffmedia-dev)"
     cd "$ROOT/scripts"
     "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" ps 2>/dev/null || log "  (no containers)"
   fi

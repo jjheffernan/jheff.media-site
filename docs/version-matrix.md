@@ -11,7 +11,7 @@ See also: [deployment-dev.md](./deployment-dev.md), [architecture.md](./architec
 | Rust | 1.85+ (stable) | `rustup update stable` |
 | Node.js | 18+ | Tailwind CLI via npm |
 | npm | 9+ | `npm install` in `frontend/` |
-| Docker | 24+ with Compose v2 | `docker compose version` |
+| Docker or Podman | Compose v2 (`docker compose` or `podman compose`) | `CONTAINER_RUNTIME` picks one |
 | MongoDB (image) | 7.0 | Pinned in compose files |
 
 ## Rust workspace

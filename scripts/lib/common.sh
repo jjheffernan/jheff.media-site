@@ -40,6 +40,9 @@ require_cmd() {
   command -v "$cmd" >/dev/null 2>&1 || die "Required command not found: $cmd"
 }
 
+# shellcheck source=container.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/container.sh"
+
 source_dev_env() {
   if [[ -f "$CONFIG_DEV" ]]; then
     # shellcheck disable=SC1090

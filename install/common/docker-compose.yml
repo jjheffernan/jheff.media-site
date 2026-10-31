@@ -34,7 +34,7 @@ services:
         condition: service_started
 
   db:
-    image: mongo:7.0
+    image: docker.io/library/mongo:7.0
     container_name: jheffmedia-database
     restart: unless-stopped
     environment:

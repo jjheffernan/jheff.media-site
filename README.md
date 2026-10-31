@@ -14,7 +14,7 @@ Landing page to showcase automotive socials — built with **Yew** (WASM fronten
 
 - [Rust](https://rustup.rs/) (`stable` + `wasm32-unknown-unknown`)
 - [Trunk](https://trunk-rs.github.io/trunk/) (`cargo install --locked trunk`)
-- [Docker Desktop](https://www.docker.com/) (Compose v2 — `docker compose`)
+- [Docker](https://www.docker.com/) or [Podman](https://podman.io/) with Compose (`docker compose` or `podman compose`). Set `CONTAINER_RUNTIME=podman` to force Podman when both are installed.
 
 ## Quick start
 

@@ -1,4 +1,4 @@
-FROM rust:1.85-bookworm AS frontend-build
+FROM docker.io/library/rust:1.85-bookworm AS frontend-build
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
     && rm -rf /var/lib/apt/lists/*
@@ -12,7 +12,7 @@ RUN cargo install --locked trunk
 WORKDIR /usr/src/workspace/frontend
 RUN npm install && trunk build --release
 
-FROM rust:1.85-bookworm AS backend-build
+FROM docker.io/library/rust:1.85-bookworm AS backend-build
 WORKDIR /usr/src/workspace
 COPY Cargo.toml Cargo.lock ./
 COPY backend ./backend
@@ -21,7 +21,7 @@ RUN mkdir -p frontend/src && echo '' > frontend/src/lib.rs
 RUN cargo build --release -p jheffmedia-site-backend
 RUN cp target/release/jheffmedia-site-backend /usr/local/bin/jheffmedia-site-backend
 
-FROM debian:bookworm-slim
+FROM docker.io/library/debian:bookworm-slim
 ENV YEW_FULLSTACK_STATIC="/usr/local/share/yew-fullstack/www"
 ENV YEW_FULLSTACK_HOST="0.0.0.0"
 ENV YEW_FULLSTACK_PORT="8080"

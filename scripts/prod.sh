@@ -11,23 +11,23 @@ usage() {
 Usage: scripts/prod.sh <command>
 
 Commands:
-  build   Build production Docker image (verbose)
-  start   Run production stack (docker compose)
+  build   Build the production image (Docker or Podman)
+  start   Run the production stack (compose)
   stop    Tear down production stack
 
 EOF
 }
 
 cmd_build() {
-  log_section "Production Docker build"
-  require_cmd docker
+  require_container
+  log_section "Production image build ($CONTAINER_BIN)"
   export BUILDKIT_PROGRESS=plain
   export DOCKER_BUILDKIT=1
 
   ensure_dev_dirs
   rm -rf "$ROOT/frontend/dist"
 
-  docker build -t jheffmedia/application -t jheffmedia/application:latest "$ROOT" \
+  "$CONTAINER_BIN" build -t jheffmedia/application -t jheffmedia/application:latest "$ROOT" \
     2>&1 | tee "$LOG_DIR/prod-docker-build.log"
 
   log "Image built: jheffmedia/application"
@@ -36,7 +36,7 @@ cmd_build() {
 
 cmd_start() {
   log_section "Starting production stack"
-  require_cmd docker
+  require_container
   cd "$ROOT/scripts"
   "$COMPOSE" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" up \
     --force-recreate --remove-orphans \
@@ -46,7 +46,7 @@ cmd_start() {
 
 cmd_stop() {
   log_section "Stopping production stack"
-  require_cmd docker
+  require_container
   "$COMPOSE" -f "$COMPOSE_PROD_FILE" down -v --rmi all --remove-orphans
   cd "$ROOT/scripts"
   "$COMPOSE" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" kill 2>/dev/null || true

@@ -57,4 +57,4 @@ Post-deploy smoke check: `scripts/smoke.sh` (or `BASE_URL=https://jheff.media sc
 
 - `lib/common.sh` — paths, timestamped logging
 - `lib/process.sh` — background PIDs, port/http waits, cleanup
-- `docker-compose.sh` — `docker compose` v2 wrapper
+- `docker-compose.sh` — `docker compose` or `podman compose` (`CONTAINER_RUNTIME` overrides)

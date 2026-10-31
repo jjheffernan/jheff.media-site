@@ -1,4 +1,4 @@
-FROM rust:1.85-bookworm
+FROM docker.io/library/rust:1.85-bookworm
 ENV RUST_LOG=info
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
