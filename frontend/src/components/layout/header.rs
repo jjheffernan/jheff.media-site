@@ -1,6 +1,7 @@
 use super::content_nav::ContentNav;
 use super::{profile_menu::ProfileMenu, theme_toggle::ThemeToggle};
 use crate::components::ui::{NavLink, Text, TextTone};
+use crate::context::AuthContext;
 use crate::routes::{AppRoutes, SearchQuery};
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -76,6 +77,11 @@ pub struct Props {
 #[function_component(Header)]
 pub fn header(props: &Props) -> Html {
     let menu_open = use_state(|| false);
+    let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
+    let is_admin = auth_ctx
+        .auth
+        .as_ref()
+        .is_some_and(|auth| auth.user.role == "admin");
     let current = use_route::<AppRoutes>().unwrap_or(AppRoutes::NotFound);
 
     {
@@ -116,6 +122,9 @@ pub fn header(props: &Props) -> Html {
                     <ContentNav />
                     <NavLink route={AppRoutes::Booking} label="Booking" />
                     <NavLink route={AppRoutes::Schedule} label="Schedule" />
+                    if is_admin {
+                        <NavLink route={AppRoutes::Admin} label="Dashboard" />
+                    }
                 </nav>
 
                 <div class="site-header-actions">
@@ -144,6 +153,9 @@ pub fn header(props: &Props) -> Html {
                     <ContentNav inline={true} />
                     <NavLink route={AppRoutes::Booking} label="Booking" />
                     <NavLink route={AppRoutes::Schedule} label="Schedule" />
+                    if is_admin {
+                        <NavLink route={AppRoutes::Admin} label="Dashboard" />
+                    }
                     <ProfileMenu inline={true} />
                 </nav>
             }
