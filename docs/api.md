@@ -268,6 +268,28 @@ Public substring search across gallery and shoot titles, summaries, locations, d
 
 `kind` is `gallery`, `shoot`, or `event`.
 
+### `GET /api/links`
+
+Public social link list for `/links`. An empty list is `{ "links": [] }`.
+
+**Success** `200`
+
+```json
+{
+  "links": [
+    { "label": "Instagram", "url": "https://instagram.com/jheffmedia" }
+  ]
+}
+```
+
+### `PUT /api/admin/links`
+
+Admin only. Replaces the whole list. At most 12 links. Each label is 1–40 characters. Each URL must start with `http://` or `https://`.
+
+**Success** `200` — the same `{ "links": [...] }` shape.
+
+**Errors** `401` unauthorized, `403` not admin, `400` — `TOO_MANY`, `BAD_LABEL`, or `BAD_URL`.
+
 ### `GET /api/content/media/{asset_id}`
 
 Serve an uploaded shoot/gallery image from disk. Public read.

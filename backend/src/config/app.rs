@@ -13,6 +13,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
             .route("/search", web::get().to(content_controller::search))
+            .route("/links", web::get().to(content_controller::social_links))
             .service(
                 web::scope("/feed")
                     .route("", web::get().to(feed_controller::list))
@@ -127,6 +128,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         "/prints/orders/{id}",
                         web::patch().to(print_controller::admin_update_order),
                     )
+                    .route("/links", web::put().to(content_controller::save_social_links))
                     .route("/library", web::get().to(admin_controller::library_sources))
                     .route(
                         "/library/{source}",

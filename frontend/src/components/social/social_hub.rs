@@ -5,10 +5,12 @@ use crate::{
         ui::{Grid, Heading, HeadingLevel, Spinner, Text, TextTone},
     },
     model::SocialHubResponse,
+    routes::AppRoutes,
 };
 use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
+use yew_router::prelude::*;
 
 #[derive(Clone, PartialEq)]
 enum LoadState {
@@ -109,6 +111,9 @@ pub fn social_hub() -> Html {
             >
                 { "Social" }
             </Heading>
+            <Link<AppRoutes> to={AppRoutes::Links} classes="btn btn-quiet">
+                { "All social links" }
+            </Link<AppRoutes>>
 
             <InstagramFeaturedCard />
 

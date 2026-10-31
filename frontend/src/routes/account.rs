@@ -1,8 +1,5 @@
 use crate::{
-    components::{
-        admin::{ContactAdmin, ContentAdmin},
-        ui::{Heading, HeadingLevel, LazyImage, Text, TextTone},
-    },
+    components::ui::{Heading, HeadingLevel, LazyImage, Text, TextTone},
     context::AuthContext,
     model::{
         ChangePassword, PrintOrder, PrintSelection, ServerResponse,
@@ -438,6 +435,13 @@ pub fn account() -> Html {
                 <div class="mt-4 space-y-1 text-sm text-muted">
                     <p>{ format!("Email: {}", display_user.email) }</p>
                     <p>{ format!("Role: {}", display_user.role) }</p>
+                    if display_user.role == "admin" {
+                        <p class="mt-3">
+                            <Link<AppRoutes> to={AppRoutes::Admin} classes="btn btn-quiet">
+                                { "Admin dashboard" }
+                            </Link<AppRoutes>>
+                        </p>
+                    }
                     <p>{ format!("2FA: {}", if totp_enabled { "enabled" } else { "not enabled" }) }</p>
                 </div>
             </div>
@@ -605,9 +609,6 @@ pub fn account() -> Html {
                 }
                 { orders_list }
             </section>
-
-            <ContactAdmin />
-            <ContentAdmin />
 
             <button
                 type="button"

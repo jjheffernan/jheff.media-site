@@ -1,5 +1,6 @@
-use crate::services::{content_service, content_upload_service};
-use actix_web::{web, HttpResponse, Result};
+use crate::services::{content_service, content_upload_service, links_service};
+use crate::utils::auth::require_admin;
+use actix_web::{web, HttpRequest, HttpResponse, Result};
 use awc::Client;
 use mongodb::Database;
 use serde::Deserialize;
@@ -54,6 +55,34 @@ pub async fn booking() -> Result<HttpResponse> {
 
 pub async fn other_sites() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(content_service::other_sites()))
+}
+
+pub async fn social_links(db: web::Data<Database>) -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "links": links_service::list(&db).await
+    })))
+}
+
+#[derive(Deserialize)]
+pub struct SaveLinks {
+    links: Vec<links_service::SocialLink>,
+}
+
+pub async fn save_social_links(
+    req: HttpRequest,
+    body: web::Json<SaveLinks>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match links_service::replace(&db, body.links.clone()).await {
+        Ok(links) => Ok(HttpResponse::Ok().json(serde_json::json!({ "links": links }))),
+        Err(code) => Ok(HttpResponse::BadRequest().json(serde_json::json!({
+            "message": code,
+            "data": ""
+        }))),
+    }
 }
 
 pub async fn serve_media(path: web::Path<String>) -> Result<HttpResponse> {

@@ -1,4 +1,5 @@
 mod account;
+mod admin;
 mod booking;
 mod contact;
 mod content;
@@ -6,6 +7,7 @@ mod galleries;
 mod gallery_detail;
 mod home;
 mod legal;
+mod links;
 mod other_sites;
 mod profile;
 mod schedule;
@@ -18,6 +20,7 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 pub use account::Account;
+pub use admin::Admin;
 pub use booking::Booking;
 pub use contact::Contact;
 pub use content::Content;
@@ -25,6 +28,7 @@ pub use galleries::Galleries;
 pub use gallery_detail::GalleryDetail;
 pub use home::Home;
 pub use legal::{Privacy, Terms};
+pub use links::Links;
 pub use other_sites::OtherSites;
 pub use profile::Profile;
 pub use schedule::Schedule;
@@ -66,6 +70,10 @@ pub enum AppRoutes {
     OtherSites,
     #[at("/account")]
     Account,
+    #[at("/admin")]
+    Admin,
+    #[at("/links")]
+    Links,
     #[at("/profile")]
     Profile,
     #[at("/404")]
@@ -90,6 +98,8 @@ pub fn switch(routes: AppRoutes) -> Html {
         AppRoutes::Privacy => html! { <Privacy /> },
         AppRoutes::OtherSites => html! { <OtherSites /> },
         AppRoutes::Account => html! { <Account /> },
+        AppRoutes::Admin => html! { <Admin /> },
+        AppRoutes::Links => html! { <Links /> },
         AppRoutes::Profile => html! { <Profile /> },
         AppRoutes::NotFound => html! {
             <p class="text-sm text-muted">{ "Page not found" }</p>

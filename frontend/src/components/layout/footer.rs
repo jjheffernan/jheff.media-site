@@ -95,6 +95,7 @@ impl Component for Footer {
                             { footer_link(AppRoutes::Galleries, "Galleries") }
                             { footer_link(AppRoutes::Shoots, "Shoots") }
                             { footer_link(AppRoutes::Social, "Social") }
+                            { footer_link(AppRoutes::Links, "Links") }
                             { footer_link(AppRoutes::Schedule, "Schedule") }
                             { footer_link(AppRoutes::Booking, "Booking") }
                             if self.has_other_sites {

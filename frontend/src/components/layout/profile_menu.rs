@@ -117,6 +117,22 @@ pub fn profile_menu(props: &Props) -> Html {
                     <button type="button" class={item_class} onclick={go_account}>
                         { "Account" }
                     </button>
+                    if auth.user.role == "admin" {
+                        <button
+                            type="button"
+                            class={item_class}
+                            onclick={{
+                                let navigator = navigator.clone();
+                                let close_all = close_all.clone();
+                                Callback::from(move |_| {
+                                    navigator.push(&AppRoutes::Admin);
+                                    close_all.emit(());
+                                })
+                            }}
+                        >
+                            { "Admin" }
+                        </button>
+                    }
                     <button
                         type="button"
                         class={item_class}

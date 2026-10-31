@@ -24,7 +24,9 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, and a
 | `/booking` | A request form. Not the general contact form |
 | `/schedule` | Month calendar of public dates is the default view. Optional embed stays under it |
 | `/contact` | General questions only. Booking requests belong on `/booking` |
-| `/account` | Password, 2FA, print size and unpaid total. Admins also get inbox, content CRUD, schedule, and print-order status. Email change is not offered |
+| `/account` | Password, 2FA, print size and unpaid total. Email change is not offered. Admins see a link to the dashboard |
+| `/admin` | Admin dashboard. Social links, inbox, content, schedule, and print orders. Admin role only |
+| `/links` | Social link buttons. Admins edit the list on the dashboard |
 | `/profile` | Signed-in welcome card. Signed-out visitors go home |
 | `/legal/terms`, `/legal/privacy` | Static copy |
 | `/other-sites` | Configured links |
@@ -36,9 +38,9 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, and a
 - Print sizes are 8×10 ($25), 11×14 ($45), and 16×20 ($75). One size per request. Status stays unpaid. No card charge in the app.
 - Detail pages reuse the existing print POST. Signed-out visitors see text and no new login modal.
 - An empty featured Instagram URL returns 204 and the card is absent. Operator static JSON stays.
-- Schedule dates are future public Mongo events. Embeds stay optional. Admins add, edit, and delete dates from the account panel.
+- Schedule dates are future public Mongo events. Embeds stay optional. Admins add, edit, and delete dates from the admin dashboard.
 - Login and signup allow 8 attempts per IP per 10 minutes. 2FA blocks the session until the code is valid.
-- Admin tools render only when `role` is `admin`.
+- Admin tools render only when `role` is `admin`, on `/admin`.
 - The homepage leads with the photo feed. The primary call to action is the content hub.
 - Galleries and shoots are a showcase. Print select stays. The page is not a shop.
 - Covers are chosen explicitly. Images are marked featured with a tag. No placeholder photo service.
@@ -47,5 +49,5 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, and a
 - Print payment is shelved. Invoices or another service will collect payment later. The site keeps the unpaid request.
 - 2FA enrollment with the otpauth URL and secret is enough. No QR image.
 - Email change is skipped. Do not offer it in the account UI.
-- Admins triage contact and booking messages, manage gallery and shoot media, and update print order status from the account page. Payment status is recorded only; the app does not charge cards.
+- Admins edit the social link list, triage contact and booking messages, manage gallery and shoot media, and update print order status from the admin dashboard. Payment status is recorded only; the app does not charge cards.
 - Immich and Nextcloud copies are admin-only, at most 6 files, and only into a draft gallery or shoot. Draft collections stay off the public site. Library credentials stay on the server.
