@@ -34,11 +34,19 @@ cmd_build() {
   log "Log: $LOG_DIR/prod-docker-build.log"
 }
 
+require_prod_env() {
+  local env_file="$ROOT/scripts/.env.production"
+  [[ -f "$env_file" ]] || die "Missing $env_file — copy install/common/.env.production.example and set MONGO_PASSWORD"
+  echo "$env_file"
+}
+
 cmd_start() {
   log_section "Starting production stack"
   require_container
+  local env_file
+  env_file="$(require_prod_env)"
   cd "$ROOT/scripts"
-  "$COMPOSE" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" up \
+  "$COMPOSE" --env-file "$env_file" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" up \
     --force-recreate --remove-orphans \
     --exit-code-from application \
     --ignore-pull-failures
@@ -47,10 +55,12 @@ cmd_start() {
 cmd_stop() {
   log_section "Stopping production stack"
   require_container
-  "$COMPOSE" -f "$COMPOSE_PROD_FILE" down -v --rmi all --remove-orphans
+  local env_file
+  env_file="$(require_prod_env)"
+  "$COMPOSE" --env-file "$env_file" -f "$COMPOSE_PROD_FILE" down -v --rmi all --remove-orphans
   cd "$ROOT/scripts"
-  "$COMPOSE" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" kill 2>/dev/null || true
-  "$COMPOSE" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" rm -f 2>/dev/null || true
+  "$COMPOSE" --env-file "$env_file" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" kill 2>/dev/null || true
+  "$COMPOSE" --env-file "$env_file" -f "$COMPOSE_PROD_FILE" -p "$COMPOSE_PROD_PROJECT" rm -f 2>/dev/null || true
   log "Production stack stopped"
 }
 

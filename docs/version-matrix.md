@@ -72,7 +72,7 @@ Bundling: [Trunk](https://trunk-rs.github.io/trunk/) (`frontend/Trunk.toml`), no
 
 | Variable | Read by backend? | Dev compose | Prod compose (fixed) |
 |----------|------------------|-------------|----------------------|
-| `YEW_FULLSTACK_DB_CONNSTR` | yes | `mongodb://db:27017` | `mongodb://root:password@db:27017/jheffmedia?authSource=admin` |
+| `YEW_FULLSTACK_DB_CONNSTR` | yes | `mongodb://db:27017` | `mongodb://root:${MONGO_PASSWORD}@db:27017/jheffmedia?authSource=admin` |
 | `YEW_FULLSTACK_DB_NAME` | yes | `jheffmedia_dev` | `jheffmedia` |
 | `YEW_FULLSTACK_DB_URL` | **no** | — | removed (legacy) |
 | `YEW_FULLSTACK_DB_USER` | **no** | — | removed (legacy) |

@@ -106,7 +106,7 @@ Manual equivalent using legacy scripts path:
 docker compose -f scripts/docker-compose.yml --env-file scripts/.env.production up -d
 ```
 
-Default compose exposes **8080**. MongoDB should not be published publicly in production — remove the `27017` port mapping or bind to localhost only.
+Default compose exposes **8080**. MongoDB is not published. `scripts/prod.sh` reads `MONGO_PASSWORD` from `scripts/.env.production`.
 
 ## 5. Reverse proxy (TLS)
 

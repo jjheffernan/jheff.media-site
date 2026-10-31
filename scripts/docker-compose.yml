@@ -5,7 +5,7 @@ services:
     environment:
       - "YEW_FULLSTACK_HOST=0.0.0.0"
       - "YEW_FULLSTACK_PORT=8080"
-      - "YEW_FULLSTACK_DB_CONNSTR=mongodb://root:password@db:27017/jheffmedia?authSource=admin"
+      - "YEW_FULLSTACK_DB_CONNSTR=mongodb://root:${MONGO_PASSWORD}@db:27017/jheffmedia?authSource=admin"
       - "YEW_FULLSTACK_DB_NAME=jheffmedia"
       - "YEW_FULLSTACK_JWT_SECRET_FILE=/run/secrets/jwt_secret"
       - "YEW_FULLSTACK_CONTENT_UPLOAD_DIR=/data/content-uploads"
@@ -23,9 +23,7 @@ services:
     environment:
       - MONGODB_INITDB_DATABASE=jheffmedia
       - MONGODB_INITDB_ROOT_USERNAME=root
-      - MONGODB_INITDB_ROOT_PASSWORD=password
-    ports:
-      - "27017:27017"
+      - MONGODB_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:?set MONGO_PASSWORD}
 
 volumes:
   jheffmedia-content-uploads:

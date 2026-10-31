@@ -31,7 +31,6 @@ id_rsa.*
 # Rust
 target
 **/*.rs.bk
-Cargo.lock
 
 # Node / frontend build output
 node_modules/

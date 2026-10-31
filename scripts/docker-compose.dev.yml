@@ -45,7 +45,7 @@ services:
       - MONGODB_INITDB_ROOT_USERNAME=root
       - MONGODB_INITDB_ROOT_PASSWORD=password
     ports:
-      - "27017-27019:27017-27019"
+      - "127.0.0.1:27017-27019:27017-27019"
 
   prometheus:
     image: "docker.io/prom/prometheus:v2.55.1"
