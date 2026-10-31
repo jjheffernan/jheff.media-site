@@ -12,11 +12,12 @@ Tokens at the top of that file: `--bg`, `--fg`, `--surface`, `--accent`, `--radi
 
 ## Site map
 
-Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule. On small screens, theme and sign-in sit in an Account dropdown. Theme is the visitor's light or dark choice. Contact is in the footer, not the header.
+Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, and a search field. On small screens, theme and sign-in sit in an Account dropdown, and search is the first row of the menu. Theme is the visitor's light or dark choice. Contact is in the footer, not the header.
 
 | Route | Behavior |
 |-------|----------|
 | `/` | Photo feed leads. Content hub is the primary call to action |
+| `/search` | Public galleries, shoots, photo titles, and upcoming dates. Drafts stay hidden |
 | `/content` | One `GET /api/content/hub`: 3 social posts, 2 shoots, 2 galleries |
 | `/social` | Real posts only. Empty keys show one muted line. No demo embed |
 | `/galleries`, `/shoots` | Showcase, not a shop. Print select stays secondary. Covers are explicit. Images can be tagged featured |

@@ -12,6 +12,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
     info!("Configurating routes...");
     cfg.service(
         web::scope("/api")
+            .route("/search", web::get().to(content_controller::search))
             .service(
                 web::scope("/feed")
                     .route("", web::get().to(feed_controller::list))

@@ -104,6 +104,10 @@
     align-items: center;
     gap: 0.5rem;
   }
+  .site-search { width: 9rem; }
+  .site-search.is-wide { width: 100%; padding: 0.25rem 0.5rem 0.5rem; }
+  .site-search .field { min-height: 2.5rem; }
+  .search-results { display: grid; gap: 0.75rem; }
   .site-nav-desktop {
     display: none;
     flex: 0 1 auto;

@@ -9,6 +9,7 @@ mod legal;
 mod other_sites;
 mod profile;
 mod schedule;
+mod search;
 mod shoot_detail;
 mod shoots;
 mod social;
@@ -27,6 +28,8 @@ pub use legal::{Privacy, Terms};
 pub use other_sites::OtherSites;
 pub use profile::Profile;
 pub use schedule::Schedule;
+pub use search::Search;
+pub use search::SearchQuery;
 pub use shoot_detail::ShootDetail;
 pub use shoots::Shoots;
 pub use social::Social;
@@ -39,6 +42,8 @@ pub enum AppRoutes {
     Content,
     #[at("/schedule")]
     Schedule,
+    #[at("/search")]
+    Search,
     #[at("/social")]
     Social,
     #[at("/shoots")]
@@ -73,6 +78,7 @@ pub fn switch(routes: AppRoutes) -> Html {
         AppRoutes::Home => html! { <Home /> },
         AppRoutes::Content => html! { <Content /> },
         AppRoutes::Schedule => html! { <Schedule /> },
+        AppRoutes::Search => html! { <Search /> },
         AppRoutes::Social => html! { <Social /> },
         AppRoutes::Shoots => html! { <Shoots /> },
         AppRoutes::ShootDetail { id } => html! { <ShootDetail id={id} /> },

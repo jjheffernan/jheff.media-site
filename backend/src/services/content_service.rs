@@ -3,7 +3,7 @@ use crate::models::content::{
     UpdateContentCollection,
 };
 use crate::models::social::SocialHubResponse;
-use crate::services::{content_store_service, content_upload_service, social_service};
+use crate::services::{content_store_service, content_upload_service, schedule_service, social_service};
 use awc::Client;
 use futures_util::future::join3;
 use mongodb::Database;
@@ -289,6 +289,105 @@ fn merge_collections(
     merged
 }
 
+const SEARCH_LIMIT: usize = 24;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchHit {
+    pub kind: String,
+    pub id: String,
+    pub title: String,
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchResponse {
+    pub query: String,
+    pub hits: Vec<SearchHit>,
+}
+
+pub async fn search(db: &Database, raw: &str) -> SearchResponse {
+    let query: String = raw.trim().chars().take(80).collect();
+    let needle = query.to_lowercase();
+    if needle.chars().count() < 2 {
+        return SearchResponse { query, hits: vec![] };
+    }
+
+    let mut hits = Vec::new();
+    for collection in public_collections("gallery", "YEW_FULLSTACK_GALLERIES_JSON", db).await {
+        push_collection_hits("gallery", &collection, &needle, &mut hits);
+    }
+    for collection in public_collections("shoot", "YEW_FULLSTACK_SHOOTS_JSON", db).await {
+        push_collection_hits("shoot", &collection, &needle, &mut hits);
+    }
+    for event in schedule_service::schedule_config(db).await.events {
+        let matched = [&event.title, event.location.as_deref().unwrap_or(""), &event.starts_at, &event.kind]
+            .iter()
+            .any(|value| contains(value, &needle));
+        if matched {
+            hits.push(SearchHit {
+                kind: "event".into(),
+                id: event.id,
+                title: event.title,
+                detail: event.location.or(Some(event.starts_at)),
+            });
+        }
+    }
+    hits.truncate(SEARCH_LIMIT);
+    SearchResponse { query, hits }
+}
+
+async fn public_collections(kind: &str, env_key: &str, db: &Database) -> Vec<ContentCollection> {
+    let env_items = parse_collections(env_key);
+    let mongo_items = content_store_service::list_by_kind(kind, db).await;
+    merge_collections(env_items, mongo_items)
+        .into_iter()
+        .filter(is_public_collection)
+        .collect()
+}
+
+fn push_collection_hits(kind: &str, collection: &ContentCollection, needle: &str, hits: &mut Vec<SearchHit>) {
+    if !is_public_collection(collection) {
+        return;
+    }
+    let matched = [
+        collection.title.as_str(),
+        collection.summary.as_deref().unwrap_or(""),
+        collection.location.as_deref().unwrap_or(""),
+        collection.date.as_deref().unwrap_or(""),
+    ]
+    .iter()
+    .any(|value| contains(value, needle));
+    if matched {
+        hits.push(SearchHit {
+            kind: kind.into(),
+            id: collection.id.clone(),
+            title: collection.title.clone(),
+            detail: collection.location.clone().or(collection.summary.clone()),
+        });
+        return;
+    }
+    let label = if kind == "gallery" { "Gallery" } else { "Shoot" };
+    for media in &collection.media {
+        let Some(title) = media.title.as_deref() else {
+            continue;
+        };
+        if contains(title, needle) {
+            hits.push(SearchHit {
+                kind: kind.into(),
+                id: collection.id.clone(),
+                title: title.to_string(),
+                detail: Some(format!("{label} · {}", collection.title)),
+            });
+        }
+    }
+}
+
+fn contains(hay: &str, needle: &str) -> bool {
+    hay.to_lowercase().contains(needle)
+}
+
 pub fn booking_config() -> crate::models::content::BookingConfig {
     let embed_url = env::var("YEW_FULLSTACK_BOOKING_EMBED_URL")
         .ok()
@@ -363,6 +462,49 @@ mod tests {
             ..draft
         };
         assert!(is_public_collection(&open));
+    }
+
+    #[test]
+    fn search_skips_drafts_and_matches_a_photo_title() {
+        let draft = sample("draft-set", "Secret canyon", Some("draft"), None);
+        let published = sample(
+            "laguna",
+            "Track Day — Laguna Seca",
+            Some("published"),
+            Some("Grid start"),
+        );
+        let mut hits = Vec::new();
+        push_collection_hits("gallery", &draft, "secret", &mut hits);
+        push_collection_hits("gallery", &published, "grid", &mut hits);
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "Grid start");
+        assert_eq!(hits[0].id, "laguna");
+    }
+
+    fn sample(id: &str, title: &str, status: Option<&str>, media_title: Option<&str>) -> ContentCollection {
+        ContentCollection {
+            id: id.into(),
+            title: title.into(),
+            kind: None,
+            summary: None,
+            cover_url: None,
+            status: status.map(str::to_string),
+            date: None,
+            location: None,
+            media: media_title
+                .map(|title| MediaItem {
+                    id: "m".into(),
+                    title: Some(title.into()),
+                    thumbnail_url: String::new(),
+                    media_url: None,
+                    media_type: Some("image".into()),
+                    width: None,
+                    height: None,
+                    featured: false,
+                })
+                .into_iter()
+                .collect(),
+        }
     }
 }
 

@@ -1,9 +1,71 @@
 use super::content_nav::ContentNav;
 use super::{profile_menu::ProfileMenu, theme_toggle::ThemeToggle};
 use crate::components::ui::{NavLink, Text, TextTone};
-use crate::routes::AppRoutes;
+use crate::routes::{AppRoutes, SearchQuery};
 use yew::prelude::*;
 use yew_router::prelude::*;
+
+#[derive(Properties, PartialEq)]
+struct SearchBoxProps {
+    #[prop_or(false)]
+    wide: bool,
+}
+
+#[function_component(SearchBox)]
+fn search_box(props: &SearchBoxProps) -> Html {
+    let navigator = use_navigator().unwrap();
+    let location = use_location();
+    let text = use_state(String::new);
+    let from_url = location
+        .and_then(|loc| loc.query::<SearchQuery>().ok())
+        .map(|query| query.q)
+        .unwrap_or_default();
+
+    {
+        let text = text.clone();
+        use_effect_with(from_url, move |query| {
+            text.set(query.clone());
+            || ()
+        });
+    }
+
+    let on_input = {
+        let text = text.clone();
+        Callback::from(move |event: InputEvent| {
+            let input = event.target_unchecked_into::<web_sys::HtmlInputElement>();
+            text.set(input.value());
+        })
+    };
+    let on_submit = {
+        let text = text.clone();
+        Callback::from(move |event: SubmitEvent| {
+            event.prevent_default();
+            let q = text.trim().to_string();
+            if q.chars().count() < 2 {
+                return;
+            }
+            let _ = navigator.push_with_query(&AppRoutes::Search, &SearchQuery { q });
+        })
+    };
+
+    let class = if props.wide {
+        "site-search is-wide"
+    } else {
+        "site-search"
+    };
+    html! {
+        <form class={class} onsubmit={on_submit}>
+            <input
+                type="search"
+                class="field"
+                placeholder="Search"
+                aria-label="Search"
+                value={(*text).clone()}
+                oninput={on_input}
+            />
+        </form>
+    }
+}
 
 #[derive(Properties, Clone, PartialEq, Debug)]
 pub struct Props {
@@ -58,6 +120,7 @@ pub fn header(props: &Props) -> Html {
 
                 <div class="site-header-actions">
                     <div class="site-header-tools">
+                        <SearchBox />
                         <ThemeToggle />
                         <ProfileMenu />
                     </div>
@@ -76,6 +139,7 @@ pub fn header(props: &Props) -> Html {
 
             if open {
                 <nav id="site-nav-panel" class="site-nav-panel" aria-label="Primary">
+                    <SearchBox wide={true} />
                     <NavLink route={AppRoutes::Home} label="Home" />
                     <ContentNav inline={true} />
                     <NavLink route={AppRoutes::Booking} label="Booking" />

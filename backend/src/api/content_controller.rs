@@ -2,9 +2,20 @@ use crate::services::{content_service, content_upload_service};
 use actix_web::{web, HttpResponse, Result};
 use awc::Client;
 use mongodb::Database;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct SearchParams {
+    #[serde(default)]
+    q: String,
+}
 
 pub async fn hub(db: web::Data<Database>, client: web::Data<Client>) -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(content_service::hub(&db, &client).await))
+}
+
+pub async fn search(query: web::Query<SearchParams>, db: web::Data<Database>) -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(content_service::search(&db, &query.q).await))
 }
 
 pub async fn list_galleries(db: web::Data<Database>) -> Result<HttpResponse> {

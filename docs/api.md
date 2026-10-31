@@ -251,6 +251,23 @@ Shoot detail with media items.
 
 **Errors** `404` — `{ "message": "SHOOT_NOT_FOUND", "data": "" }`
 
+### `GET /api/search?q=`
+
+Public substring search across gallery and shoot titles, summaries, locations, dates, and photo titles, plus upcoming public schedule dates. Draft collections are omitted. Fewer than 2 characters returns no hits. At most 24 hits.
+
+**Success** `200`
+
+```json
+{
+  "query": "laguna",
+  "hits": [
+    { "kind": "gallery", "id": "laguna-seca", "title": "Track Day — Laguna Seca", "detail": "Laguna Seca" }
+  ]
+}
+```
+
+`kind` is `gallery`, `shoot`, or `event`.
+
 ### `GET /api/content/media/{asset_id}`
 
 Serve an uploaded shoot/gallery image from disk. Public read.
