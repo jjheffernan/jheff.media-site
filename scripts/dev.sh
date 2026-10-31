@@ -122,6 +122,27 @@ cmd_start() {
   fi
 }
 
+seed_local_admin() {
+  local email="${YEW_FULLSTACK_ADMIN_EMAILS%%,*}"
+  email="${email//[[:space:]]/}"
+  [[ -n "$email" ]] || return 0
+  log "Local admin will be created when the API is up ($email, username admin)"
+  nohup bash -c '
+    email=$1
+    for _ in $(seq 1 40); do
+      code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+        -X POST http://127.0.0.1:8080/api/auth/signup \
+        -H "content-type: application/json" \
+        -d "{\"email\":\"${email}\",\"username\":\"admin\",\"password\":\"localadmin\"}" || true)
+      if [[ "$code" == "200" || "$code" == "400" ]]; then
+        exit 0
+      fi
+      sleep 3
+    done
+    exit 1
+  ' _ "$email" >>"$LOG_DIR/admin-seed.log" 2>&1 &
+}
+
 cmd_start_local() {
   local do_wait=${1:-false}
   log_section "Starting local dev (non-blocking)"
@@ -178,6 +199,8 @@ cmd_start_local() {
   else
     log "Skipping health wait (first compile may take a minute). Use: scripts/dev.sh logs trunk"
   fi
+
+  seed_local_admin
 }
 
 cmd_start_docker() {

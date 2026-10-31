@@ -24,6 +24,7 @@ services:
       - "YEW_FULLSTACK_DB_CONNSTR=mongodb://db:27017"
       - "YEW_FULLSTACK_DB_NAME=jheffmedia_dev"
       - "YEW_FULLSTACK_JWT_SECRET_FILE=/run/secrets/jwt_secret"
+      - "YEW_FULLSTACK_ADMIN_EMAILS=you@example.com"
       - "YEW_FULLSTACK_FEED_PROVIDER=static"
       - "YEW_FULLSTACK_FEED_STATIC_JSON=[{\"id\":\"1\",\"thumbnailUrl\":\"https://picsum.photos/seed/auto1/800/600\",\"title\":\"Sample 1\"},{\"id\":\"2\",\"thumbnailUrl\":\"https://picsum.photos/seed/auto2/800/600\",\"title\":\"Sample 2\"},{\"id\":\"3\",\"thumbnailUrl\":\"https://picsum.photos/seed/auto3/800/600\",\"title\":\"Sample 3\"}]"
     volumes:
