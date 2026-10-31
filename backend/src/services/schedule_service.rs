@@ -120,7 +120,7 @@ fn normalize_kind(kind: &str) -> Option<&'static str> {
     }
 }
 
-fn parse_starts_at(value: &str) -> Option<DateTime<Utc>> {
+pub(crate) fn parse_starts_at(value: &str) -> Option<DateTime<Utc>> {
     let value = value.trim();
     if value.is_empty() {
         return None;

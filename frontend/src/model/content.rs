@@ -80,6 +80,8 @@ pub struct ContactSubmission {
     pub website: String,
     #[serde(default = "default_contact_kind")]
     pub kind: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub preferred_at: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

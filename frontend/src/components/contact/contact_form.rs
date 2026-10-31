@@ -23,6 +23,7 @@ pub fn contact_form(props: &Props) -> Html {
     let email = use_state(String::new);
     let subject = use_state(String::new);
     let message = use_state(String::new);
+    let preferred = use_state(String::new);
     let website = use_state(String::new);
     let submit_state = use_state(|| SubmitState::Idle);
     let booking = props.booking;
@@ -56,6 +57,14 @@ pub fn contact_form(props: &Props) -> Html {
         })
     };
 
+    let on_preferred = {
+        let preferred = preferred.clone();
+        Callback::from(move |e: InputEvent| {
+            let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
+            preferred.set(input.value());
+        })
+    };
+
     let on_website = {
         let website = website.clone();
         Callback::from(move |e: InputEvent| {
@@ -69,6 +78,7 @@ pub fn contact_form(props: &Props) -> Html {
         let email = email.clone();
         let subject = subject.clone();
         let message = message.clone();
+        let preferred = preferred.clone();
         let website = website.clone();
         let submit_state = submit_state.clone();
         Callback::from(move |e: MouseEvent| {
@@ -93,6 +103,11 @@ pub fn contact_form(props: &Props) -> Html {
                     "booking".into()
                 } else {
                     "contact".into()
+                },
+                preferred_at: if booking {
+                    (*preferred).clone()
+                } else {
+                    String::new()
                 },
             };
             let submit_state = submit_state.clone();
@@ -222,6 +237,17 @@ pub fn contact_form(props: &Props) -> Html {
                         disabled={disabled}
                     />
                 </label>
+                <label class="label">
+                    { "Preferred time" }
+                    <input
+                        type="datetime-local"
+                        class="field"
+                        value={(*preferred).clone()}
+                        oninput={on_preferred}
+                        disabled={disabled}
+                    />
+                </label>
+                <p class="muted">{ "Optional. Leave it blank if you do not have a time." }</p>
             }
             { feedback }
             <button type="button" class="btn btn-primary" disabled={disabled} onclick={on_submit}>

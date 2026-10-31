@@ -83,6 +83,9 @@ pub struct ContactSubmission {
     pub website: String,
     #[serde(default = "default_contact_kind")]
     pub kind: String,
+    /// Optional booking time. Empty on contact messages.
+    #[serde(default)]
+    pub preferred_at: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

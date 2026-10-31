@@ -14,6 +14,8 @@ struct ContactItem {
     email: String,
     subject: String,
     message: String,
+    #[serde(default)]
+    preferred_at: String,
     created_at: String,
     status: String,
 }
@@ -168,6 +170,9 @@ pub fn contact_admin() -> Html {
                     <p>{ item.subject.clone() }</p>
                 }
                 <p>{ item.message.clone() }</p>
+                if !item.preferred_at.is_empty() {
+                    <p class="muted">{ format!("Preferred time: {}", item.preferred_at) }</p>
+                }
                 <select class="field" value={item.status.clone()} onchange={on_status}>
                     <option value="new">{ "new" }</option>
                     <option value="read">{ "read" }</option>

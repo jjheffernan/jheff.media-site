@@ -28,6 +28,8 @@ struct ContactRecord {
     subject: String,
     message: String,
     kind: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    preferred_at: String,
     #[serde(default = "default_status")]
     status: String,
     created_at: DateTime,
@@ -42,6 +44,7 @@ pub struct ContactView {
     pub email: String,
     pub subject: String,
     pub message: String,
+    pub preferred_at: String,
     pub created_at: String,
     pub status: String,
 }
@@ -72,6 +75,16 @@ pub async fn submit_contact(
             "Name, email, and message are required.",
         ));
     }
+    let kind = if form.kind.trim() == "booking" {
+        "booking"
+    } else {
+        "contact"
+    };
+    let preferred_at = if kind == "booking" {
+        clean_preferred(&form.preferred_at)?
+    } else {
+        String::new()
+    };
 
     if !allow_submission(client_ip) {
         return Err(ServiceError::new(
@@ -87,11 +100,6 @@ pub async fn submit_contact(
         ));
     }
 
-    let kind = if form.kind.trim() == "booking" {
-        "booking"
-    } else {
-        "contact"
-    };
     let record = ContactRecord {
         id: None,
         name: form.name.trim().to_string(),
@@ -99,6 +107,7 @@ pub async fn submit_contact(
         subject: form.subject.trim().to_string(),
         message: form.message.trim().to_string(),
         kind: kind.to_string(),
+        preferred_at,
         status: default_status(),
         created_at: DateTime::now(),
     };
@@ -114,11 +123,16 @@ pub async fn submit_contact(
         record.name, record.email
     );
 
+    let mailed = if record.preferred_at.is_empty() {
+        record.message.clone()
+    } else {
+        format!("{}\n\nPreferred: {}", record.message, record.preferred_at)
+    };
     super::mailer::notify_contact(
         &record.name,
         &record.email,
         &record.subject,
-        &record.message,
+        &mailed,
         &record.kind,
     )
     .await;
@@ -190,9 +204,24 @@ fn contact_view(record: ContactRecord) -> Option<ContactView> {
         email: record.email,
         subject: record.subject,
         message: record.message,
+        preferred_at: record.preferred_at,
         created_at,
         status: record.status,
     })
+}
+
+fn clean_preferred(value: &str) -> ServiceResult<String> {
+    let value = value.trim();
+    if value.is_empty() {
+        return Ok(String::new());
+    }
+    if value.len() > 40 || super::schedule_service::parse_starts_at(value).is_none() {
+        return Err(ServiceError::new(
+            StatusCode::BAD_REQUEST,
+            "Preferred time is not a date.",
+        ));
+    }
+    Ok(value.to_string())
 }
 
 fn clean_status(status: &str) -> ServiceResult<String> {
@@ -239,7 +268,22 @@ mod tests {
         })
         .unwrap();
         assert_eq!(record.status, "new");
+        assert!(record.preferred_at.is_empty());
         assert!(record.id.is_none());
+    }
+
+    #[test]
+    fn preferred_time_is_optional_and_must_parse() {
+        assert!(matches!(
+            super::clean_preferred("  ").as_deref(),
+            Ok("")
+        ));
+        assert!(matches!(
+            super::clean_preferred("2026-11-02T15:45").as_deref(),
+            Ok("2026-11-02T15:45")
+        ));
+        assert!(super::clean_preferred("tomorrow").is_err());
+        assert!(super::clean_preferred(&"x".repeat(41)).is_err());
     }
 
     #[test]
