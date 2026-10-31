@@ -25,14 +25,16 @@ pub fn media_card(props: &Props) -> Html {
         <figure class="group relative overflow-hidden rounded-xl border border-border bg-surface-elevated">
             <div class="aspect-[4/3] overflow-hidden bg-surface">
                 if video && media_url.is_some() {
-                    <video
-                        class="h-full w-full object-cover"
-                        controls={true}
-                        preload="metadata"
-                        poster={props.item.thumbnail_url.clone()}
-                    >
-                        <source src={media_url.unwrap_or_default()} />
-                    </video>
+                    <div class="mark">
+                        <video
+                            class="h-full w-full object-cover"
+                            controls={true}
+                            preload="metadata"
+                            poster={props.item.thumbnail_url.clone()}
+                        >
+                            <source src={media_url.unwrap_or_default()} />
+                        </video>
+                    </div>
                 } else {
                     <LazyImage src={props.item.thumbnail_url.clone()} alt={title.clone()} />
                 }

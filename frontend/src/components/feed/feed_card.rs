@@ -50,14 +50,16 @@ pub fn feed_card(props: &Props) -> Html {
     let media_body = if video {
         if let Some(url) = &item.media_url {
             html! {
-                <video
-                    class="w-full object-cover"
-                    controls={true}
-                    preload="metadata"
-                    poster={item.thumbnail_url.clone()}
-                >
-                    <source src={url.clone()} />
-                </video>
+                <div class="mark">
+                    <video
+                        class="w-full object-cover"
+                        controls={true}
+                        preload="metadata"
+                        poster={item.thumbnail_url.clone()}
+                    >
+                        <source src={url.clone()} />
+                    </video>
+                </div>
             }
         } else if let Some(url) = &item.link_url {
             html! {
