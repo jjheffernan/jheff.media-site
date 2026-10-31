@@ -6,13 +6,15 @@ Related: [development.md](./development.md) (troubleshooting) · [version-matrix
 
 ## What you get
 
-Three containers (Docker) or two local processes + MongoDB:
+Docker dev runs the app plus MongoDB, Prometheus, and Grafana. Local start runs Trunk and Actix on the host, and MongoDB, Prometheus, and Grafana in containers. Prometheus and Grafana listen on localhost only.
 
 | Service | Port | Role |
 |---------|------|------|
 | Backend (Actix) | 8080 | API + proxy to frontend in dev |
 | Frontend (Trunk) | 8000 | Yew WASM dev server |
 | MongoDB | 27017 | User + session data |
+| Prometheus | 127.0.0.1:9090 | Scrapes `GET /metrics` |
+| Grafana | 127.0.0.1:3000 | Dashboard. Login `admin` / `admin` |
 
 **Use http://localhost:8080** in the browser so `/api/*` and the UI share one origin.
 
@@ -102,17 +104,15 @@ docker ps --filter name=jheffmedia
 # HTTP
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/
 
-# Signup + login (API)
-curl -s -X POST http://localhost:8080/api/auth/signup \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"dev@example.com","username":"devuser","password":"devpass"}'
-
+# Local start creates these accounts once the API is up:
+#   admin / localadmin   you@example.com   role admin
+#   tester / testuser    tester@example.com   role user
 curl -s -X POST http://localhost:8080/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"emailOrUsername":"devuser","password":"devpass"}'
+  -d '{"emailOrUsername":"admin","password":"localadmin"}'
 ```
 
-Open http://localhost:8080 — header should show login/signup forms; after login, greeting + logout.
+Open http://localhost:8080. Sign in from the account menu. `admin` opens `/admin`. `tester` is sent to `/404`.
 
 Full API reference: [api.md](./api.md).
 

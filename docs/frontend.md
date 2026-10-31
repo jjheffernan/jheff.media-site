@@ -21,17 +21,20 @@ Yew 0.23 WASM client for **automotive photography** workflows: `jheffmedia-site-
 | `/` | Home |
 | `/content` | Content |
 | `/schedule` | Schedule |
+| `/search` | Search |
 | `/social` | Social |
 | `/shoots` | Shoots |
 | `/shoots/:id` | Shoot detail |
 | `/galleries` | Galleries |
 | `/galleries/:id` | Gallery detail |
-| `/booking` | Booking |
+| `/booking` | Booking. Optional preferred time |
 | `/contact` | Contact |
 | `/legal/terms` | Terms |
 | `/legal/privacy` | Privacy |
 | `/other-sites` | Other sites |
 | `/account` | Account |
+| `/admin` | Admin. Sign-in when signed out. `/404` when the account is not an admin |
+| `/links` | Links |
 | `/profile` | Profile |
 | `/404` | Not found |
 

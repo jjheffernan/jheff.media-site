@@ -31,7 +31,7 @@ scripts/dev.sh logs trunk     # watch WASM compile
 - [x] **Role-gated admin UI**
 - [x] **Schedule dates** — future public Mongo events on Schedule and Booking. Admin panel can add, edit, and delete a date
 - [x] **Contact** — honeypot, per-IP limit, best-effort SMTP
-- [x] **Contact inbox** — admin list, status, and delete on the account page (`/api/admin/contacts`)
+- [x] **Contact inbox** — admin list, status, and delete on `/admin` (`/api/admin/contacts`)
 - [x] **Feed filter** — `instagram`, `youtube`, `gallery`, `shoot`
 - [x] **Print request** — detail pages can select stills; checkout stores one size and an unpaid total
 - [x] Docker tags `jheffmedia-*`
@@ -44,7 +44,7 @@ Decisions are recorded in [design.md](./design.md#decided).
 
 - [x] **Gallery and shoot maintenance** — edit, delete, reorder, and multi-file upload. Env JSON collections still cannot take uploads
 - [x] **Schedule delete in the admin panel**
-- [x] **Schedule edit** — same date fields, saved with the date id from the account admin panel
+- [x] **Schedule edit** — same date fields, saved with the date id from the admin dashboard
 - [x] **Explicit covers and featured tag** — cover changes only when the upload asks. Featured is stored on the media item. Cards no longer invent a placeholder image. Sample env JSON may still point at picsum
 - [x] **Legal pages** — titles and body use the design classes
 - [x] **Homepage** — photo feed leads. Content hub is the primary call to action

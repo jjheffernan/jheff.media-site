@@ -2,7 +2,7 @@
 
 What the site is today. Visual rules live in `frontend/styles/input.css`. Implementation work lives in [TODO.md](./TODO.md).
 
-**Updated:** 2026-10-29
+**Updated:** 2026-10-30
 
 ## Visual system
 
@@ -21,11 +21,11 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, and a
 | `/content` | One `GET /api/content/hub`: 3 social posts, 2 shoots, 2 galleries |
 | `/social` | Real posts only. Empty keys show one muted line. No demo embed |
 | `/galleries`, `/shoots` | Showcase, not a shop. Print select stays secondary. Covers are explicit. Images can be tagged featured |
-| `/booking` | A request form. Not the general contact form |
+| `/booking` | A request form, with an optional preferred time. Not the general contact form |
 | `/schedule` | Month calendar of public dates is the default view. Optional embed stays under it |
 | `/contact` | General questions only. Booking requests belong on `/booking` |
 | `/account` | Password, 2FA, print size and unpaid total. Email change is not offered. Admins see a link to the dashboard |
-| `/admin` | Admin dashboard. Social links, inbox, content, schedule, and print orders. Admin role only |
+| `/admin` | Sidebar for analytics, links, inbox, and content. Content holds galleries, shoots, schedule, library, and orders. Signed out opens sign-in. Any other role goes to `/404` |
 | `/links` | Social link buttons. Admins edit the list on the dashboard |
 | `/profile` | Signed-in welcome card. Signed-out visitors go home |
 | `/legal/terms`, `/legal/privacy` | Static copy |
@@ -40,11 +40,11 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, and a
 - An empty featured Instagram URL returns 204 and the card is absent. Operator static JSON stays.
 - Schedule dates are future public Mongo events. Embeds stay optional. Admins add, edit, and delete dates from the admin dashboard.
 - Login and signup allow 8 attempts per IP per 10 minutes. 2FA blocks the session until the code is valid.
-- Admin tools render only when `role` is `admin`, on `/admin`.
+- Admin tools stay on `/admin`. Signed out opens sign-in. A signed-in account that is not an admin goes to `/404`.
 - The homepage leads with the photo feed. The primary call to action is the content hub.
 - Galleries and shoots are a showcase. Print select stays. The page is not a shop.
 - Covers are chosen explicitly. Images are marked featured with a tag. No placeholder photo service.
-- Booking is a request. Schedule shows a short list of public dates as event availability.
+- Booking is a request. An optional preferred time can ride with it and does not create a public date. Schedule shows a short list of public dates as event availability.
 - Contact is separate from booking.
 - Print payment is shelved. Invoices or another service will collect payment later. The site keeps the unpaid request.
 - 2FA enrollment with the otpauth URL and secret is enough. No QR image.

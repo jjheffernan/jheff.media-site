@@ -40,7 +40,7 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 |-----------|--------|--------|-------|
 | Authentication | High | ✅ | JWT (HS256) + server-side `loginSession` in MongoDB |
 | Password storage | High | ✅ | bcrypt; min 8 chars |
-| Authorization | High | ⚠️ | Admin routes enforce role; profile not gated; admin panel is hidden unless `role == admin` |
+| Authorization | High | ⚠️ | Admin API routes enforce role. Signed-out `/admin` opens sign-in. Any other role goes to `/404`. Profile is not gated |
 | Transport / edge | High | ⚠️ | HTTPS/HSTS documented for reverse proxy, not enforced in app |
 | Headers | Medium | ✅ | `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` in `main.rs` |
 | CORS | Medium | ✅ | Explicit origins via `YEW_FULLSTACK_CORS_ORIGINS` (not wildcard) |

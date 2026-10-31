@@ -81,7 +81,8 @@ Signup does **not** log the user in automatically—the header still shows login
 - Passwords never returned in API responses (`PublicUserDTO` only has email, username, role, totpEnabled).
 - Signup and password change require at least 8 characters; passwords stored as bcrypt hashes.
 - Protected routes use `Authorization: bearer <jwt>` with server-side session validation.
-- Email change stores a pending address and does not send mail. The account button says to check an inbox. Wire SMTP before treating that flow as live.
+- Email change is not offered on `/account`. The backend route stays.
+- `/admin` opens the sign-in dialog when signed out and sends any other role to `/404`. Admin API routes still return 401 or 403.
 - Client stores JWT in **session storage** (tab-scoped). Any XSS in the WASM app could exfiltrate tokens — keep dependencies patched and avoid inline third-party scripts.
 - TOTP disable requires a valid code when 2FA is enabled.
 - Admin role is assigned at signup via `YEW_FULLSTACK_ADMIN_EMAILS`; review admin list carefully.

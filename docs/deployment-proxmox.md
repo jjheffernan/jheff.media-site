@@ -1,6 +1,6 @@
 # Proxmox deployment
 
-Deploy **jheff.media** on a Proxmox host using Docker — single production container (Actix + baked Yew frontend) plus MongoDB. Photos stay on your self-hosted Immich (or other) instance; the site only proxies thumbnails.
+Deploy **jheff.media** on a Proxmox host using Docker — one production container (Actix + baked Yew frontend), MongoDB, and Prometheus and Grafana bound to localhost. Photos stay on your self-hosted Immich (or other) instance; the site only proxies thumbnails.
 
 Related: [architecture.md](./architecture.md) · [deployment-dev.md](./deployment-dev.md) · [backend.md](./backend.md) · [version-matrix.md](./version-matrix.md) · [install/proxmox/README.md](../install/proxmox/README.md)
 
@@ -31,7 +31,7 @@ Guided whiptail sections cover repository branch (`dev` by default), site port, 
 
 | Component | Role |
 |-----------|------|
-| **Site LXC/VM** | Docker: `jheffmedia-site` app + MongoDB |
+| **Site LXC/VM** | Docker: `jheffmedia-site` app, MongoDB, Prometheus, and Grafana |
 | **Immich** (recommended) | Photo library; API key never exposed to browsers |
 | **Reverse proxy** | TLS, optional auth, route `jheff.media` → app |
 

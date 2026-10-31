@@ -282,6 +282,29 @@ Public social link list for `/links`. An empty list is `{ "links": [] }`.
 }
 ```
 
+### `POST /api/telemetry`
+
+Public. Records one page view. Body is `{ "path": "/galleries" }`. The path is the pathname only, 1–80 characters, and may contain letters, numbers, `/`, `-`, `_`, and `.`. Query strings are dropped. Nothing about the visitor is stored. More than 120 events from one address in 10 minutes returns `429`.
+
+**Success** `204`
+
+### `GET /api/admin/analytics`
+
+Admin only. Page-view totals for the last 14 days.
+
+**Success** `200`
+
+```json
+{
+  "days": [{ "day": "2026-10-30", "n": 4 }],
+  "paths": [{ "path": "/", "n": 4 }]
+}
+```
+
+### `GET /metrics`
+
+Prometheus text. Request counts by method and status, plus `telemetry_events_total`. Scrapes of this path are not counted. Counters reset when the API process restarts.
+
 ### `PUT /api/admin/links`
 
 Admin only. Replaces the whole list. At most 12 links. Each label is 1–40 characters. Each URL must start with `http://` or `https://`.
@@ -424,8 +447,9 @@ Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SM
 | `message` | string | yes |
 | `website` | string | no |
 | `kind` | string | no |
+| `preferredAt` | string | no |
 
-`kind` is `booking` for a booking request and `contact` otherwise. A missing or unknown value is stored as `contact`. Booking mail uses the subject prefix `Booking:`. New documents store `status` as `new`. Older documents with no `status` are treated as `new` when listed.
+`kind` is `booking` for a booking request and `contact` otherwise. A missing or unknown value is stored as `contact`. Booking mail uses the subject prefix `Booking:`. `preferredAt` is an optional booking time (`2026-11-02T15:45`). Leave it out, or send it empty, to book without a time. A booking with a value that is not a date returns 400 `Preferred time is not a date.` Contact messages drop the field. New documents store `status` as `new`. Older documents with no `status` are treated as `new` when listed. The inbox returns `preferredAt` as an empty string when none was sent.
 
 `website` is a honeypot. Leave it empty. A non-empty value returns the success envelope and is not stored.
 
@@ -436,6 +460,7 @@ Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SM
 | Status | `message` | When |
 |--------|-----------|------|
 | 400 | `Name, email, and message are required.` | Blank required field |
+| 400 | `Preferred time is not a date.` | Booking `preferredAt` is set and is not a date |
 | 429 | `Too many messages. Try again later.` | More than 5 submissions from one IP in 10 minutes |
 
 **Env (optional)**
@@ -453,13 +478,13 @@ Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SM
 
 Admin JWT. Newest `contacts` first. Documents missing `status` come back as `new`.
 
-**Success** `200` — JSON array. Each item has `id`, `kind`, `name`, `email`, `subject`, `message`, `createdAt` (RFC3339), and `status`.
+**Success** `200` — JSON array. Each item has `id`, `kind`, `name`, `email`, `subject`, `message`, `preferredAt` (empty when none was sent), `createdAt` (RFC3339), and `status`.
 
 **Errors** `401` `UNAUTHORIZED`. `403` `FORBIDDEN`.
 
 ### `PATCH /api/admin/contacts/{id}`
 
-Admin JWT. Body: `{ "status": "read" }`. `status` is any non-empty string up to 32 characters (`new`, `read`, and `archived` are the ones the account inbox offers).
+Admin JWT. Body: `{ "status": "read" }`. `status` is any non-empty string up to 32 characters (`new`, `read`, and `archived` are the ones the admin inbox offers).
 
 **Success** `200` `{ "message": "UPDATED" }`.
 

@@ -57,27 +57,27 @@ CORS allows only origins listed in `YEW_FULLSTACK_CORS_ORIGINS` (comma-separated
 
 ### Dev (`scripts/docker-compose.dev.yml`)
 
-Three services:
-
 | Service | Container | Port |
 |---------|-----------|------|
 | `frontend` | `jheffmedia-frontend` | 8000 |
 | `backend` | `jheffmedia-backend` | 8080 |
 | `db` | `jheffmedia-database` | 27017 |
+| `prometheus` | `jheffmedia-prometheus` | `127.0.0.1:9090` |
+| `grafana` | `jheffmedia-grafana` | `127.0.0.1:3000` |
 
 Backend env sets `YEW_FULLSTACK_FORWARD_FRONTEND_URL=http://frontend:8000`.
 
 ### Prod (`scripts/docker-compose.yml`)
 
-Single app container + MongoDB (`mongo:7.0`). Prod compose uses `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (legacy `YEW_FULLSTACK_DB_URL` removed). Deploy guide: [deployment-dev.md](./deployment-dev.md) (dev) · version pins: [version-matrix.md](./version-matrix.md).
+App container, MongoDB (`mongo:7.0`), Prometheus, and Grafana. Prometheus and Grafana bind to `127.0.0.1` only. Prod compose uses `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (legacy `YEW_FULLSTACK_DB_URL` removed). Deploy guide: [deployment-dev.md](./deployment-dev.md) (dev) · version pins: [version-matrix.md](./version-matrix.md).
 
 ## Frontend application structure
 
 ```
 App (layout + router)
  └── Layout (header, footer, content)
-      └── Router → Home, Content, Schedule, Social, Shoots, Galleries,
-                   Booking, Contact, Legal, OtherSites, Account, Profile, 404
+      └── Router → Home, Content, Schedule, Search, Social, Shoots, Galleries,
+                   Booking, Contact, Legal, OtherSites, Account, Admin, Links, Profile, 404
 Header
  └── Login + Signup (guest) OR AuthControls (logged in)
 ```

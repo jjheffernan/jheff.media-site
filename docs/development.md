@@ -12,7 +12,7 @@ scripts/dev.sh build
 scripts/dev.sh start
 ```
 
-Open http://localhost:8080 — Actix proxies the Trunk app from port 8000.
+Open http://localhost:8080 — Actix proxies the Trunk app from port 8000. Local start also binds Prometheus to http://127.0.0.1:9090 and Grafana to http://127.0.0.1:3000 (`admin` / `admin`). It creates `admin` / `localadmin` and `tester` / `testuser` once the API is up.
 
 See [scripts/README.md](../scripts/README.md) for the full dev/prod command schema.
 
