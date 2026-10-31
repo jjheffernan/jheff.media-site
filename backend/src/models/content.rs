@@ -38,6 +38,8 @@ pub struct UpdateContentCollection {
     pub status: Option<String>,
     pub date: Option<String>,
     pub location: Option<String>,
+    #[serde(default)]
+    pub cover_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

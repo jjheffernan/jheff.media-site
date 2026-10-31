@@ -261,6 +261,45 @@ pub fn is_public_collection(collection: &ContentCollection) -> bool {
     )
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdminCollection {
+    #[serde(flatten)]
+    pub collection: ContentCollection,
+    pub locked: bool,
+}
+
+pub fn merge_admin_collections(
+    env_items: Vec<ContentCollection>,
+    mongo_items: Vec<ContentCollection>,
+) -> Vec<AdminCollection> {
+    let mut items: Vec<AdminCollection> = mongo_items
+        .into_iter()
+        .map(|collection| AdminCollection {
+            locked: false,
+            collection,
+        })
+        .collect();
+    for collection in env_items {
+        if items.iter().any(|item| item.collection.id == collection.id) {
+            continue;
+        }
+        items.push(AdminCollection {
+            locked: true,
+            collection,
+        });
+    }
+    items
+}
+
+pub async fn list_admin_collections(kind: &str, db: &Database) -> Vec<AdminCollection> {
+    let env_items = env_key_for_kind(kind)
+        .map(parse_collections)
+        .unwrap_or_default();
+    let mongo_items = content_store_service::list_by_kind(kind, db).await;
+    merge_admin_collections(env_items, mongo_items)
+}
+
 fn list_from_items(items: Vec<ContentCollection>) -> ContentListResponse {
     ContentListResponse {
         items: items
@@ -412,6 +451,50 @@ pub fn booking_config() -> crate::models::content::BookingConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn admin_list_keeps_drafts_and_locks_env_only_copies() {
+        let mongo = ContentCollection {
+            id: "track".into(),
+            title: "Track".into(),
+            kind: Some("gallery".into()),
+            summary: None,
+            cover_url: None,
+            status: Some("draft".into()),
+            date: None,
+            location: None,
+            media: vec![],
+        };
+        let env_same = ContentCollection {
+            id: "track".into(),
+            title: "Env track".into(),
+            kind: None,
+            summary: None,
+            cover_url: None,
+            status: Some("published".into()),
+            date: None,
+            location: None,
+            media: vec![],
+        };
+        let env_only = ContentCollection {
+            id: "demo".into(),
+            title: "Demo".into(),
+            kind: None,
+            summary: None,
+            cover_url: None,
+            status: Some("published".into()),
+            date: None,
+            location: None,
+            media: vec![],
+        };
+        let items = merge_admin_collections(vec![env_same, env_only], vec![mongo]);
+        assert_eq!(items.len(), 2);
+        assert_eq!(items[0].collection.id, "track");
+        assert_eq!(items[0].collection.status.as_deref(), Some("draft"));
+        assert!(!items[0].locked);
+        assert_eq!(items[1].collection.id, "demo");
+        assert!(items[1].locked);
+    }
 
     #[test]
     fn summary_leaves_cover_empty_until_set() {

@@ -1,4 +1,5 @@
 mod analytics_admin;
+mod collection_browser;
 mod contact_admin;
 mod content_admin;
 mod library_import;

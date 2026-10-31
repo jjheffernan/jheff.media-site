@@ -14,6 +14,26 @@ use futures_util::StreamExt;
 use mongodb::Database;
 use serde::Deserialize;
 
+pub async fn list_galleries(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    list_collections(req, db, "gallery").await
+}
+
+pub async fn list_shoots(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    list_collections(req, db, "shoot").await
+}
+
+async fn list_collections(
+    req: HttpRequest,
+    db: web::Data<Database>,
+    kind: &str,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    let items = content_service::list_admin_collections(kind, &db).await;
+    Ok(HttpResponse::Ok().json(serde_json::json!({ "items": items })))
+}
+
 pub async fn create_gallery(
     req: HttpRequest,
     body: web::Json<ContentCollection>,

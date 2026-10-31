@@ -321,6 +321,10 @@ Serve an uploaded shoot/gallery image from disk. Public read.
 
 **Errors** `404` — `{ "message": "MEDIA_NOT_FOUND", "data": "" }`
 
+### `GET /api/admin/galleries` / `GET /api/admin/shoots`
+
+Admin JWT. Every gallery or shoot, including drafts, with its media. A collection that exists only in server config is `locked: true` and cannot be edited here. When the same id exists in the database, the database copy is the one returned.
+
 ### `POST /api/admin/galleries`
 
 Create a gallery collection (admin JWT required).

@@ -69,6 +69,9 @@ pub async fn update_metadata(
     if let Some(location) = patch.location {
         set.insert("location", location);
     }
+    if let Some(cover_url) = patch.cover_url {
+        set.insert("coverUrl", cover_url);
+    }
     if set.is_empty() {
         return find_by_kind_and_id(kind, id, db).await.is_some();
     }

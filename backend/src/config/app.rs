@@ -75,6 +75,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
             )
             .service(
                 web::scope("/admin")
+                    .route("/galleries", web::get().to(admin_controller::list_galleries))
                     .route("/galleries", web::post().to(admin_controller::create_gallery))
                     .route(
                         "/galleries/{id}",
@@ -96,6 +97,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         "/galleries/{id}/media/{asset_id}",
                         web::delete().to(admin_controller::delete_gallery_media),
                     )
+                    .route("/shoots", web::get().to(admin_controller::list_shoots))
                     .route("/shoots", web::post().to(admin_controller::create_shoot))
                     .route(
                         "/shoots/{id}",
