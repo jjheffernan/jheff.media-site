@@ -62,14 +62,14 @@ pub fn privacy() -> Html {
             <section class="space-y-2">
                 <h2 class="title-sm">{ "How we use data" }</h2>
                 <p>
-                    { "Account data is for authentication and account features. Contact and booking submissions are used to reply about projects and availability. Print selections and unpaid requests are used to fulfill print orders. Access logs support security and operations and stay on the server." }
+                    { "Account data is for authentication and account features. Contact and booking submissions are used to reply about projects and availability. Print selections and unpaid requests are used to fulfill print orders. Page views are counted by path and day for the admin analytics view, without an account or address. Access logs support security and operations and stay on the server." }
                 </p>
             </section>
 
             <section class="space-y-2">
                 <h2 class="title-sm">{ "Third parties" }</h2>
                 <p>
-                    { "Optional calendar or social embeds may load from external providers with their own policies. The site loads Inter from Google Fonts (fonts.googleapis.com). No third-party analytics or telemetry product is installed." }
+                    { "Optional calendar or social embeds may load from external providers with their own policies. The site loads Inter from Google Fonts (fonts.googleapis.com). No third-party analytics script runs in the browser. Prometheus and Grafana, when the server stack includes them, read request counters that stay on the server." }
                 </p>
             </section>
 

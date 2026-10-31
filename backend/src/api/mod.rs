@@ -7,3 +7,4 @@ pub mod media_controller;
 pub mod print_controller;
 pub mod schedule_controller;
 pub mod social_controller;
+pub mod telemetry_controller;

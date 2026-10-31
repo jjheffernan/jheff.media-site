@@ -44,6 +44,31 @@ services:
     volumes:
       - jheffmedia-mongo:/data/db
 
+  prometheus:
+    image: docker.io/prom/prometheus:v2.55.1
+    container_name: jheffmedia-prometheus
+    restart: unless-stopped
+    volumes:
+      - ../../scripts/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    image: docker.io/grafana/grafana:11.4.0
+    container_name: jheffmedia-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ../../scripts/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../scripts/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   jheffmedia-mongo:
   jheffmedia-content-uploads:

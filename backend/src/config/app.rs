@@ -1,6 +1,7 @@
 use crate::api::{
     admin_controller, account_controller, contact_controller, content_controller,
     feed_controller, media_controller, print_controller, schedule_controller, social_controller,
+    telemetry_controller,
 };
 #[cfg(feature = "forward-frontend")]
 use crate::services::forward_frontend::forward;
@@ -10,10 +11,12 @@ use actix_web::web;
 
 pub fn config_services(cfg: &mut web::ServiceConfig) {
     info!("Configurating routes...");
+    cfg.route("/metrics", web::get().to(telemetry_controller::metrics_text));
     cfg.service(
         web::scope("/api")
             .route("/search", web::get().to(content_controller::search))
             .route("/links", web::get().to(content_controller::social_links))
+            .route("/telemetry", web::post().to(telemetry_controller::ingest))
             .service(
                 web::scope("/feed")
                     .route("", web::get().to(feed_controller::list))
@@ -138,6 +141,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         "/library/{source}",
                         web::post().to(admin_controller::library_import),
                     )
+                    .route("/analytics", web::get().to(telemetry_controller::analytics))
                     .route("/contacts", web::get().to(contact_controller::list))
                     .route(
                         "/contacts/{id}",

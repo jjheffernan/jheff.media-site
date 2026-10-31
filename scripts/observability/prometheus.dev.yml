@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: jheffmedia
+    metrics_path: /metrics
+    static_configs:
+      # Local and docker-dev both publish the API on the host.
+      - targets: ["host.docker.internal:8080"]

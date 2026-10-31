@@ -11,10 +11,12 @@ pub mod instagram_service;
 pub mod library_import_service;
 pub mod links_service;
 pub mod mailer;
+pub mod metrics;
 pub mod media_feed_service;
 pub mod print_service;
 pub mod schedule_service;
 #[cfg(not(feature = "forward-frontend"))]
 pub mod serve_frontend;
 pub mod social_service;
+pub mod telemetry_service;
 pub mod youtube_service;

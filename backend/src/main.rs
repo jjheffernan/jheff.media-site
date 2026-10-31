@@ -81,6 +81,7 @@ async fn main() -> io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(actix_web::middleware::from_fn(services::metrics::track))
             .wrap(actix_web::middleware::Logger::default())
             .wrap(
                 actix_web::middleware::DefaultHeaders::new()

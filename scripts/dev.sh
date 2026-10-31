@@ -162,7 +162,7 @@ cmd_start_local() {
 
   log_section "MongoDB ($CONTAINER_BIN)"
   cd "$ROOT/scripts"
-  "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" up -d db \
+  "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" up -d db prometheus grafana \
     2>&1 | tee -a "$LOG_DIR/docker-db.log"
 
   wait_for_tcp localhost 27017 60 "MongoDB :27017" || true
@@ -192,7 +192,9 @@ cmd_start_local() {
   "
 
   log_section "Startup dispatched (processes run in background)"
-  log "  App:       http://localhost:8080"
+  log "  App:        http://localhost:8080"
+  log "  Grafana:    http://127.0.0.1:3000  (admin / admin)"
+  log "  Prometheus: http://127.0.0.1:9090"
   log "  Trunk:     http://localhost:8000"
   log "  Logs:      scripts/dev.sh logs all"
   log "  Status:    scripts/dev.sh status"
@@ -222,8 +224,10 @@ cmd_start_docker() {
   "$COMPOSE" -f "$COMPOSE_DEV_FILE" -p "$COMPOSE_DEV_PROJECT" ps
 
   log_section "Docker dev stack started"
-  log "  App:   http://localhost:8080"
-  log "  Logs:  scripts/dev.sh logs docker"
+  log "  App:        http://localhost:8080"
+  log "  Grafana:    http://127.0.0.1:3000  (admin / admin)"
+  log "  Prometheus: http://127.0.0.1:9090"
+  log "  Logs:       scripts/dev.sh logs docker"
   if [[ "$do_wait" == true ]]; then
     wait_for_http "http://localhost:8080/" 180 "App :8080" || true
   fi

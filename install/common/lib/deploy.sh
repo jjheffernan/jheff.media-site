@@ -50,6 +50,8 @@ write_credentials() {
     echo "Env file: ${COMMON_DIR}/.env.production"
     echo "JWT secret file: ${INSTALL_DIR}/backend/src/secret.key (mounted at container start)"
     echo "Compose: ${COMMON_DIR}/docker-compose.yml"
+    echo "Grafana: http://127.0.0.1:3000 (admin / admin, or GRAFANA_PASSWORD)"
+    echo "Prometheus: http://127.0.0.1:9090"
   } >"$creds"
   chmod 600 "$creds"
 }

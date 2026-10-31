@@ -10,7 +10,7 @@ Two entry points — everything else is a thin wrapper for backwards compatibili
 | `build` | **Local** `cargo check` + Tailwind (fast, verbose logs in `.dev/logs/`) |
 | `build --docker` | Build dev Docker images (`BUILDKIT_PROGRESS=plain`) |
 | `build --docker --no-cache` | Force rebuild dev images |
-| `start` | **Local** Mongo in Docker + Trunk/backend/tailwind in background — **returns immediately** |
+| `start` | **Local** Mongo, Prometheus, and Grafana in Docker + Trunk/backend/tailwind in background — **returns immediately** |
 | `start --wait` | Same, then poll :8000/:8080 (optional) |
 | `start --build` | Run `build` before `start` |
 | `start --docker` | Full dev stack in Docker (detached) |
