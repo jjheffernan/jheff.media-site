@@ -122,19 +122,23 @@ cmd_start() {
   fi
 }
 
-seed_local_admin() {
+seed_local_accounts() {
   local email="${YEW_FULLSTACK_ADMIN_EMAILS%%,*}"
   email="${email//[[:space:]]/}"
   [[ -n "$email" ]] || return 0
-  log "Local admin will be created when the API is up ($email, username admin)"
+  log "Local accounts will be created when the API is up (admin, tester)"
   nohup bash -c '
     email=$1
-    for _ in $(seq 1 40); do
-      code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
+    post() {
+      curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
         -X POST http://127.0.0.1:8080/api/auth/signup \
         -H "content-type: application/json" \
-        -d "{\"email\":\"${email}\",\"username\":\"admin\",\"password\":\"localadmin\"}" || true)
-      if [[ "$code" == "200" || "$code" == "400" ]]; then
+        -d "$1" || true
+    }
+    for _ in $(seq 1 40); do
+      admin=$(post "{\"email\":\"${email}\",\"username\":\"admin\",\"password\":\"localadmin\"}")
+      tester=$(post "{\"email\":\"tester@example.com\",\"username\":\"tester\",\"password\":\"testuser\"}")
+      if [[ ( "$admin" == "200" || "$admin" == "400" ) && ( "$tester" == "200" || "$tester" == "400" ) ]]; then
         exit 0
       fi
       sleep 3
@@ -200,7 +204,7 @@ cmd_start_local() {
     log "Skipping health wait (first compile may take a minute). Use: scripts/dev.sh logs trunk"
   fi
 
-  seed_local_admin
+  seed_local_accounts
 }
 
 cmd_start_docker() {
