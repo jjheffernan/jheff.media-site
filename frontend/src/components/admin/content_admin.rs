@@ -244,6 +244,19 @@ fn bind_input(state: UseStateHandle<String>) -> Callback<InputEvent> {
     })
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum ContentTab {
+    Galleries,
+    Shoots,
+    Schedule,
+    Library,
+    Orders,
+}
+
+fn tab_class(active: bool) -> &'static str {
+    if active { "btn btn-primary" } else { "btn btn-quiet" }
+}
+
 fn bind_check(state: UseStateHandle<bool>) -> Callback<Event> {
     Callback::from(move |e: Event| {
         state.set(e.target_unchecked_into::<HtmlInputElement>().checked());
@@ -279,6 +292,7 @@ pub fn content_admin() -> Html {
     let gallery_featured = use_state(|| false);
     let shoot_cover = use_state(|| false);
     let shoot_featured = use_state(|| false);
+    let content_tab = use_state(|| ContentTab::Galleries);
 
     if auth_ctx.auth.as_ref().map(|a| a.user.role.as_str()) != Some("admin") {
         return html! {};
@@ -853,19 +867,31 @@ pub fn content_admin() -> Html {
         })
     };
 
+    let tab = *content_tab;
+    let pick = |next: ContentTab| {
+        let content_tab = content_tab.clone();
+        Callback::from(move |_| content_tab.set(next))
+    };
+
     html! {
         <section class="card space-y-6">
-            <Heading level={HeadingLevel::H2} subtitle="Admin only — create, edit, upload, reorder, delete. Mongo collections only.">
-                { "Content management" }
+            <Heading level={HeadingLevel::H2} subtitle="One tool at a time.">
+                { "Content" }
             </Heading>
+            <div class="flex flex-wrap gap-2" role="tablist" aria-label="Content">
+                <button type="button" class={tab_class(tab == ContentTab::Galleries)} role="tab" aria-selected={(tab == ContentTab::Galleries).to_string()} onclick={pick(ContentTab::Galleries)}>{ "Galleries" }</button>
+                <button type="button" class={tab_class(tab == ContentTab::Shoots)} role="tab" aria-selected={(tab == ContentTab::Shoots).to_string()} onclick={pick(ContentTab::Shoots)}>{ "Shoots" }</button>
+                <button type="button" class={tab_class(tab == ContentTab::Schedule)} role="tab" aria-selected={(tab == ContentTab::Schedule).to_string()} onclick={pick(ContentTab::Schedule)}>{ "Schedule" }</button>
+                <button type="button" class={tab_class(tab == ContentTab::Library)} role="tab" aria-selected={(tab == ContentTab::Library).to_string()} onclick={pick(ContentTab::Library)}>{ "Library" }</button>
+                <button type="button" class={tab_class(tab == ContentTab::Orders)} role="tab" aria-selected={(tab == ContentTab::Orders).to_string()} onclick={pick(ContentTab::Orders)}>{ "Orders" }</button>
+            </div>
 
             if let Some(msg) = &*message {
                 <p class="text-sm text-accent">{ msg }</p>
             }
 
-            <div class="grid gap-6 sm:grid-cols-2">
+            if tab == ContentTab::Galleries {
                 <div class="space-y-3">
-                    <Text tone={TextTone::Muted}>{ "Gallery" }</Text>
                     <input type="text" placeholder="ID (slug)" class="field" value={(*gallery_id).clone()} oninput={bind_input(gallery_id.clone())} />
                     <input type="text" placeholder="Title" class="field" value={(*gallery_title).clone()} oninput={bind_input(gallery_title.clone())} />
                     <input type="text" placeholder="Summary" class="field" value={(*gallery_summary).clone()} oninput={bind_input(gallery_summary.clone())} />
@@ -900,9 +926,9 @@ pub fn content_admin() -> Html {
                     <input type="text" placeholder="Reorder: id1, id2, …" class="field" value={(*gallery_order).clone()} oninput={bind_input(gallery_order.clone())} />
                     <button type="button" class="btn btn-quiet" onclick={on_reorder_gallery}>{ "Reorder media" }</button>
                 </div>
-
+            }
+            if tab == ContentTab::Shoots {
                 <div class="space-y-3">
-                    <Text tone={TextTone::Muted}>{ "Shoot" }</Text>
                     <input type="text" placeholder="ID (slug)" class="field" value={(*shoot_id).clone()} oninput={bind_input(shoot_id.clone())} />
                     <input type="text" placeholder="Title" class="field" value={(*shoot_title).clone()} oninput={bind_input(shoot_title.clone())} />
                     <input type="text" placeholder="Summary" class="field" value={(*shoot_summary).clone()} oninput={bind_input(shoot_summary.clone())} />
@@ -937,10 +963,11 @@ pub fn content_admin() -> Html {
                     <input type="text" placeholder="Reorder: id1, id2, …" class="field" value={(*shoot_order).clone()} oninput={bind_input(shoot_order.clone())} />
                     <button type="button" class="btn btn-quiet" onclick={on_reorder_shoot}>{ "Reorder media" }</button>
                 </div>
-            </div>
-
-            <LibraryImport />
-
+            }
+            if tab == ContentTab::Library {
+                <LibraryImport />
+            }
+            if tab == ContentTab::Schedule {
             <div class="space-y-3">
                 <Text tone={TextTone::Muted}>{ "Add date" }</Text>
                 <input
@@ -1007,8 +1034,10 @@ pub fn content_admin() -> Html {
                     { "Delete" }
                 </button>
             </div>
-
-            <PrintOrdersAdmin />
+            }
+            if tab == ContentTab::Orders {
+                <PrintOrdersAdmin />
+            }
         </section>
     }
 }
