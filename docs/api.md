@@ -303,7 +303,7 @@ Admin only. Page-view totals for the last 14 days.
 
 ### `GET /metrics`
 
-Prometheus text. Request counts by method and status, plus `telemetry_events_total`. Scrapes of this path are not counted. Counters reset when the API process restarts.
+Prometheus text. Request counts by method and status, plus `telemetry_events_total`. Scrapes of this path are not counted. Counters reset when the API process restarts. Point an existing Prometheus at this path (`scripts/observability/prometheus.yml`) and use that Prometheus as a Grafana datasource. Import `scripts/observability/grafana/dashboards/site.json` into that Grafana. The production stack does not run either service.
 
 ### `PUT /api/admin/links`
 

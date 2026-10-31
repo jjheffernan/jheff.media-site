@@ -65,8 +65,8 @@ Bundling: [Trunk](https://trunk-rs.github.io/trunk/) (`frontend/Trunk.toml`), no
 | Backend dev | `backend/Dockerfile` | `rust:latest` | Consider pinning to `rust:1.85-bookworm` |
 | Prod app | `Dockerfile` | `rust:1.85-bookworm` + `debian:bookworm-slim` | Binary `jheffmedia-site-backend` |
 | MongoDB | compose files | `mongo:7.0` | Was unpinned `mongo` |
-| Prometheus | compose files | `prom/prometheus:v2.55.1` | Scrapes `GET /metrics` |
-| Grafana | compose files | `grafana/grafana:11.4.0` | Bound to `127.0.0.1:3000` |
+| Prometheus | dev compose | `prom/prometheus:v2.55.1` | Local only. Scrapes `GET /metrics` |
+| Grafana | dev compose | `grafana/grafana:11.4.0` | Local only. Bound to `127.0.0.1:3000` |
 
 ## Environment variable alignment
 

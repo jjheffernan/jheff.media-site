@@ -69,7 +69,7 @@ Backend env sets `YEW_FULLSTACK_FORWARD_FRONTEND_URL=http://frontend:8000`.
 
 ### Prod (`scripts/docker-compose.yml`)
 
-App container, MongoDB (`mongo:7.0`), Prometheus, and Grafana. Prometheus and Grafana bind to `127.0.0.1` only. Prod compose uses `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (legacy `YEW_FULLSTACK_DB_URL` removed). Deploy guide: [deployment-dev.md](./deployment-dev.md) (dev) · version pins: [version-matrix.md](./version-matrix.md).
+App container and MongoDB (`mongo:7.0`). `GET /metrics` is Prometheus text for an existing Prometheus and Grafana. Prod compose uses `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (legacy `YEW_FULLSTACK_DB_URL` removed). Deploy guide: [deployment-dev.md](./deployment-dev.md) (dev) · version pins: [version-matrix.md](./version-matrix.md).
 
 ## Frontend application structure
 

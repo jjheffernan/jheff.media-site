@@ -13,7 +13,7 @@ Controlled by Cargo feature `forward-frontend`:
 | `forward-frontend` | Reverse proxy to Trunk dev server | `--features forward-frontend` |
 | (default) | Serve files from `YEW_FULLSTACK_STATIC` | no feature |
 
-Dev Docker and local watch use `forward-frontend`. Production binary serves baked static assets. `GET /metrics` sits outside `/api` and returns Prometheus text. Page views are `POST /api/telemetry`. Shapes are in [api.md](./api.md).
+Dev Docker and local watch use `forward-frontend`. Production binary serves baked static assets. `GET /metrics` sits outside `/api` and returns Prometheus text for an existing Prometheus. The production stack does not run Prometheus or Grafana. Page views are `POST /api/telemetry`. Shapes are in [api.md](./api.md).
 
 ## Environment variables
 
