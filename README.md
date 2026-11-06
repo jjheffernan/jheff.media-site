@@ -38,11 +38,23 @@ Stop: `scripts/dev.sh stop`
 
 Full setup, env vars, and troubleshooting: [docs/README.md](docs/README.md) · [docs/development.md](docs/development.md) · [docs/TODO.md](docs/TODO.md)
 
+## Deploy
+
+Production uses Docker on Proxmox, bare metal, or TrueNAS — not Cloudflare Workers. One-liners and a community-scripts-style catalog live under [`install/`](install/README.md).
+
+```bash
+# Proxmox host (creates LXC) — track main for production
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
+```
+
+Guide: [docs/deployment.md](docs/deployment.md) · registry: [install/registry.json](install/registry.json)
+
 ## Documentation
 
 | Guide | Topics |
 |-------|--------|
 | [docs/README.md](docs/README.md) | Index of all docs |
+| [docs/deployment.md](docs/deployment.md) | **Production deploy** — hosts, one-liners, checklist |
 | [docs/architecture.md](docs/architecture.md) | Request routing, dev vs prod, Docker layout |
 | [docs/authentication.md](docs/authentication.md) | JWT, sessions, login/logout behavior |
 | [docs/api.md](docs/api.md) | REST endpoints and examples |

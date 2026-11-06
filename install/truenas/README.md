@@ -2,12 +2,14 @@
 
 **TrueNAS SCALE** (Docker available). Shared stack in [`../common/`](../common/).
 
+Starting guide: [docs/deployment.md](../../docs/deployment.md) · catalog: [`../registry.json`](../registry.json)
+
 ## Option A — shell install
 
 Root shell on SCALE:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/truenas/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/truenas/install.sh)"
 ```
 
 Default install dir: `/mnt/.ix-apps/jheffmedia-site`. Prefer a dataset path:

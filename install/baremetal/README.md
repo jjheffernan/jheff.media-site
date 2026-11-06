@@ -2,12 +2,14 @@
 
 Generic **Debian/Ubuntu** host with Docker. Uses shared stack in [`../common/`](../common/).
 
+Starting guide: [docs/deployment.md](../../docs/deployment.md) · catalog: [`../registry.json`](../registry.json)
+
 ## One-line install
 
 Run as **root**:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/baremetal/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/baremetal/install.sh)"
 ```
 
 Default install directory: `/opt/jheffmedia-site`. Override:

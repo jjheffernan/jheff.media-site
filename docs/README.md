@@ -6,8 +6,9 @@ Human-readable guides for jheff.media-site. Start here or from [README](../READM
 
 | Doc | What it explains |
 |-----|------------------|
+| [deployment.md](./deployment.md) | **Start here for production** — pick a host, one-liner, checklist |
 | [deployment-dev.md](./deployment-dev.md) | **Deploy dev stack** — setup, Docker, verify, tests |
-| [deployment-proxmox.md](./deployment-proxmox.md) | **Proxmox production** — see [install/](../install/README.md) |
+| [deployment-proxmox.md](./deployment-proxmox.md) | Proxmox/manual compose detail — see [install/](../install/README.md) · [registry.json](../install/registry.json) |
 | [version-matrix.md](./version-matrix.md) | Dependency pins, Docker images, env var alignment |
 | [architecture.md](./architecture.md) | System layout, dev vs prod, request routing |
 | [authentication.md](./authentication.md) | JWT + session flow, login/logout behavior |

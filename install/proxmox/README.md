@@ -2,24 +2,26 @@
 
 [community-scripts.org](https://community-scripts.org/docs) style install for Proxmox VE — uses `build.func` for LXC creation and shared logic in [`../common/`](../common/).
 
+Starting guide: [docs/deployment.md](../../docs/deployment.md) · catalog: [`../registry.json`](../registry.json)
+
 ## One-line install
 
 **Proxmox host** (creates Debian 12 LXC, 2 CPU, 6 GB RAM, 24 GB disk):
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 ```
 
 **Existing LXC/VM** (same host or elsewhere):
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
+MODE=existing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 ```
 
-Force existing-target mode from Proxmox:
+Staging / `dev` branch:
 
 ```bash
-MODE=existing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
+BRANCH=dev bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
 ```
 
 ## Proxmox-only files

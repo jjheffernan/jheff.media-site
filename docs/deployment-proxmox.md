@@ -2,6 +2,8 @@
 
 Deploy **jheff.media** on a Proxmox host using Docker — one production container (Actix + baked Yew frontend) and MongoDB. `GET /metrics` is there for an existing Prometheus. Photos stay on your self-hosted Immich (or other) instance; the site only proxies thumbnails.
 
+**New here?** Start with the short guide: [deployment.md](./deployment.md). Catalog metadata: [install/registry.json](../install/registry.json).
+
 Related: [architecture.md](./architecture.md) · [deployment-dev.md](./deployment-dev.md) · [backend.md](./backend.md) · [version-matrix.md](./version-matrix.md) · [install/proxmox/README.md](../install/proxmox/README.md)
 
 ## One-line install (recommended)

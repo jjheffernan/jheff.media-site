@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "source": "https://github.com/jjheffernan/jheff.media-site",
+  "documentation": "https://github.com/jjheffernan/jheff.media-site/blob/main/docs/deployment.md",
+  "notes": [
+    "Catalog entry in the spirit of community-scripts.org — one app, several host targets.",
+    "Not a Cloudflare Workers project. Deploy with Docker via the install targets below.",
+    "Production branch is main. Install scripts still accept BRANCH=dev for staging."
+  ],
+  "apps": [
+    {
+      "slug": "jheffmedia",
+      "name": "jheff.media",
+      "type": "container",
+      "description": "Automotive photography site — Yew WASM frontend, Actix API, MongoDB. Admin content browser, Immich/Nextcloud import, contact and booking.",
+      "website": "https://jheff.media",
+      "documentation": "https://github.com/jjheffernan/jheff.media-site/blob/main/docs/deployment.md",
+      "source": "https://github.com/jjheffernan/jheff.media-site",
+      "license": "MIT",
+      "tags": ["media", "photography", "docker", "actix", "yew"],
+      "categories": ["media", "web"],
+      "default_branch": "main",
+      "resources": {
+        "cpu": 2,
+        "ram_mb": 6144,
+        "disk_gb": 24,
+        "os": "debian",
+        "os_version": "12",
+        "unprivileged": true
+      },
+      "ports": [
+        {
+          "port": 8080,
+          "protocol": "tcp",
+          "description": "HTTP — put Caddy, Nginx, or a Cloudflare Tunnel in front for TLS"
+        }
+      ],
+      "services": [
+        { "name": "application", "image": "jheffmedia/application:latest", "role": "Actix + baked Yew frontend" },
+        { "name": "db", "image": "mongo:7.0", "role": "MongoDB (bundled)" }
+      ],
+      "install": {
+        "proxmox": {
+          "script": "install/proxmox/ct/jheffmedia.sh",
+          "entry": "install/proxmox/install.sh",
+          "command": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)\""
+        },
+        "baremetal": {
+          "entry": "install/baremetal/install.sh",
+          "command": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/baremetal/install.sh)\""
+        },
+        "truenas": {
+          "entry": "install/truenas/install.sh",
+          "command": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/truenas/install.sh)\""
+        }
+      },
+      "credentials_path": "/root/site-install.creds",
+      "env_file": "install/common/.env.production",
+      "compose": "install/common/docker-compose.yml"
+    }
+  ],
+  "targets": [
+    {
+      "id": "proxmox",
+      "name": "Proxmox VE",
+      "kind": "lxc",
+      "readme": "install/proxmox/README.md",
+      "entry": "install/proxmox/install.sh",
+      "notes": "Uses community-scripts build.func to create the LXC, then shared install/common deploy."
+    },
+    {
+      "id": "baremetal",
+      "name": "Bare metal (Debian/Ubuntu)",
+      "kind": "host",
+      "readme": "install/baremetal/README.md",
+      "entry": "install/baremetal/install.sh",
+      "notes": "Requires root and Docker (or installs Docker during setup)."
+    },
+    {
+      "id": "truenas",
+      "name": "TrueNAS SCALE",
+      "kind": "host",
+      "readme": "install/truenas/README.md",
+      "entry": "install/truenas/install.sh",
+      "notes": "Shell install or Custom App pointing at install/common/docker-compose.yml."
+    }
+  ]
+}

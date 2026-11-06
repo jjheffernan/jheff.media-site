@@ -76,6 +76,7 @@ Decisions are recorded in [design.md](./design.md#decided).
 - [x] **Library import** — admin copies up to 6 Immich or Nextcloud files into a draft gallery or shoot. Public pages hide `draft`
 - [ ] **Immich feed** — set `YEW_FULLSTACK_FEED_PROVIDER=immich` and confirm the thumbnail proxy
 - [ ] **Live social** — Instagram and YouTube posts still need keys or `YEW_FULLSTACK_YOUTUBE_STATIC_JSON`
+- [x] **Deploy starting guide** — [deployment.md](./deployment.md) + [install/registry.json](../install/registry.json) (community-scripts-style catalog)
 - [ ] **Proxmox path** — confirm [install/README.md](../install/README.md) matches [deployment-proxmox.md](./deployment-proxmox.md)
 
 ## Fixes applied
