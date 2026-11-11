@@ -8,7 +8,7 @@ See also: [deployment-dev.md](./deployment-dev.md), [architecture.md](./architec
 
 | Tool | Minimum | Notes |
 |------|---------|-------|
-| Rust | 1.85+ (stable) | `rustup update stable` |
+| Rust | 1.89+ (stable) | `rustup update stable` |
 | Node.js | 18+ | Tailwind CLI via npm |
 | npm | 9+ | `npm install` in `frontend/` |
 | Docker or Podman | Compose v2 (`docker compose` or `podman compose`) | `CONTAINER_RUNTIME` picks one |
@@ -62,8 +62,8 @@ Bundling: [Trunk](https://trunk-rs.github.io/trunk/) (`frontend/Trunk.toml`), no
 | Image | File | Pin | Issue fixed |
 |-------|------|-----|-------------|
 | Frontend dev | `frontend/Dockerfile` | `node:20-bookworm` | Was `node:latest` |
-| Backend dev | `backend/Dockerfile` | `rust:latest` | Consider pinning to `rust:1.85-bookworm` |
-| Prod app | `Dockerfile` | `rust:1.85-bookworm` + `debian:bookworm-slim` | Binary `jheffmedia-site-backend` |
+| Backend dev | `backend/Dockerfile` | `rust:latest` | Prefer pin matching prod |
+| Prod app | `Dockerfile` | `rust:1.89-bookworm` + `debian:bookworm-slim` | Binary `jheffmedia-site-backend` |
 | MongoDB | compose files | `mongo:7.0` | Was unpinned `mongo` |
 | Prometheus | dev compose | `prom/prometheus:v2.55.1` | Local only. Scrapes `GET /metrics` |
 | Grafana | dev compose | `grafana/grafana:11.4.0` | Local only. Bound to `127.0.0.1:3000` |

@@ -1,5 +1,5 @@
 # Coolify Dockerfile-only: install/coolify/README.md (local git mirror + env.example)
-FROM docker.io/library/rust:1.85-bookworm AS frontend-build
+FROM docker.io/library/rust:1.89-bookworm AS frontend-build
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
     && rm -rf /var/lib/apt/lists/*
@@ -13,7 +13,7 @@ RUN cargo install --locked trunk
 WORKDIR /usr/src/workspace/frontend
 RUN npm install && trunk build --release
 
-FROM docker.io/library/rust:1.85-bookworm AS backend-build
+FROM docker.io/library/rust:1.89-bookworm AS backend-build
 WORKDIR /usr/src/workspace
 COPY Cargo.toml Cargo.lock ./
 COPY backend ./backend
