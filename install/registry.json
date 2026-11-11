@@ -55,6 +55,13 @@
         "truenas": {
           "entry": "install/truenas/install.sh",
           "command": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/truenas/install.sh)\""
+        },
+        "coolify": {
+          "dockerfile": "Dockerfile",
+          "mirror_script": "install/coolify/mirror.sh",
+          "env_example": "install/coolify/env.example",
+          "readme": "install/coolify/README.md",
+          "notes": "Dockerfile-only. Local bare git mirror for self-hosted Coolify without GitHub. MongoDB is a separate Coolify service."
         }
       },
       "credentials_path": "/root/site-install.creds",
@@ -86,6 +93,14 @@
       "readme": "install/truenas/README.md",
       "entry": "install/truenas/install.sh",
       "notes": "Shell install or Custom App pointing at install/common/docker-compose.yml."
+    },
+    {
+      "id": "coolify",
+      "name": "Coolify (Dockerfile)",
+      "kind": "paas",
+      "readme": "install/coolify/README.md",
+      "entry": "install/coolify/mirror.sh",
+      "notes": "Local git mirror + root Dockerfile. MongoDB separate. Env: install/coolify/env.example."
     }
   ]
 }

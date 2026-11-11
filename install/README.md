@@ -20,7 +20,8 @@ install/
 │       └── deploy.sh
 ├── proxmox/                # Proxmox VE (community-scripts build.func)
 ├── baremetal/              # generic Linux host
-└── truenas/                # TrueNAS SCALE (Docker)
+├── truenas/                # TrueNAS SCALE (Docker)
+└── coolify/                # Coolify Dockerfile-only + local git mirror
 ```
 
 ## Pick a target
@@ -30,6 +31,7 @@ install/
 | [Proxmox](proxmox/README.md) | `.../install/proxmox/install.sh` | New LXC or existing CT/VM |
 | [Bare metal](baremetal/README.md) | `.../install/baremetal/install.sh` | Debian/Ubuntu + Docker |
 | [TrueNAS](truenas/README.md) | `.../install/truenas/install.sh` | SCALE shell or Custom App |
+| [Coolify](coolify/README.md) | — (Dockerfile + [`coolify/mirror.sh`](coolify/mirror.sh)) | Local mirror; Mongo separate |
 
 Replace `...` with:
 

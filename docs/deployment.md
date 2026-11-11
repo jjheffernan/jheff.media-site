@@ -11,6 +11,7 @@ This project ships [community-scripts](https://community-scripts.org)-style one-
 | **Proxmox VE** | [install/proxmox](../install/proxmox/README.md) | Creates a Debian 12 LXC (2 CPU / 6 GB / 24 GB) or installs into an existing CT |
 | **Debian / Ubuntu** | [install/baremetal](../install/baremetal/README.md) | Docker on a plain Linux box |
 | **TrueNAS SCALE** | [install/truenas](../install/truenas/README.md) | Shell install or Custom App compose |
+| **Coolify** | [install/coolify](../install/coolify/README.md) | Dockerfile-only + local git mirror (no GitHub required) |
 
 Cloudflare Workers is **not** a deploy target. The site is Actix + MongoDB; use Docker on one of the hosts above, then put Cloudflare (or any reverse proxy) in front for DNS/TLS if you want.
 

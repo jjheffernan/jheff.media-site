@@ -1,3 +1,4 @@
+# Coolify Dockerfile-only: install/coolify/README.md (local git mirror + env.example)
 FROM docker.io/library/rust:1.85-bookworm AS frontend-build
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
