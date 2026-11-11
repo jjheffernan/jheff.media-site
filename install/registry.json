@@ -25,7 +25,7 @@
         "ram_mb": 6144,
         "disk_gb": 24,
         "os": "debian",
-        "os_version": "12",
+        "os_version": "13",
         "unprivileged": true
       },
       "ports": [
@@ -42,8 +42,11 @@
       "install": {
         "proxmox": {
           "script": "install/proxmox/ct/jheffmedia.sh",
+          "install_script": "install/proxmox/install/jheffmedia-install.sh",
           "entry": "install/proxmox/install.sh",
-          "command": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)\""
+          "command": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)\"",
+          "engine": "https://raw.githubusercontent.com/community-scripts/core/main/core/build.func",
+          "template_fallback": "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/debian.sh"
         },
         "baremetal": {
           "entry": "install/baremetal/install.sh",
@@ -66,7 +69,7 @@
       "kind": "lxc",
       "readme": "install/proxmox/README.md",
       "entry": "install/proxmox/install.sh",
-      "notes": "Uses community-scripts build.func to create the LXC, then shared install/common deploy."
+      "notes": "Uses community-scripts Core (core/build.func). Layout: install/proxmox/{ct,install}/. Or create a Debian template LXC first, then MODE=existing."
     },
     {
       "id": "baremetal",

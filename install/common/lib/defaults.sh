@@ -2,7 +2,7 @@
 # Shared defaults for install targets (sourced, not executed).
 
 REPO="${REPO:-https://github.com/jjheffernan/jheff.media-site.git}"
-BRANCH="${BRANCH:-dev}"
+BRANCH="${BRANCH:-main}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/jheffmedia-site}"
 HTTP_PORT="${HTTP_PORT:-8080}"
 DB_NAME="${DB_NAME:-jheffmedia}"

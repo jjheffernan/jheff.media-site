@@ -2,16 +2,17 @@
 # Proxmox installer
 #
 # New LXC on Proxmox host (root):
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 #
-# Existing LXC/VM on Proxmox (root):
+# Existing LXC/VM (Debian template, etc.):
 #   MODE=existing bash -c "$(curl -fsSL .../install/proxmox/install.sh)"
 
 set -euo pipefail
 
-BRANCH="${BRANCH:-dev}"
+BRANCH="${BRANCH:-main}"
 REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${BRANCH}}"
 PLATFORM_RAW="${PLATFORM_RAW:-${REPO_RAW}/install/proxmox}"
+CORE_URL="${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}"
 
 if [[ -f /etc/pve/.version ]] && [[ "${MODE:-auto}" != "existing" ]]; then
   exec bash <(curl -fsSL "${PLATFORM_RAW}/ct/jheffmedia.sh") "$@"
@@ -22,7 +23,9 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# Content of Core install helpers (same shape build_container exports).
+FUNCTIONS_FILE_PATH="$(curl -fsSL "${CORE_URL}/lxc/install.func")"
 export FUNCTIONS_FILE_PATH
-FUNCTIONS_FILE_PATH="$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)"
 export BRANCH REPO_RAW
-bash -c "$(curl -fsSL "${PLATFORM_RAW}/container-install.sh")"
+export COMMUNITY_SCRIPTS_CORE_URL="$CORE_URL"
+bash -c "$(curl -fsSL "${PLATFORM_RAW}/install/jheffmedia-install.sh")"

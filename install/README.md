@@ -4,7 +4,7 @@ Platform-specific one-line installers in the style of [community-scripts.org](ht
 
 **Start here:** [docs/deployment.md](../docs/deployment.md) · catalog metadata: [`registry.json`](./registry.json)
 
-Production installs should use **`main`**. Scripts still default `BRANCH=dev` for staging; override with `BRANCH=main`.
+Production installs default to **`main`**. Use `BRANCH=dev` for staging.
 
 ## Layout
 
@@ -56,7 +56,7 @@ UNATTENDED=yes MONGO_PASSWORD='secret' BRANCH=main \
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `REPO` | GitHub clone URL | Repository to clone |
-| `BRANCH` | `dev` | Branch to deploy (`main` for production) |
+| `BRANCH` | `main` | Branch to deploy (`dev` for staging) |
 | `INSTALL_DIR` | `/opt/jheffmedia-site` | Clone target on host |
 | `HTTP_PORT` | `8080` | Published port |
 | `MONGO_PASSWORD` | generated | MongoDB root password |

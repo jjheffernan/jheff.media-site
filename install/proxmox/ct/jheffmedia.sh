@@ -3,11 +3,20 @@
 # License: MIT
 # Source: https://github.com/jjheffernan/jheff.media-site
 #
-# Proxmox host — creates an unprivileged LXC via community-scripts build.func.
+# Proxmox host — creates an unprivileged LXC via community-scripts Core.
 # One line (Proxmox shell as root):
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/ct/jheffmedia.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/ct/jheffmedia.sh)"
 
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+BRANCH="${BRANCH:-main}"
+REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${BRANCH}}"
+# Scripts root for this app: install/proxmox/{ct,install}/ — matches Core's layout.
+export COMMUNITY_SCRIPTS_URL="${COMMUNITY_SCRIPTS_URL:-${REPO_RAW}/install/proxmox}"
+export COMMUNITY_SCRIPTS_CORE_URL="${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}"
+export BRANCH REPO_RAW
+
+_cs_boot="${COMMUNITY_SCRIPTS_CORE_DIR:-}/core/build.func"
+# shellcheck disable=SC1090
+source "$_cs_boot" 2>/dev/null || source <(curl -fsSL "${COMMUNITY_SCRIPTS_CORE_URL}/core/build.func")
 
 APP="jheffmedia"
 var_tags="${var_tags:-media;photography;docker}"
@@ -15,18 +24,9 @@ var_cpu="${var_cpu:-2}"
 var_ram="${var_ram:-6144}"
 var_disk="${var_disk:-24}"
 var_os="${var_os:-debian}"
-var_version="${var_version:-12}"
+var_version="${var_version:-13}"
 var_unprivileged="${var_unprivileged:-1}"
 var_brg="${var_brg:-vmbr0}"
-
-BRANCH="${BRANCH:-dev}"
-REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${BRANCH}}"
-PLATFORM_RAW="${PLATFORM_RAW:-${REPO_RAW}/install/proxmox}"
-export BRANCH REPO_RAW
-
-# ponytail: build.func hardcodes ProxmoxVE install URLs; redirect to this repo
-__install_url="${PLATFORM_RAW}/container-install.sh"
-eval "$(declare -f build_container | sed "s|https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/install/\${var_install}.sh|${__install_url}|g")"
 
 header_info "$APP"
 variables
@@ -44,7 +44,7 @@ function update_script() {
   fi
 
   INSTALL_DIR=/opt/jheffmedia-site
-  BRANCH="${BRANCH:-dev}"
+  BRANCH="${BRANCH:-main}"
   COMMON_DIR="${INSTALL_DIR}/install/common"
   # shellcheck disable=SC1091
   source "${COMMON_DIR}/lib/defaults.sh"

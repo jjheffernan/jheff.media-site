@@ -22,19 +22,27 @@ On the Proxmox host as root:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 ```
 
-Production should track **`main`**. Override only when you mean to:
+That loads [community-scripts Core](https://github.com/community-scripts/core) (`core/build.func`). The old `ProxmoxVE/misc/build.func` path 404s after their Core split — if you see `header_info: command not found`, you hit that stale URL; use the command above from `main`.
+
+Production tracks **`main`**. For staging:
 
 ```bash
 BRANCH=dev bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
 ```
 
-Existing LXC/VM:
+### Or: community-scripts template, then install
+
+Create a Debian LXC with their [All Templates](https://community-scripts.org/scripts/all-templates?from=scripts&fromQ=template) / Debian script, then install inside it:
 
 ```bash
+# On Proxmox host — Debian LXC (enable nesting for Docker)
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/debian.sh)"
+
+# Inside that LXC as root
 MODE=existing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 ```
 
-Unattended:
+Unattended (creates LXC + installs in one shot via our CT script):
 
 ```bash
 UNATTENDED=yes MONGO_PASSWORD='choose-a-strong-password' \
