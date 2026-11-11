@@ -21,6 +21,8 @@ export BRANCH REPO_RAW
 export COMMUNITY_SCRIPTS_CORE_URL="${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}"
 
 # shellcheck disable=SC1090
+source <(curl -fsSL "${REPO_RAW}/install/common/lib/defaults.sh")
+# shellcheck disable=SC1090
 source <(curl -fsSL "${REPO_RAW}/install/common/run-install.sh")
 
 run_docker_install

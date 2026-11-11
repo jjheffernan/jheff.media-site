@@ -13,13 +13,15 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-BRANCH="${BRANCH:-dev}"
+BRANCH="${BRANCH:-main}"
 REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${BRANCH}}"
 INSTALL_DIR="${INSTALL_DIR:-/mnt/.ix-apps/jheffmedia-site}"
+CORE_URL="${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}"
 export INSTALL_DIR BRANCH REPO_RAW
+export COMMUNITY_SCRIPTS_CORE_URL="$CORE_URL"
 
 export FUNCTIONS_FILE_PATH
-FUNCTIONS_FILE_PATH="$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)"
+FUNCTIONS_FILE_PATH="$(curl -fsSL "${CORE_URL}/lxc/install.func")"
 
 source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
 color

@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 # Shared Docker install flow — sourced by platform entry scripts after bootstrap.
 
+_bootstrap_common_libs() {
+  if declare -f source_common_libs >/dev/null 2>&1; then
+    return 0
+  fi
+  local branch="${BRANCH:-main}"
+  local repo_raw="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${branch}}"
+  # shellcheck disable=SC1090
+  source <(curl -fsSL "${repo_raw}/install/common/lib/defaults.sh")
+}
+
 run_docker_install() {
+  _bootstrap_common_libs
   source_common_libs yes
 
   msg_info "Installing Docker"
