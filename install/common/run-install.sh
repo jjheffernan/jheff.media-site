@@ -1,19 +1,43 @@
 #!/usr/bin/env bash
-# Shared Docker install flow — sourced by platform entry scripts after bootstrap.
+# Shared Docker install flow — sourced by baremetal/TrueNAS entry scripts.
+# Proxmox in-LXC install is self-contained in install/proxmox/install/jheffmedia-install.sh.
 
-_bootstrap_common_libs() {
-  if declare -f source_common_libs >/dev/null 2>&1; then
-    return 0
-  fi
+_load_raw() {
+  local rel="$1"
   local branch="${BRANCH:-main}"
   local repo_raw="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${branch}}"
+  local bust="${RAW_BUST:-$(date +%s)}"
+  local url="${repo_raw}/${rel}?${bust}"
+  local content
+  content="$(curl -fsSL -H 'Cache-Control: no-cache' "$url")" || {
+    echo "Failed to download ${url}" >&2
+    return 1
+  }
+  [[ -n "$content" ]] || {
+    echo "Empty download ${url}" >&2
+    return 1
+  }
   # shellcheck disable=SC1090
-  source <(curl -fsSL "${repo_raw}/install/common/lib/defaults.sh")
+  source /dev/stdin <<<"$content"
+}
+
+_bootstrap_common_libs() {
+  if declare -f source_common_libs >/dev/null 2>&1 \
+    && declare -f guided_config >/dev/null 2>&1 \
+    && declare -f deploy_stack >/dev/null 2>&1; then
+    return 0
+  fi
+  _load_raw "install/common/lib/defaults.sh"
+  _load_raw "install/common/lib/guided-config.sh"
+  _load_raw "install/common/lib/deploy.sh"
+  declare -f source_common_libs >/dev/null 2>&1 || {
+    echo "defaults.sh did not define source_common_libs" >&2
+    return 1
+  }
 }
 
 run_docker_install() {
   _bootstrap_common_libs
-  source_common_libs yes
 
   msg_info "Installing Docker"
   setup_docker

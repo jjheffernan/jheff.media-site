@@ -7,16 +7,19 @@
 # One line (Proxmox shell as root):
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/ct/jheffmedia.sh)"
 
+# INSTALL_REF pins raw.githubusercontent.com (commit SHA or branch). Prefer a SHA
+# right after a fix so Varnish (max-age=300) cannot serve a stale install script.
 BRANCH="${BRANCH:-main}"
-REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${BRANCH}}"
+INSTALL_REF="${INSTALL_REF:-${BRANCH}}"
+REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${INSTALL_REF}}"
 # Scripts root for this app: install/proxmox/{ct,install}/ — matches Core's layout.
 export COMMUNITY_SCRIPTS_URL="${COMMUNITY_SCRIPTS_URL:-${REPO_RAW}/install/proxmox}"
 export COMMUNITY_SCRIPTS_CORE_URL="${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}"
-export BRANCH REPO_RAW
+export BRANCH INSTALL_REF REPO_RAW
 
 _cs_boot="${COMMUNITY_SCRIPTS_CORE_DIR:-}/core/build.func"
 # shellcheck disable=SC1090
-source "$_cs_boot" 2>/dev/null || source <(curl -fsSL "${COMMUNITY_SCRIPTS_CORE_URL}/core/build.func")
+source "$_cs_boot" 2>/dev/null || source <(curl -fsSL -H 'Cache-Control: no-cache' "${COMMUNITY_SCRIPTS_CORE_URL}/core/build.func")
 
 APP="jheffmedia"
 var_tags="${var_tags:-media;photography;docker}"
