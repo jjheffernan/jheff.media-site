@@ -21,7 +21,7 @@ if command -v rustup >/dev/null 2>&1; then
   rustup target add wasm32-unknown-unknown
   if ! command -v trunk >/dev/null 2>&1; then
     log_section "Installing Trunk (this can take several minutes)"
-    cargo install --locked trunk
+    cargo install --locked trunk --version 0.21.14
   else
     log "Trunk already installed: $(command -v trunk)"
   fi

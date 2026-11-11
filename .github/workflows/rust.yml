@@ -41,7 +41,7 @@ jobs:
       run: openssl rand -out backend/src/secret.key 32
 
     - name: Install Trunk
-      run: cargo install --locked trunk
+      run: cargo install --locked trunk --version 0.21.14
 
     - name: Build frontend with Trunk
       run: trunk build --release

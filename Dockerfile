@@ -9,7 +9,8 @@ COPY frontend ./frontend
 COPY backend/Cargo.toml backend/Cargo.toml
 RUN mkdir -p backend/src && echo 'fn main() {}' > backend/src/main.rs
 RUN rustup target add wasm32-unknown-unknown
-RUN cargo install --locked trunk
+# Pin: trunk 0.22+ needs rustc 1.96; keep in sync with image rustc.
+RUN cargo install --locked trunk --version 0.21.14
 WORKDIR /usr/src/workspace/frontend
 RUN npm install && trunk build --release
 
