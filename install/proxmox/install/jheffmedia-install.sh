@@ -6,7 +6,7 @@
 #
 # In-container install for Proxmox LXC (community-scripts Core lxc/install.func).
 # Fetched by build_container as install/jheffmedia-install.sh under this scripts root.
-# Bust: 2026-11-11-a — keep helpers inline so raw.githubusercontent.com cache cannot
+# Bust: 2026-11-11-b — keep helpers inline so raw.githubusercontent.com cache cannot
 # leave us calling source_common_libs before defaults.sh is loaded.
 
 source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
@@ -17,7 +17,12 @@ setting_up_container
 network_check
 update_os
 
+# Core exports COMMUNITY_SCRIPTS_URL into the CT (often a commit-SHA raw URL).
+# Derive REPO_RAW from that so helper curls match the pinned install script.
 BRANCH="${BRANCH:-main}"
+if [[ -z "${REPO_RAW:-}" && -n "${COMMUNITY_SCRIPTS_URL:-}" ]]; then
+  REPO_RAW="${COMMUNITY_SCRIPTS_URL%/install/proxmox}"
+fi
 REPO_RAW="${REPO_RAW:-https://raw.githubusercontent.com/jjheffernan/jheff.media-site/${BRANCH}}"
 export BRANCH REPO_RAW
 export COMMUNITY_SCRIPTS_CORE_URL="${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}"
