@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Guided whiptail/read prompts (all install targets).
+#
+# Do not call msg_info before prompts — community-scripts msg_info leaves a
+# spinner/modal up until msg_ok, which clips over whiptail and hides typing.
 
 prompt_input() {
   local title=$1 prompt=$2 default=${3:-}
@@ -41,6 +44,11 @@ prompt_menu() {
   fi
 }
 
+_section() {
+  # Non-modal section header (msg_info would cover the next whiptail).
+  msg_custom "→" "${YW:-}" "$1"
+}
+
 guided_config() {
   if [[ "${UNATTENDED:-}" == "yes" ]]; then
     msg_info "Using unattended defaults (UNATTENDED=yes)"
@@ -49,7 +57,7 @@ guided_config() {
     return 0
   fi
 
-  msg_info "Guided setup — repository"
+  _section "Guided setup — repository"
   REPO="$(prompt_input "Repository" "Git clone URL:" "$REPO")"
   BRANCH="$(prompt_input "Branch" "Git branch to deploy:" "$BRANCH")"
   INSTALL_DIR="$(prompt_input "Install path" "Directory on this host:" "$INSTALL_DIR")"
@@ -58,14 +66,14 @@ guided_config() {
   COMMON_RAW="${REPO_RAW}/install/common"
   msg_ok "Repository settings saved"
 
-  msg_info "Guided setup — site"
+  _section "Guided setup — site"
   HTTP_PORT="$(prompt_input "HTTP port" "Port published on this host (reverse-proxy target):" "$HTTP_PORT")"
   PUBLIC_URL="$(prompt_input "Public URL" "Optional https URL for docs (Enter to skip):" "$PUBLIC_URL")"
   CONTACT_EMAIL="$(prompt_input "Contact email" "Contact email shown on site:" "$CONTACT_EMAIL")"
   msg_ok "Site settings saved"
 
-  msg_info "Guided setup — database"
-  msg_custom "ℹ️" "$YW" "MongoDB runs in Docker on this host. No external DB required."
+  _section "Guided setup — database"
+  msg_custom "ℹ️" "${YW:-}" "MongoDB runs in Docker on this host. No external DB required."
   local mongo_default
   mongo_default="$(random_alnum 20)"
   MONGO_PASSWORD="$(prompt_password "MongoDB" "MongoDB root password (blank = generate):" "$mongo_default")"
@@ -73,8 +81,8 @@ guided_config() {
   DB_NAME="$(prompt_input "Database name" "MongoDB database name:" "$DB_NAME")"
   msg_ok "Database settings saved"
 
-  msg_info "Guided setup — photo feed"
-  msg_custom "ℹ️" "$YW" "Choose static/none to run without Immich. Add Immich later in .env.production."
+  _section "Guided setup — photo feed"
+  msg_custom "ℹ️" "${YW:-}" "Choose static/none to run without Immich. Add Immich later in .env.production."
   FEED_PROVIDER="$(prompt_menu "Photo feed" "Homepage feed provider:" "$FEED_PROVIDER" \
     "none" "No homepage feed" \
     "static" "Demo stills (external URLs)" \
@@ -86,12 +94,12 @@ guided_config() {
       IMMICH_ALBUM_ID="$(prompt_input "Immich album" "Album UUID for homepage feed:" "${IMMICH_ALBUM_ID:-}")"
       ;;
     static)
-      msg_custom "ℹ️" "$YW" "Using bundled demo JSON. Override FEED_STATIC_JSON in .env.production later."
+      msg_custom "ℹ️" "${YW:-}" "Using bundled demo JSON. Override FEED_STATIC_JSON in .env.production later."
       ;;
   esac
   msg_ok "Photo feed settings saved"
 
-  msg_info "Guided setup — admin (optional)"
+  _section "Guided setup — admin (optional)"
   ADMIN_EMAILS="$(prompt_input "Admin emails" "Comma-separated signup emails granted admin (Enter to skip):" "${ADMIN_EMAILS:-}")"
   msg_ok "Admin settings saved"
 }
