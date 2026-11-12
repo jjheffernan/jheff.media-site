@@ -129,6 +129,19 @@ jheffmedia --update              # always tracks production main
 jheffmedia --update -d           # tracks testing (-d / --dev / --testing)
 ```
 
+### Admin GUI deploy (optional)
+
+Signed-in **admins** can open **Admin → Dev → Deploy** and run the same update paths without SSH:
+
+| Button | Host command |
+|--------|----------------|
+| **Update** | `jheffmedia --update` (main) |
+| **Update testing (-d)** | `jheffmedia --update -d` |
+
+Requires a normal LXC/`jheffmedia` install (bind-mounted `var/deploy` + systemd path unit `jheffmedia-gui-update.path`). Local `cargo run` has no deploy CLI — the API returns **503**. Destructive CLI ops (`--cleanup`, `--reinstall`, `--reset-db`) stay SSH-only. Autoupdate enable/disable stays CLI; the panel only shows status when `var/deploy/autoupdate-status` exists.
+
+**Bootstrap:** after pulling this feature, run `jheffmedia --update` once over SSH so the new binary, compose mount, and path unit land — then the GUI Deploy panel works.
+
 Optional autoupdate (systemd timer, **off by default**):
 
 ```bash

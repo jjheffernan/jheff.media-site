@@ -442,6 +442,18 @@ Admin JWT. Site setup wizard: feed provider (`none` | `static` | `immich` | `nex
 
 Admin JWT. Non-secret runtime snapshot for live troubleshooting: `dbReachable`, `dbTests` (`ping` / `listCollections` / `usersReadable`), `feedProvider`, `rustLog` (env value only), `uptimeSecs`, `version`, `buildId` (`YEW_FULLSTACK_BUILD_ID`, often a git SHA), `compressEnabled`, and `warnings` (`NO_BUILD_ID`, `CORS_DEFAULT`, …). No connection strings, keys, or JWTs. Admin → Dev also flags frontend/backend `VERSION_MISMATCH` and probes `Content-Encoding` on public routes.
 
+### `GET /api/admin/deploy/status`
+
+Admin JWT. Deploy control readiness: `buildId`, `channelHint`, `cliAvailable`, `controlDir`, `available`, optional `autoupdateEnabled` / `autoupdateChannel`, `activeJobId`, `message`. Local cargo run without the host control dir → `available: false`.
+
+### `POST /api/admin/deploy/update`
+
+Admin JWT. Body `{ "channel": "main" | "testing" }` only (no shell strings). Starts host `jheffmedia --update` (or `-d` for testing) asynchronously via the `var/deploy` drop-file bridge. **202** `{ jobId, channel }`. **503** if deploy CLI/control unavailable. **409** if a job is already running.
+
+### `GET /api/admin/deploy/jobs/{id}`
+
+Admin JWT. Poll job `state` (`queued` / `running` / `ok` / `failed`), `logTail`, optional `exitCode`.
+
 ### `GET /api/admin/social` / `PUT /api/admin/social`
 
 Admin JWT. Social integrations (Instagram access token, YouTube API key + channel id, optional Other platform). Stored in Mongo `site_config` like Immich secrets; empty secret fields on PUT keep the previous value. Secrets are never echoed — response uses `*Set` / `*Hint` masks.
