@@ -280,6 +280,22 @@ pub async fn proxy_thumbnail(
     }
 }
 
+/// Public proxy must not fetch arbitrary Immich assets with the server API key.
+/// ponytail: re-lists album/recent per thumb; add short TTL cache if Immich rate-limits.
+async fn immich_feed_allows_asset(
+    client: &Client,
+    config: &ImmichConfig,
+    asset_id: &str,
+) -> ServiceResult<bool> {
+    let assets = if let Some(album_id) = &config.album_id {
+        fetch_album_assets(client, config, album_id).await?
+    } else {
+        // Same window as list_feed when no album is configured.
+        fetch_recent_assets(client, config, MAX_LIMIT).await?
+    };
+    Ok(assets.iter().any(|asset| asset.id == asset_id))
+}
+
 async fn proxy_immich_thumbnail(
     client: &Client,
     config: &ImmichConfig,
@@ -287,6 +303,9 @@ async fn proxy_immich_thumbnail(
 ) -> ServiceResult<(Vec<u8>, String)> {
     if !library_import_service::valid_asset_id("immich", asset_id) {
         return Err(ServiceError::new(StatusCode::BAD_REQUEST, "BAD_ID"));
+    }
+    if !immich_feed_allows_asset(client, config, asset_id).await? {
+        return Err(ServiceError::new(StatusCode::NOT_FOUND, "NOT_FOUND"));
     }
     let mut url = format!(
         "{}/api/assets/{}/thumbnail?size=preview",
