@@ -1,11 +1,15 @@
 use crate::{
     error::{ServiceError, ServiceResult},
     models::feed::{FeedItem, FeedResponse},
+    services::{
+        library_import_service,
+        site_config_service::{self, ResolvedConfig, DEFAULT_STATIC_JSON},
+    },
 };
 use actix_web::http::StatusCode;
 use awc::Client;
+use mongodb::Database;
 use serde::Deserialize;
-use std::env;
 
 const DEFAULT_LIMIT: usize = 24;
 const MAX_LIMIT: usize = 48;
@@ -13,6 +17,7 @@ const MAX_LIMIT: usize = 48;
 #[derive(Debug, Clone)]
 enum FeedProvider {
     Immich(ImmichConfig),
+    Nextcloud,
     Static(Vec<FeedItem>),
     Disabled,
 }
@@ -25,34 +30,36 @@ struct ImmichConfig {
     shared_key: Option<String>,
 }
 
-fn provider_from_env() -> FeedProvider {
-    let kind = env::var("YEW_FULLSTACK_FEED_PROVIDER")
-        .unwrap_or_else(|_| String::from("none"))
-        .to_lowercase();
-
-    match kind.as_str() {
+fn provider_from_resolved(cfg: &ResolvedConfig) -> FeedProvider {
+    match cfg.feed_provider.as_str() {
         "immich" => {
-            let base_url = env::var("YEW_FULLSTACK_IMMICH_URL").unwrap_or_default();
-            let api_key = env::var("YEW_FULLSTACK_IMMICH_API_KEY").unwrap_or_default();
-            if base_url.is_empty() {
+            if cfg.immich_url.trim().is_empty() {
                 return FeedProvider::Disabled;
             }
             FeedProvider::Immich(ImmichConfig {
-                base_url: base_url.trim_end_matches('/').to_string(),
-                api_key,
-                album_id: env::var("YEW_FULLSTACK_IMMICH_ALBUM_ID").ok(),
-                shared_key: env::var("YEW_FULLSTACK_IMMICH_SHARED_KEY").ok(),
+                base_url: cfg.immich_url.trim_end_matches('/').to_string(),
+                api_key: cfg.immich_api_key.clone(),
+                album_id: Some(cfg.immich_album_id.clone()).filter(|id| !id.trim().is_empty()),
+                shared_key: Some(cfg.immich_shared_key.clone()).filter(|k| !k.trim().is_empty()),
             })
         }
-        "static" => {
-            let json = env::var("YEW_FULLSTACK_FEED_STATIC_JSON").unwrap_or_default();
-            if json.is_empty() {
-                return FeedProvider::Disabled;
+        "nextcloud" => {
+            if site_config_service::nextcloud_ready(cfg) {
+                FeedProvider::Nextcloud
+            } else {
+                FeedProvider::Disabled
             }
-            match serde_json::from_str::<Vec<FeedItem>>(&json) {
+        }
+        "static" => {
+            let json = if cfg.feed_static_json.trim().is_empty() {
+                DEFAULT_STATIC_JSON
+            } else {
+                cfg.feed_static_json.as_str()
+            };
+            match serde_json::from_str::<Vec<FeedItem>>(json) {
                 Ok(items) => FeedProvider::Static(items),
                 Err(err) => {
-                    error!("Invalid YEW_FULLSTACK_FEED_STATIC_JSON: {}", err);
+                    error!("Invalid feed static JSON: {}", err);
                     FeedProvider::Disabled
                 }
             }
@@ -61,12 +68,17 @@ fn provider_from_env() -> FeedProvider {
     }
 }
 
-pub async fn list_feed(client: &Client, limit: Option<usize>) -> ServiceResult<FeedResponse> {
+pub async fn list_feed(
+    client: &Client,
+    db: &Database,
+    limit: Option<usize>,
+) -> ServiceResult<FeedResponse> {
     let limit = limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
-    let provider = provider_from_env();
+    let provider = provider_from_resolved(&site_config_service::resolved(db).await);
 
     match provider {
         FeedProvider::Immich(config) => list_immich(client, &config, limit).await,
+        FeedProvider::Nextcloud => list_nextcloud(client, db, limit).await,
         FeedProvider::Static(items) => Ok(FeedResponse {
             source: String::from("static"),
             items: items.into_iter().take(limit).collect(),
@@ -108,6 +120,33 @@ async fn list_immich(
 
     Ok(FeedResponse {
         source: String::from("immich"),
+        items,
+    })
+}
+
+async fn list_nextcloud(
+    client: &Client,
+    db: &Database,
+    limit: usize,
+) -> ServiceResult<FeedResponse> {
+    let candidates = library_import_service::list_candidates(client, db, "nextcloud")
+        .await
+        .map_err(|code| ServiceError::new(StatusCode::BAD_GATEWAY, code))?;
+    let items = candidates
+        .into_iter()
+        .take(limit)
+        .map(|item| FeedItem {
+            id: item.id.clone(),
+            title: Some(item.name),
+            thumbnail_url: format!("/api/feed/thumbnail/{}", item.id),
+            media_url: None,
+            media_type: Some(String::from("image")),
+            width: None,
+            height: None,
+        })
+        .collect();
+    Ok(FeedResponse {
+        source: String::from("nextcloud"),
         items,
     })
 }
@@ -205,18 +244,39 @@ async fn fetch_recent_assets(
     Ok(result.assets.items)
 }
 
-pub async fn proxy_thumbnail(client: &Client, asset_id: &str) -> ServiceResult<(Vec<u8>, String)> {
-    let provider = provider_from_env();
-    let config = match provider {
-        FeedProvider::Immich(config) => config,
-        _ => {
-            return Err(ServiceError::new(
-                StatusCode::NOT_FOUND,
-                "Feed provider does not proxy thumbnails",
-            ));
+pub async fn proxy_thumbnail(
+    client: &Client,
+    db: &Database,
+    asset_id: &str,
+) -> ServiceResult<(Vec<u8>, String)> {
+    let provider = provider_from_resolved(&site_config_service::resolved(db).await);
+    match provider {
+        FeedProvider::Immich(config) => proxy_immich_thumbnail(client, &config, asset_id).await,
+        FeedProvider::Nextcloud => {
+            library_import_service::fetch_nextcloud_bytes(client, db, asset_id)
+                .await
+                .map_err(|code| {
+                    let status = match code {
+                        "BAD_ID" | "UNKNOWN_SOURCE" => StatusCode::BAD_REQUEST,
+                        "NOT_CONFIGURED" => StatusCode::NOT_FOUND,
+                        "FILE_TOO_LARGE" => StatusCode::PAYLOAD_TOO_LARGE,
+                        _ => StatusCode::BAD_GATEWAY,
+                    };
+                    ServiceError::new(status, code)
+                })
         }
-    };
+        _ => Err(ServiceError::new(
+            StatusCode::NOT_FOUND,
+            "Feed provider does not proxy thumbnails",
+        )),
+    }
+}
 
+async fn proxy_immich_thumbnail(
+    client: &Client,
+    config: &ImmichConfig,
+    asset_id: &str,
+) -> ServiceResult<(Vec<u8>, String)> {
     let mut url = format!(
         "{}/api/assets/{}/thumbnail?size=preview",
         config.base_url, asset_id

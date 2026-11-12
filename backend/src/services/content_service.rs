@@ -427,13 +427,20 @@ fn contains(hay: &str, needle: &str) -> bool {
     hay.to_lowercase().contains(needle)
 }
 
-pub fn booking_config() -> crate::models::content::BookingConfig {
+pub async fn booking_config(db: &Database) -> crate::models::content::BookingConfig {
     let embed_url = env::var("YEW_FULLSTACK_BOOKING_EMBED_URL")
         .ok()
         .filter(|u| !u.is_empty());
-    let contact_email = env::var("YEW_FULLSTACK_CONTACT_EMAIL")
-        .ok()
-        .filter(|u| !u.is_empty());
+    let contact_email = {
+        let cfg = crate::services::site_config_service::resolved(db).await;
+        if !cfg.contact_email.trim().is_empty() {
+            Some(cfg.contact_email)
+        } else {
+            env::var("YEW_FULLSTACK_CONTACT_EMAIL")
+                .ok()
+                .filter(|u| !u.is_empty())
+        }
+    };
 
     let has_embed = embed_url.is_some();
 

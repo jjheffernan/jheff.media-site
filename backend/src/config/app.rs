@@ -143,6 +143,8 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         "/library/{source}",
                         web::post().to(admin_controller::library_import),
                     )
+                    .route("/setup", web::get().to(admin_controller::get_setup))
+                    .route("/setup", web::put().to(admin_controller::update_setup))
                     .route("/analytics", web::get().to(telemetry_controller::analytics))
                     .route("/social", web::get().to(social_controller::channels))
                     .route("/contacts", web::get().to(contact_controller::list))

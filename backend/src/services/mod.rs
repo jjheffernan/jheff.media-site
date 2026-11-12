@@ -17,6 +17,7 @@ pub mod print_service;
 pub mod schedule_service;
 #[cfg(not(feature = "forward-frontend"))]
 pub mod serve_frontend;
+pub mod site_config_service;
 pub mod social_service;
 pub mod telemetry_service;
 pub mod youtube_service;

@@ -62,7 +62,7 @@ Bare metal and TrueNAS use the same pattern with `install/baremetal/install.sh` 
 6. Writes credentials to `/root/site-install.creds` (or `~/site-install.creds`)
 7. Runs postinstall once — prints admin signup email (generated if you left admin blank / unattended) and the creds file
 
-Default feed is **`static`** demo images so the homepage works without Immich. Switch to Immich later in `.env.production`.
+Default feed is **`static`** demo images so the homepage works without Immich. After you have an admin account, switch providers in **Admin → Setup** (Mongo `site_config`). Env vars remain bootstrap defaults until Setup is saved.
 
 There is no seeded admin password. Admin is whoever signs up with an address in `ADMIN_EMAILS` (mapped to `YEW_FULLSTACK_ADMIN_EMAILS` in compose).
 
@@ -81,8 +81,8 @@ Then:
 1. **TLS** — put Caddy/Nginx (or Cloudflare Tunnel) in front of `:8080`. See [deployment-proxmox.md](./deployment-proxmox.md) § reverse proxy.
 2. **CORS** — once the public hostname is known, set `YEW_FULLSTACK_CORS_ORIGINS=https://jheff.media` (or your domain) on the app service and restart.
 3. **Admin** — open the site, sign up with the printed `ADMIN_EMAILS` address (any password ≥8 chars). That account becomes `admin`. Change the email in `.env.production` later if you generated a bootstrap address.
-4. **Feed (optional)** — set `FEED_PROVIDER=immich` plus Immich URL, API key, and album id when ready.
-5. **SMTP (optional)** — contact/booking mail needs `YEW_FULLSTACK_SMTP_*` and `CONTACT_EMAIL`.
+4. **Feed** — Admin → Setup: pick `none` / `static` / `immich` / `nextcloud` and save. Feed reads Mongo per request. If images look stale after a provider change, run `jheffmedia --restart`.
+5. **SMTP (optional)** — contact/booking mail needs `YEW_FULLSTACK_SMTP_*`; contact recipient can also be set in Admin → Setup.
 
 Credentials stay only on the host (`site-install.creds`, chmod 600). Nothing secret is committed to git.
 

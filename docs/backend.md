@@ -27,7 +27,7 @@ Dev Docker and local watch use `forward-frontend`. Production binary serves bake
 | `YEW_FULLSTACK_DB_NAME` | `yew-fullstack` | Database name |
 | `YEW_FULLSTACK_JWT_SECRET_FILE` | — | Path to 32-byte JWT signing key (production) |
 | `YEW_FULLSTACK_JWT_SECRET` | — | Hex-encoded 32-byte JWT key (alternative to file) |
-| `YEW_FULLSTACK_FEED_PROVIDER` | `none` | `immich`, `static`, or `none` |
+| `YEW_FULLSTACK_FEED_PROVIDER` | `none` | Bootstrap default: `immich`, `static`, `nextcloud`, or `none`. Overridden by Mongo `site_config` after Admin → Setup |
 | `YEW_FULLSTACK_IMMICH_URL` | — | Immich base URL (no trailing slash) |
 | `YEW_FULLSTACK_IMMICH_API_KEY` | — | Immich API key (server-side only) |
 | `YEW_FULLSTACK_IMMICH_ALBUM_ID` | — | Album UUID for homepage feed |

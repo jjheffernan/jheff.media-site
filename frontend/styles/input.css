@@ -462,20 +462,21 @@
   }
   .calendar-dow {
     text-align: center;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     color: var(--muted);
+    padding: 0.25rem 0;
   }
   .calendar-day {
     display: grid;
-    align-content: start;
+    align-content: center;
     justify-items: center;
-    min-height: 2.6rem;
+    min-height: 2.75rem;
     border: 1px solid var(--border);
     border-radius: var(--radius-control);
     background: var(--surface);
     color: var(--fg);
-    font-size: 0.8rem;
-    padding: 0.3rem 0.1rem;
+    font-size: 0.95rem;
+    padding: 0.35rem 0.1rem;
   }
   .calendar-day.has-event { font-weight: 600; }
   .calendar-day.is-today { border-color: var(--accent); }
@@ -546,6 +547,16 @@
     box-shadow: inset 3px 0 0 var(--accent);
   }
   .admin-who { display: none; }
+  .admin-warn {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-control);
+    background: var(--surface-elevated);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+  .stack-gap-xs { display: grid; gap: 0.35rem; }
+  .row-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .stat-grid, .dash-lower { display: grid; gap: 0.75rem; }
   .stat-n { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }
   .day-chart { display: flex; align-items: flex-end; justify-content: flex-start; gap: 0.35rem; height: 9rem; }

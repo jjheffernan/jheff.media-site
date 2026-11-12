@@ -128,12 +128,16 @@ pub async fn submit_contact(
     } else {
         format!("{}\n\nPreferred: {}", record.message, record.preferred_at)
     };
+    let contact_to = super::site_config_service::resolved(db)
+        .await
+        .contact_email;
     super::mailer::notify_contact(
         &record.name,
         &record.email,
         &record.subject,
         &mailed,
         &record.kind,
+        Some(contact_to.as_str()),
     )
     .await;
 

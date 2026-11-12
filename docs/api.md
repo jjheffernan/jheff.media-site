@@ -140,7 +140,7 @@ Public photo feed metadata. Images are **not** stored in the site repo — thumb
 }
 ```
 
-`source` is `immich`, `static`, or `none` when unconfigured.
+`source` is `immich`, `nextcloud`, `static`, or `none` when unconfigured. Provider settings come from Mongo `site_config` when present, otherwise env.
 
 **Errors** use the standard envelope with HTTP 4xx/5xx.
 
@@ -411,6 +411,10 @@ Upload one or more images to an existing MongoDB gallery. Admin JWT required. En
 ### `POST /api/admin/shoots/{id}/media`
 
 Upload one or more images to an existing MongoDB shoot. Same contract as gallery media upload.
+
+### `GET /api/admin/setup` / `PUT /api/admin/setup`
+
+Admin JWT. Site setup wizard: feed provider (`none` | `static` | `immich` | `nextcloud`), Immich/Nextcloud fields, optional static JSON, contact email, public URL. Persisted in Mongo `site_config` (`_id: main`). GET masks secrets (last 4 only). PUT: empty secret fields keep the stored value. Response includes `needsSetup`, `fromDb`, and `restartRequired` (true when the provider changed — images may need `jheffmedia --restart`).
 
 ### `GET /api/admin/library`
 

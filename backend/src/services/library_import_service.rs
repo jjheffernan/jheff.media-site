@@ -1,8 +1,9 @@
-use crate::services::{content_service, content_store_service, content_upload_service};
+use crate::services::{
+    content_service, content_store_service, content_upload_service, site_config_service,
+};
 use awc::Client;
 use mongodb::Database;
 use serde::Serialize;
-use std::env;
 
 pub const MAX_LIST: usize = 12;
 pub const MAX_IMPORT: usize = 6;
@@ -27,12 +28,13 @@ struct NextcloudConfig {
     folder: String,
 }
 
-pub fn configured_sources() -> Vec<&'static str> {
+pub async fn configured_sources(db: &Database) -> Vec<&'static str> {
+    let cfg = site_config_service::resolved(db).await;
     let mut sources = Vec::new();
-    if immich_config().is_some() {
+    if site_config_service::immich_ready(&cfg) {
         sources.push("immich");
     }
-    if nextcloud_config().is_some() {
+    if site_config_service::nextcloud_ready(&cfg) {
         sources.push("nextcloud");
     }
     sources
@@ -92,14 +94,18 @@ pub fn valid_asset_id(source: &str, id: &str) -> bool {
     }
 }
 
-pub async fn list_candidates(client: &Client, source: &str) -> Result<Vec<LibraryCandidate>, &'static str> {
+pub async fn list_candidates(
+    client: &Client,
+    db: &Database,
+    source: &str,
+) -> Result<Vec<LibraryCandidate>, &'static str> {
     match source {
         "immich" => {
-            let config = immich_config().ok_or("NOT_CONFIGURED")?;
+            let config = immich_config(db).await.ok_or("NOT_CONFIGURED")?;
             list_immich(client, &config).await
         }
         "nextcloud" => {
-            let config = nextcloud_config().ok_or("NOT_CONFIGURED")?;
+            let config = nextcloud_config(db).await.ok_or("NOT_CONFIGURED")?;
             list_nextcloud(client, &config).await
         }
         _ => Err("UNKNOWN_SOURCE"),
@@ -115,7 +121,7 @@ pub async fn import_selected(
     asset_ids: &[String],
 ) -> Result<usize, &'static str> {
     validate_import(source, kind, collection_id, asset_ids)?;
-    if !configured_sources().contains(&source) {
+    if !configured_sources(db).await.contains(&source) {
         return Err("NOT_CONFIGURED");
     }
     let collection = content_store_service::find_by_kind_and_id(kind, collection_id, db)
@@ -127,13 +133,23 @@ pub async fn import_selected(
 
     let mut copied = 0;
     for id in asset_ids {
-        let (bytes, content_type, name) = download(client, source, id).await?;
+        let (bytes, content_type, name) = download(client, db, source, id).await?;
         content_service::upload_media(kind, collection_id, &bytes, &content_type, Some(&name), false, false, db)
             .await
             .map_err(upload_code)?;
         copied += 1;
     }
     Ok(copied)
+}
+
+/// Public feed thumbnail helper — Nextcloud file bytes (capped like imports).
+pub async fn fetch_nextcloud_bytes(
+    client: &Client,
+    db: &Database,
+    id: &str,
+) -> Result<(Vec<u8>, String), &'static str> {
+    let (bytes, content_type, _) = download(client, db, "nextcloud", id).await?;
+    Ok((bytes, content_type))
 }
 
 fn upload_code(err: String) -> &'static str {
@@ -150,12 +166,13 @@ fn upload_code(err: String) -> &'static str {
 
 async fn download(
     client: &Client,
+    db: &Database,
     source: &str,
     id: &str,
 ) -> Result<(Vec<u8>, String, String), &'static str> {
     match source {
         "immich" => {
-            let config = immich_config().ok_or("NOT_CONFIGURED")?;
+            let config = immich_config(db).await.ok_or("NOT_CONFIGURED")?;
             let url = format!("{}/api/assets/{id}/original", config.base_url);
             let mut request = client.get(url);
             request = request.append_header(("x-api-key", config.api_key.as_str()));
@@ -163,7 +180,7 @@ async fn download(
             Ok((bytes, content_type, format!("{id}.jpg")))
         }
         "nextcloud" => {
-            let config = nextcloud_config().ok_or("NOT_CONFIGURED")?;
+            let config = nextcloud_config(db).await.ok_or("NOT_CONFIGURED")?;
             let url = format!(
                 "{}/remote.php/dav/files/{}/{}/{}",
                 config.base_url,
@@ -300,41 +317,29 @@ async fn list_nextcloud(
     Ok(items)
 }
 
-fn immich_config() -> Option<ImmichConfig> {
-    let base_url = env::var("YEW_FULLSTACK_IMMICH_URL").unwrap_or_default();
-    let api_key = env::var("YEW_FULLSTACK_IMMICH_API_KEY").unwrap_or_default();
-    if base_url.trim().is_empty() || api_key.trim().is_empty() {
+async fn immich_config(db: &Database) -> Option<ImmichConfig> {
+    let cfg = site_config_service::resolved(db).await;
+    if !site_config_service::immich_ready(&cfg) {
         return None;
     }
-    let album_id = env::var("YEW_FULLSTACK_IMMICH_ALBUM_ID")
-        .ok()
-        .filter(|id| valid_asset_id("immich", id));
+    let album_id = Some(cfg.immich_album_id.clone()).filter(|id| valid_asset_id("immich", id));
     Some(ImmichConfig {
-        base_url: base_url.trim_end_matches('/').to_string(),
-        api_key,
+        base_url: cfg.immich_url.trim_end_matches('/').to_string(),
+        api_key: cfg.immich_api_key,
         album_id,
     })
 }
 
-fn nextcloud_config() -> Option<NextcloudConfig> {
-    let base_url = env::var("YEW_FULLSTACK_NEXTCLOUD_URL").unwrap_or_default();
-    let user = env::var("YEW_FULLSTACK_NEXTCLOUD_USER").unwrap_or_default();
-    let password = env::var("YEW_FULLSTACK_NEXTCLOUD_APP_PASSWORD").unwrap_or_default();
-    let folder = env::var("YEW_FULLSTACK_NEXTCLOUD_FOLDER").unwrap_or_default();
-    if base_url.trim().is_empty()
-        || user.trim().is_empty()
-        || password.is_empty()
-        || folder.trim().is_empty()
-        || folder.contains("..")
-        || folder.contains('\\')
-    {
+async fn nextcloud_config(db: &Database) -> Option<NextcloudConfig> {
+    let cfg = site_config_service::resolved(db).await;
+    if !site_config_service::nextcloud_ready(&cfg) {
         return None;
     }
     Some(NextcloudConfig {
-        base_url: base_url.trim_end_matches('/').to_string(),
-        user,
-        password,
-        folder: folder.trim_matches('/').to_string(),
+        base_url: cfg.nextcloud_url.trim_end_matches('/').to_string(),
+        user: cfg.nextcloud_user,
+        password: cfg.nextcloud_app_password,
+        folder: cfg.nextcloud_folder.trim_matches('/').to_string(),
     })
 }
 

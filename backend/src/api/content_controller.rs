@@ -49,8 +49,8 @@ pub async fn get_shoot(path: web::Path<String>, db: web::Data<Database>) -> Resu
     }
 }
 
-pub async fn booking() -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().json(content_service::booking_config()))
+pub async fn booking(db: web::Data<Database>) -> Result<HttpResponse> {
+    Ok(HttpResponse::Ok().json(content_service::booking_config(&db).await))
 }
 
 pub async fn other_sites() -> Result<HttpResponse> {

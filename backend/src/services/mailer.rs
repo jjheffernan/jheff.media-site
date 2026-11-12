@@ -10,9 +10,14 @@ pub async fn notify_contact(
     subject: &str,
     message: &str,
     kind: &str,
+    contact_to: Option<&str>,
 ) {
     let host = env_trimmed("YEW_FULLSTACK_SMTP_HOST");
-    let to = env_trimmed("YEW_FULLSTACK_CONTACT_EMAIL");
+    let to = contact_to
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| env_trimmed("YEW_FULLSTACK_CONTACT_EMAIL"));
     if host.is_empty() || to.is_empty() {
         info!("Contact email skipped");
         return;

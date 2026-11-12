@@ -4,7 +4,7 @@ use crate::{
         content::{ContentCollection, ReorderMediaRequest, UpdateContentCollection},
         response::ResponseBody,
     },
-    services::{content_service, library_import_service},
+    services::{content_service, library_import_service, site_config_service},
     utils::auth::require_admin,
 };
 use actix_multipart::Multipart;
@@ -375,7 +375,7 @@ pub async fn library_sources(req: HttpRequest, db: web::Data<Database>) -> Resul
     }
     Ok(HttpResponse::Ok().json(ResponseBody::new(
         "OK",
-        serde_json::json!({ "sources": library_import_service::configured_sources() }),
+        serde_json::json!({ "sources": library_import_service::configured_sources(&db).await }),
     )))
 }
 
@@ -389,9 +389,36 @@ pub async fn library_list(
         return Ok(resp);
     }
     let source = path.into_inner();
-    match library_import_service::list_candidates(&client, &source).await {
+    match library_import_service::list_candidates(&client, &db, &source).await {
         Ok(items) => Ok(HttpResponse::Ok().json(ResponseBody::new("OK", items))),
         Err(code) => Ok(library_error(code)),
+    }
+}
+
+pub async fn get_setup(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    Ok(HttpResponse::Ok().json(site_config_service::get_view(&db).await))
+}
+
+pub async fn update_setup(
+    req: HttpRequest,
+    body: web::Json<site_config_service::SiteConfigUpdate>,
+    db: web::Data<Database>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    match site_config_service::update(&db, body.into_inner()).await {
+        Ok(view) => Ok(HttpResponse::Ok().json(view)),
+        Err(code) => {
+            let status = match code {
+                "SAVE_FAILED" => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+                _ => actix_web::http::StatusCode::BAD_REQUEST,
+            };
+            Ok(ServiceError::new(status, code).response())
+        }
     }
 }
 
