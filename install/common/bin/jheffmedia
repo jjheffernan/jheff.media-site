@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Host CLI for a deployed jheff.media install.
-#   jheffmedia --update [--dev] | --status | --restart | --postinstall
+#   jheffmedia --update [-d|--dev] | --status | --restart | --postinstall
 #   jheffmedia --cleanup | --reinstall | --autoupdate …
-#   jheffmedia --help
+#   jheffmedia -h | --help
 #
 # Operator model: install (apt/docker/pct) needs root. Day-2 ops run as root or
 # the jheffmedia service user (docker group). App containers themselves are non-root.
@@ -18,7 +18,7 @@ AUTOUPDATE_ENV="${COMPOSE_DIR}/autoupdate.env"
 POSTINSTALL="${INSTALL_DIR}/install/postinstall.sh"
 SERVICE_USER="${SERVICE_USER:-jheffmedia}"
 SERVICE_UID="${SERVICE_UID:-10001}"
-# Channels: main = production; testing = non-prod (--dev / --testing).
+# Channels: main = production; testing = non-prod (-d / --dev / --testing).
 CHANNEL_PROD=main
 CHANNEL_DEV=testing
 
@@ -27,51 +27,51 @@ usage() {
 jheffmedia — manage a deployed jheff.media site
 
 Usage:
-  jheffmedia --update [--dev|--testing] [--channel main|testing] [--branch BRANCH] [--no-cache]
+  jheffmedia --update [-d|--dev|--testing] [--channel NAME] [--branch BRANCH] [--no-cache]
       Pull, rebuild image, restart stack (healthy installs).
       Plain --update always tracks production (main).
-      --dev / --testing   Deploy from testing branch
-      --channel NAME      main (prod) or testing (same as --dev)
-      --branch BRANCH     Explicit git branch (escape hatch)
-      --no-cache          Rebuild without Docker layer cache (avoid unless needed)
-  jheffmedia --autoupdate enable|disable|status [--dev|--testing] [--channel main|testing] [--interval daily|weekly]
+      -d, --dev, --testing   Deploy from testing branch
+      --channel NAME         main (prod) or testing (same as -d)
+      --branch BRANCH        Explicit git branch (escape hatch)
+      --no-cache             Rebuild without Docker layer cache (avoid unless needed)
+  jheffmedia --autoupdate enable|disable|status [-d|--dev|--testing] [--channel NAME] [--interval daily|weekly]
       Optional systemd timer (off by default). enable is idempotent; needs root.
       Channel is stored in install/common/autoupdate.env (AUTOUPDATE_CHANNEL).
-  jheffmedia --cleanup [--dry-run] [--yes|-y]
+  jheffmedia --cleanup [--dry-run] [-y|--yes]
       Safe repair: drop legacy cred dumps, ensure service user, fix ownership /
       secret perms, refresh site.service User=, prune exited jheffmedia
       containers. Does NOT delete Mongo volumes or .env.production.
-      --dry-run         Print actions only
-      --yes / -y        Skip confirm for project docker prune
-  jheffmedia --reinstall [--purge] [--dev|--testing] [--branch BRANCH] [--no-cache] [--yes|-y]
+      --dry-run              Print actions only
+      -y, --yes              Skip confirm for project docker prune
+  jheffmedia --reinstall [--purge] [-d|--dev|--testing] [--branch BRANCH] [--no-cache] [-y|--yes]
       Cleanup, then pull/rebuild/restart like --update (for broken/partial
       installs). Keeps DB volumes by default.
-      --purge           Remove this project's containers + app image first;
-                        still confirms before deleting named volumes
-      --yes / -y        Skip non-volume confirms (volumes always confirm unless
-                        JM_PURGE_VOLUMES=yes)
+      --purge                Remove this project's containers + app image first;
+                            still confirms before deleting named volumes
+      -y, --yes              Skip non-volume confirms (volumes always confirm unless
+                            JM_PURGE_VOLUMES=yes)
   jheffmedia --status
   jheffmedia --diagnostics
       Container + /healthz + Mongo auth ping (no secrets printed).
-  jheffmedia --reset-db [--yes|-y]
+  jheffmedia --reset-db [-y|--yes]
       Wipe Mongo data volume only (users/schedule/site_config). Keeps
       uploads + .env.production. Recreates DB with current MONGO_PASSWORD.
-      --yes still requires typing RESET unless JM_RESET_DB=yes.
+      -y, --yes still requires typing RESET unless JM_RESET_DB=yes.
   jheffmedia --restart
   jheffmedia --postinstall [--show-creds]
       Admin signup reminder (ADMIN_EMAILS → Admin → Setup).
       --show-creds prints admin email + secret *paths* (not Mongo/JWT values).
-  jheffmedia --help | -h
+  jheffmedia -h, --help
       This usage (also printed for bare `jheffmedia`).
 
 When to use what:
-  --cleanup     leaks / wrong owner / leftover /root/*.creds / bad User=
-  --reinstall   partial or broken install; refresh stack, keep data
-  --reset-db    Mongo password mismatch or wipe users; keep media uploads
-  --update      routine pull on production (main)
-  --update --dev  pull from testing channel
-  --autoupdate  optional periodic --update (off by default)
-  --diagnostics site/container health before opening a ticket
+  --cleanup       leaks / wrong owner / leftover /root/*.creds / bad User=
+  --reinstall     partial or broken install; refresh stack, keep data
+  --reset-db      Mongo password mismatch or wipe users; keep media uploads
+  --update        routine pull on production (main)
+  --update -d     pull from testing channel (--dev / --testing also ok)
+  --autoupdate    optional periodic --update (off by default)
+  --diagnostics   site/container health before opening a ticket
 
 Privilege:
   --update / --restart / --cleanup / --reinstall / --reset-db / --diagnostics
@@ -83,7 +83,7 @@ Privilege:
 Env:
   INSTALL_DIR    Install path (default /opt/jheffmedia-site)
   BRANCH         Default branch for install scripts (CLI --update ignores this;
-                 plain --update always uses main unless --dev/--branch)
+                 plain --update always uses main unless -d/--branch)
   SERVICE_USER   Host operator user (default jheffmedia)
   SERVICE_UID    Host/container uid (default 10001)
   JM_PURGE_VOLUMES  Set to yes with --reinstall --purge --yes to also
@@ -190,9 +190,10 @@ cmd_update() {
   BRANCH="$CHANNEL_PROD"
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --) shift; break ;;
       --branch) BRANCH="${2:?}"; shift 2 ;;
       --branch=*) BRANCH="${1#*=}"; shift ;;
-      --dev | --testing) BRANCH="$CHANNEL_DEV"; shift ;;
+      -d | --dev | --testing) BRANCH="$CHANNEL_DEV"; shift ;;
       --channel)
         BRANCH="$(resolve_channel "${2:?}")" || exit 1
         shift 2
@@ -257,7 +258,8 @@ cmd_autoupdate() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --dev | --testing) channel="$CHANNEL_DEV"; shift ;;
+      --) shift; break ;;
+      -d | --dev | --testing) channel="$CHANNEL_DEV"; shift ;;
       --channel)
         channel="$(resolve_channel "${2:?}")" || exit 1
         shift 2
@@ -316,7 +318,7 @@ Wants=network-online.target
 Type=oneshot
 EnvironmentFile=-${AUTOUPDATE_ENV}
 # Map channel → CLI flags; plain --update = main.
-ExecStart=/bin/bash -c 'ch="\${AUTOUPDATE_CHANNEL:-main}"; if [ "\$ch" = "testing" ] || [ "\$ch" = "dev" ]; then exec ${cli} --update --dev; else exec ${cli} --update; fi'
+ExecStart=/bin/bash -c 'ch="\${AUTOUPDATE_CHANNEL:-main}"; if [ "\$ch" = "testing" ] || [ "\$ch" = "dev" ]; then exec ${cli} --update -d; else exec ${cli} --update; fi'
 Nice=10
 EOF
       cat >"$unit_tmr" <<EOF
@@ -521,8 +523,9 @@ cmd_cleanup() {
   ASSUME_YES=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --) shift; break ;;
       --dry-run) dry=1; shift ;;
-      --yes | -y) ASSUME_YES=1; shift ;;
+      -y | --yes) ASSUME_YES=1; shift ;;
       *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
     esac
   done
@@ -591,13 +594,14 @@ purge_project_stack() {
 cmd_reinstall() {
   local no_cache=0 purge=0 dry=0
   ASSUME_YES=0
-  # Match --update: default prod main unless --dev/--branch.
+  # Match --update: default prod main unless -d/--branch.
   BRANCH="$CHANNEL_PROD"
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --) shift; break ;;
       --branch) BRANCH="${2:?}"; shift 2 ;;
       --branch=*) BRANCH="${1#*=}"; shift ;;
-      --dev | --testing) BRANCH="$CHANNEL_DEV"; shift ;;
+      -d | --dev | --testing) BRANCH="$CHANNEL_DEV"; shift ;;
       --channel)
         BRANCH="$(resolve_channel "${2:?}")" || exit 1
         shift 2
@@ -609,7 +613,7 @@ cmd_reinstall() {
       --no-cache) no_cache=1; shift ;;
       --purge) purge=1; shift ;;
       --dry-run) dry=1; shift ;;
-      --yes | -y) ASSUME_YES=1; shift ;;
+      -y | --yes) ASSUME_YES=1; shift ;;
       *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
     esac
   done
@@ -793,7 +797,8 @@ cmd_reset_db() {
   ASSUME_YES=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --yes | -y) ASSUME_YES=1; shift ;;
+      --) shift; break ;;
+      -y | --yes) ASSUME_YES=1; shift ;;
       *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
     esac
   done
@@ -914,7 +919,7 @@ main() {
     --reset-db | reset-db) cmd_reset_db "$@" ;;
     --restart | restart) cmd_restart ;;
     --postinstall | postinstall) cmd_postinstall "$@" ;;
-    --help | -h | help | "") usage ;;
+    -h | --help | help | "") usage ;;
     *)
       echo "Unknown command: $cmd" >&2
       usage

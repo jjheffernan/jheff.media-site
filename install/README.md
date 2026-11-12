@@ -4,7 +4,7 @@ Platform-specific one-line installers in the style of [community-scripts.org](ht
 
 **Start here:** [docs/deployment.md](../docs/deployment.md) · catalog metadata: [`registry.json`](./registry.json)
 
-Production installs default to **`main`**. Non-prod channel: **`testing`** (`BRANCH=testing` or day-2 `jheffmedia --update --dev`).
+Production installs default to **`main`**. Non-prod channel: **`testing`** (`BRANCH=testing` or day-2 `jheffmedia --update -d`).
 
 ## Layout
 
@@ -82,9 +82,9 @@ Inside the host/LXC as root:
 
 ```bash
 jheffmedia --update                   # production: pull main
-jheffmedia --update --dev             # non-prod: pull testing (alias: --testing)
+jheffmedia --update -d                # non-prod: pull testing (-d / --dev / --testing)
 jheffmedia --autoupdate enable        # optional daily timer → --update (main); off by default
-jheffmedia --autoupdate enable --dev --interval weekly
+jheffmedia --autoupdate enable -d --interval weekly
 jheffmedia --autoupdate status
 jheffmedia --autoupdate disable
 jheffmedia --cleanup                  # fix cred leaks / ownership / site.service (keeps data)

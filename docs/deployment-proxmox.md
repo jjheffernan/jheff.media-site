@@ -14,7 +14,7 @@ From the **Proxmox host** (creates a new LXC) or **inside an existing LXC/VM** a
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 ```
 
-Guided whiptail sections cover repository branch (`main` by default; `testing` for non-prod), site port, bundled MongoDB credentials, and photo feed (`static` demo works without Immich). Unattended: `UNATTENDED=yes MONGO_PASSWORD='…'`. Day-2: `jheffmedia --update` / `--update --dev`. Full reference: [install/proxmox/README.md](../install/proxmox/README.md) · other targets: [install/README.md](../install/README.md).
+Guided whiptail sections cover repository branch (`main` by default; `testing` for non-prod), site port, bundled MongoDB credentials, and photo feed (`static` demo works without Immich). Unattended: `UNATTENDED=yes MONGO_PASSWORD='…'`. Day-2: `jheffmedia --update` / `--update -d`. Full reference: [install/proxmox/README.md](../install/proxmox/README.md) · other targets: [install/README.md](../install/README.md).
 
 ## Target layout
 

@@ -126,14 +126,14 @@ Inside the install host/LXC as root or `jheffmedia`:
 
 ```bash
 jheffmedia --update              # always tracks production main
-jheffmedia --update --dev        # tracks testing (alias: --testing)
+jheffmedia --update -d           # tracks testing (-d / --dev / --testing)
 ```
 
 Optional autoupdate (systemd timer, **off by default**):
 
 ```bash
 jheffmedia --autoupdate enable                 # daily → main
-jheffmedia --autoupdate enable --dev --interval weekly
+jheffmedia --autoupdate enable -d --interval weekly
 jheffmedia --autoupdate status
 jheffmedia --autoupdate disable
 # journalctl -u jheffmedia-autoupdate.service -n 50
@@ -195,7 +195,7 @@ Curl fallback (or older installs):
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"
 ```
 
-Keep `backend/src/secret.key` — rotating it logs everyone out. Non-prod channel: `jheffmedia --update --dev` (git branch `testing`).
+Keep `backend/src/secret.key` — rotating it logs everyone out. Non-prod channel: `jheffmedia --update -d` (git branch `testing`).
 
 ## Process model (single replica)
 

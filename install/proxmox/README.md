@@ -48,7 +48,7 @@ Non-prod / `testing` branch:
 BRANCH=testing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/testing/install/proxmox/install.sh)"
 ```
 
-Day-2 on an existing LXC: `jheffmedia --update --dev` (after CLI on `main` includes `--dev`).
+Day-2 on an existing LXC: `jheffmedia --update -d` (testing channel; `--dev` still works).
 
 ## Proxmox-only files
 
@@ -68,7 +68,7 @@ Re-run the CT script on the Proxmox host and choose update, or inside the contai
 
 ```bash
 jheffmedia --update              # production (main)
-jheffmedia --update --dev        # testing channel
+jheffmedia --update -d           # testing channel (--dev / --testing)
 # optional: jheffmedia --autoupdate enable
 ```
 
