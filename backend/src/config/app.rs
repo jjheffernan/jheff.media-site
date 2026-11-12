@@ -149,6 +149,7 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                     )
                     .route("/analytics", web::get().to(telemetry_controller::analytics))
                     .route("/social", web::get().to(social_controller::channels))
+                    .route("/social", web::put().to(social_controller::update_social))
                     .route("/contacts", web::get().to(contact_controller::list))
                     .route(
                         "/contacts/{id}",

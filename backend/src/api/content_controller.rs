@@ -1,4 +1,4 @@
-use crate::services::{content_service, content_upload_service, links_service};
+use crate::services::{content_service, content_upload_service, links_service, social_service};
 use crate::utils::auth::require_admin;
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use awc::Client;
@@ -54,8 +54,11 @@ pub async fn other_sites() -> Result<HttpResponse> {
 }
 
 pub async fn social_links(db: web::Data<Database>) -> Result<HttpResponse> {
+    let links = links_service::list(&db).await;
+    let integrations = social_service::public_integration_links(&db).await;
     Ok(HttpResponse::Ok().json(serde_json::json!({
-        "links": links_service::list(&db).await
+        "links": links,
+        "integrations": integrations,
     })))
 }
 

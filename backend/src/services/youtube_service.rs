@@ -1,6 +1,7 @@
 use crate::{
     error::{ServiceError, ServiceResult},
     models::social::SocialPost,
+    services::site_config_service::ResolvedConfig,
 };
 use actix_web::http::StatusCode;
 use awc::Client;
@@ -46,38 +47,55 @@ struct YouTubeThumb {
     url: String,
 }
 
-pub fn channel_url() -> String {
-    env::var("YEW_FULLSTACK_YOUTUBE_CHANNEL_URL")
-        .ok()
-        .filter(|u| !u.is_empty())
-        .unwrap_or_else(|| format!("https://www.youtube.com/@{}", DEFAULT_CHANNEL_HANDLE))
+pub fn channel_url(cfg: &ResolvedConfig) -> String {
+    if !cfg.youtube_channel_url.trim().is_empty() {
+        cfg.youtube_channel_url.clone()
+    } else {
+        let handle = if cfg.youtube_handle.trim().is_empty() {
+            DEFAULT_CHANNEL_HANDLE
+        } else {
+            cfg.youtube_handle.trim().trim_start_matches('@')
+        };
+        format!("https://www.youtube.com/@{}", handle)
+    }
 }
 
-pub async fn fetch_channel_videos(client: &Client, limit: usize) -> ServiceResult<Vec<SocialPost>> {
-    let api_key = env::var("YEW_FULLSTACK_YOUTUBE_API_KEY")
-        .ok()
-        .filter(|k| !k.is_empty());
+pub fn channel_handle(cfg: &ResolvedConfig) -> String {
+    if !cfg.youtube_handle.trim().is_empty() {
+        cfg.youtube_handle.clone()
+    } else {
+        format!("@{}", DEFAULT_CHANNEL_HANDLE)
+    }
+}
 
-    if api_key.is_none() {
+pub async fn fetch_channel_videos(
+    client: &Client,
+    limit: usize,
+    cfg: &ResolvedConfig,
+) -> ServiceResult<Vec<SocialPost>> {
+    let api_key = cfg.youtube_api_key.trim();
+    if api_key.is_empty() {
         return Ok(static_youtube_posts());
     }
 
-    let channel_id = env::var("YEW_FULLSTACK_YOUTUBE_CHANNEL_ID")
-        .ok()
-        .filter(|id| !id.is_empty());
-
-    let url = if let Some(channel_id) = channel_id {
+    let channel_id = cfg.youtube_channel_id.trim();
+    let url = if !channel_id.is_empty() {
         format!(
             "https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={}&type=video&order=date&maxResults={}&key={}",
             channel_id,
             limit.clamp(1, 25),
-            api_key.unwrap()
+            api_key
         )
     } else {
+        let handle = cfg.youtube_handle.trim().trim_start_matches('@');
+        let q = if handle.is_empty() {
+            DEFAULT_CHANNEL_HANDLE
+        } else {
+            handle
+        };
         format!(
             "https://www.googleapis.com/youtube/v3/search?part=snippet&q={}&type=channel&maxResults=1&key={}",
-            DEFAULT_CHANNEL_HANDLE,
-            api_key.unwrap()
+            q, api_key
         )
     };
 
@@ -97,7 +115,7 @@ pub async fn fetch_channel_videos(client: &Client, limit: usize) -> ServiceResul
         .await
         .map_err(|e| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let posts: Vec<crate::models::social::SocialPost> = payload
+    let posts: Vec<SocialPost> = payload
         .items
         .into_iter()
         .filter_map(|item| {

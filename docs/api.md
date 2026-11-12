@@ -290,7 +290,7 @@ Public substring search across gallery and shoot titles, summaries, locations, d
 
 ### `GET /api/links`
 
-Public social link list for `/links`. An empty list is `{ "links": [] }`.
+Public social link list for `/links`. Shape: `{ "links": [...], "integrations": [{ "platform", "label", "url", "live" }] }`. Integrations come from connected social config (profile URLs); static `links` remain editable in Admin. An empty page is `{ "links": [], "integrations": [] }`.
 
 **Success** `200`
 
@@ -442,9 +442,13 @@ Admin JWT. Site setup wizard: feed provider (`none` | `static` | `immich` | `nex
 
 Admin JWT. Non-secret runtime snapshot for live troubleshooting: `dbReachable`, `dbTests` (`ping` / `listCollections` / `usersReadable`), `feedProvider`, `rustLog` (env value only), `uptimeSecs`, `version`, `buildId` (`YEW_FULLSTACK_BUILD_ID`, often a git SHA), `compressEnabled`, and `warnings` (`NO_BUILD_ID`, `CORS_DEFAULT`, …). No connection strings, keys, or JWTs. Admin → Dev also flags frontend/backend `VERSION_MISMATCH` and probes `Content-Encoding` on public routes.
 
-### `GET /api/admin/social`
+### `GET /api/admin/social` / `PUT /api/admin/social`
 
-Admin JWT. Channel status for Instagram/YouTube (and env extras): whether each source is live or fallback. No tokens in the response. No first-party UI caller today; kept for admin tooling / curl.
+Admin JWT. Social integrations (Instagram access token, YouTube API key + channel id, optional Other platform). Stored in Mongo `site_config` like Immich secrets; empty secret fields on PUT keep the previous value. Secrets are never echoed — response uses `*Set` / `*Hint` masks.
+
+**GET** returns `{ "config": SocialConfigView, "channels": [ ChannelView ] }` — channel rows still report live vs fallback status. **PUT** body is `SocialConfigUpdate` (handles, profile URLs, channel id, optional secrets); response is the masked `SocialConfigView`. No process restart — hub/feed re-read config each request. Env vars remain the bootstrap default when Mongo fields are empty.
+
+Admin UI: **Admin → Links → Social integrations**.
 
 ### `GET /api/admin/library`
 

@@ -23,7 +23,7 @@ pub struct ContentHubResponse {
 
 pub async fn hub(db: &Database, client: &Client) -> ContentHubResponse {
     let (mut social, mut shoots, mut galleries) = join3(
-        social_service::hub_config(client),
+        social_service::hub_config(db, client),
         list_shoots_merged(db),
         list_galleries_merged(db),
     )

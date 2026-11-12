@@ -66,7 +66,7 @@ pub fn social_hub() -> Html {
             if instagram_posts.is_empty() && youtube_posts.is_empty() {
                 html! {
                     <Text tone={TextTone::Muted}>
-                        { "Instagram and YouTube appear here when the backend keys are set." }
+                        { "Instagram and YouTube appear here when connected under Admin → Links." }
                     </Text>
                 }
             } else {

@@ -38,10 +38,84 @@ pub struct SiteConfigDoc {
     pub contact_email: String,
     #[serde(default)]
     pub public_url: String,
+    // Social integrations (API keys / tokens). Empty DB values fall back to env in resolved().
+    #[serde(default)]
+    pub instagram_access_token: String,
+    #[serde(default)]
+    pub instagram_handle: String,
+    #[serde(default)]
+    pub instagram_profile_url: String,
+    #[serde(default)]
+    pub youtube_api_key: String,
+    #[serde(default)]
+    pub youtube_channel_id: String,
+    #[serde(default)]
+    pub youtube_channel_url: String,
+    #[serde(default)]
+    pub youtube_handle: String,
+    #[serde(default)]
+    pub other_platform: String,
+    #[serde(default)]
+    pub other_handle: String,
+    #[serde(default)]
+    pub other_profile_url: String,
+    #[serde(default)]
+    pub other_api_key: String,
 }
 
 fn default_provider() -> String {
     String::from("none")
+}
+
+/// Admin social integrations — secrets masked.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SocialConfigView {
+    pub instagram_handle: String,
+    pub instagram_profile_url: String,
+    pub instagram_token_set: bool,
+    pub instagram_token_hint: String,
+    pub youtube_handle: String,
+    pub youtube_channel_url: String,
+    pub youtube_channel_id: String,
+    pub youtube_api_key_set: bool,
+    pub youtube_api_key_hint: String,
+    pub other_platform: String,
+    pub other_handle: String,
+    pub other_profile_url: String,
+    pub other_api_key_set: bool,
+    pub other_api_key_hint: String,
+    pub from_db: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SocialConfigUpdate {
+    #[serde(default)]
+    pub instagram_handle: String,
+    #[serde(default)]
+    pub instagram_profile_url: String,
+    /// Empty keeps the previous token.
+    #[serde(default)]
+    pub instagram_access_token: String,
+    #[serde(default)]
+    pub youtube_handle: String,
+    #[serde(default)]
+    pub youtube_channel_url: String,
+    #[serde(default)]
+    pub youtube_channel_id: String,
+    /// Empty keeps the previous key.
+    #[serde(default)]
+    pub youtube_api_key: String,
+    #[serde(default)]
+    pub other_platform: String,
+    #[serde(default)]
+    pub other_handle: String,
+    #[serde(default)]
+    pub other_profile_url: String,
+    /// Empty keeps the previous key.
+    #[serde(default)]
+    pub other_api_key: String,
 }
 
 /// Admin GET shape — secrets masked.
@@ -112,6 +186,17 @@ pub struct ResolvedConfig {
     pub feed_static_json: String,
     pub contact_email: String,
     pub public_url: String,
+    pub instagram_access_token: String,
+    pub instagram_handle: String,
+    pub instagram_profile_url: String,
+    pub youtube_api_key: String,
+    pub youtube_channel_id: String,
+    pub youtube_channel_url: String,
+    pub youtube_handle: String,
+    pub other_platform: String,
+    pub other_handle: String,
+    pub other_profile_url: String,
+    pub other_api_key: String,
     pub from_db: bool,
 }
 
@@ -136,6 +221,75 @@ fn from_env() -> SiteConfigDoc {
         feed_static_json: env_or("YEW_FULLSTACK_FEED_STATIC_JSON"),
         contact_email: env_or("YEW_FULLSTACK_CONTACT_EMAIL"),
         public_url: env_or("YEW_FULLSTACK_PUBLIC_URL"),
+        instagram_access_token: env_or("YEW_FULLSTACK_INSTAGRAM_ACCESS_TOKEN"),
+        instagram_handle: env_or("YEW_FULLSTACK_INSTAGRAM_HANDLE"),
+        instagram_profile_url: env_or("YEW_FULLSTACK_INSTAGRAM_PROFILE_URL"),
+        youtube_api_key: env_or("YEW_FULLSTACK_YOUTUBE_API_KEY"),
+        youtube_channel_id: env_or("YEW_FULLSTACK_YOUTUBE_CHANNEL_ID"),
+        youtube_channel_url: env_or("YEW_FULLSTACK_YOUTUBE_CHANNEL_URL"),
+        youtube_handle: env_or("YEW_FULLSTACK_YOUTUBE_HANDLE"),
+        other_platform: String::new(),
+        other_handle: String::new(),
+        other_profile_url: String::new(),
+        other_api_key: String::new(),
+    }
+}
+
+fn prefer_nonempty(db_val: String, env_key: &str) -> String {
+    if db_val.trim().is_empty() {
+        env_or(env_key)
+    } else {
+        db_val
+    }
+}
+
+fn keep_secret(incoming: &str, previous: String) -> String {
+    if incoming.trim().is_empty() {
+        previous
+    } else {
+        incoming.trim().to_string()
+    }
+}
+
+fn doc_to_resolved(doc: SiteConfigDoc, from_db: bool) -> ResolvedConfig {
+    // Social secrets: empty Mongo fields still honor env so Setup saves don't blank live feeds.
+    ResolvedConfig {
+        feed_provider: normalize_provider(&doc.feed_provider),
+        immich_url: doc.immich_url,
+        immich_api_key: doc.immich_api_key,
+        immich_album_id: doc.immich_album_id,
+        immich_shared_key: doc.immich_shared_key,
+        nextcloud_url: doc.nextcloud_url,
+        nextcloud_user: doc.nextcloud_user,
+        nextcloud_app_password: doc.nextcloud_app_password,
+        nextcloud_folder: doc.nextcloud_folder,
+        feed_static_json: doc.feed_static_json,
+        contact_email: doc.contact_email,
+        public_url: doc.public_url,
+        instagram_access_token: prefer_nonempty(
+            doc.instagram_access_token,
+            "YEW_FULLSTACK_INSTAGRAM_ACCESS_TOKEN",
+        ),
+        instagram_handle: prefer_nonempty(doc.instagram_handle, "YEW_FULLSTACK_INSTAGRAM_HANDLE"),
+        instagram_profile_url: prefer_nonempty(
+            doc.instagram_profile_url,
+            "YEW_FULLSTACK_INSTAGRAM_PROFILE_URL",
+        ),
+        youtube_api_key: prefer_nonempty(doc.youtube_api_key, "YEW_FULLSTACK_YOUTUBE_API_KEY"),
+        youtube_channel_id: prefer_nonempty(
+            doc.youtube_channel_id,
+            "YEW_FULLSTACK_YOUTUBE_CHANNEL_ID",
+        ),
+        youtube_channel_url: prefer_nonempty(
+            doc.youtube_channel_url,
+            "YEW_FULLSTACK_YOUTUBE_CHANNEL_URL",
+        ),
+        youtube_handle: prefer_nonempty(doc.youtube_handle, "YEW_FULLSTACK_YOUTUBE_HANDLE"),
+        other_platform: doc.other_platform,
+        other_handle: doc.other_handle,
+        other_profile_url: doc.other_profile_url,
+        other_api_key: doc.other_api_key,
+        from_db,
     }
 }
 
@@ -160,38 +314,9 @@ async fn load_doc(db: &Database) -> Option<SiteConfigDoc> {
 
 pub async fn resolved(db: &Database) -> ResolvedConfig {
     if let Some(doc) = load_doc(db).await {
-        return ResolvedConfig {
-            feed_provider: normalize_provider(&doc.feed_provider),
-            immich_url: doc.immich_url,
-            immich_api_key: doc.immich_api_key,
-            immich_album_id: doc.immich_album_id,
-            immich_shared_key: doc.immich_shared_key,
-            nextcloud_url: doc.nextcloud_url,
-            nextcloud_user: doc.nextcloud_user,
-            nextcloud_app_password: doc.nextcloud_app_password,
-            nextcloud_folder: doc.nextcloud_folder,
-            feed_static_json: doc.feed_static_json,
-            contact_email: doc.contact_email,
-            public_url: doc.public_url,
-            from_db: true,
-        };
+        return doc_to_resolved(doc, true);
     }
-    let env = from_env();
-    ResolvedConfig {
-        feed_provider: normalize_provider(&env.feed_provider),
-        immich_url: env.immich_url,
-        immich_api_key: env.immich_api_key,
-        immich_album_id: env.immich_album_id,
-        immich_shared_key: env.immich_shared_key,
-        nextcloud_url: env.nextcloud_url,
-        nextcloud_user: env.nextcloud_user,
-        nextcloud_app_password: env.nextcloud_app_password,
-        nextcloud_folder: env.nextcloud_folder,
-        feed_static_json: env.feed_static_json,
-        contact_email: env.contact_email,
-        public_url: env.public_url,
-        from_db: false,
-    }
+    doc_to_resolved(from_env(), false)
 }
 
 fn normalize_provider(raw: &str) -> String {
@@ -320,6 +445,8 @@ pub async fn update(db: &Database, body: SiteConfigUpdate) -> Result<SiteConfigV
         body.immich_shared_key.trim().to_string()
     };
 
+    // Preserve social integrations — Setup form does not edit them.
+    let previous_doc = load_doc(db).await.unwrap_or_else(from_env);
     let doc = SiteConfigDoc {
         id: DOC_ID.into(),
         feed_provider: provider.clone(),
@@ -334,6 +461,17 @@ pub async fn update(db: &Database, body: SiteConfigUpdate) -> Result<SiteConfigV
         feed_static_json: body.feed_static_json.trim().to_string(),
         contact_email: body.contact_email.trim().to_lowercase(),
         public_url: body.public_url.trim().trim_end_matches('/').to_string(),
+        instagram_access_token: previous_doc.instagram_access_token,
+        instagram_handle: previous_doc.instagram_handle,
+        instagram_profile_url: previous_doc.instagram_profile_url,
+        youtube_api_key: previous_doc.youtube_api_key,
+        youtube_channel_id: previous_doc.youtube_channel_id,
+        youtube_channel_url: previous_doc.youtube_channel_url,
+        youtube_handle: previous_doc.youtube_handle,
+        other_platform: previous_doc.other_platform,
+        other_handle: previous_doc.other_handle,
+        other_profile_url: previous_doc.other_profile_url,
+        other_api_key: previous_doc.other_api_key,
     };
 
     if provider == "immich" && doc.immich_api_key.is_empty() {
@@ -352,24 +490,109 @@ pub async fn update(db: &Database, body: SiteConfigUpdate) -> Result<SiteConfigV
     // Never log secrets.
     info!("site_config saved (provider={})", provider);
 
-    Ok(to_view(
-        &ResolvedConfig {
-            feed_provider: doc.feed_provider,
-            immich_url: doc.immich_url,
-            immich_api_key: doc.immich_api_key,
-            immich_album_id: doc.immich_album_id,
-            immich_shared_key: doc.immich_shared_key,
-            nextcloud_url: doc.nextcloud_url,
-            nextcloud_user: doc.nextcloud_user,
-            nextcloud_app_password: doc.nextcloud_app_password,
-            nextcloud_folder: doc.nextcloud_folder,
-            feed_static_json: doc.feed_static_json,
-            contact_email: doc.contact_email,
-            public_url: doc.public_url,
-            from_db: true,
-        },
-        provider_changed,
-    ))
+    Ok(to_view(&doc_to_resolved(doc, true), provider_changed))
+}
+
+fn to_social_view(cfg: &ResolvedConfig) -> SocialConfigView {
+    let (ig_set, ig_hint) = mask_secret(&cfg.instagram_access_token);
+    let (yt_set, yt_hint) = mask_secret(&cfg.youtube_api_key);
+    let (other_set, other_hint) = mask_secret(&cfg.other_api_key);
+    SocialConfigView {
+        instagram_handle: cfg.instagram_handle.clone(),
+        instagram_profile_url: cfg.instagram_profile_url.clone(),
+        instagram_token_set: ig_set,
+        instagram_token_hint: ig_hint,
+        youtube_handle: cfg.youtube_handle.clone(),
+        youtube_channel_url: cfg.youtube_channel_url.clone(),
+        youtube_channel_id: cfg.youtube_channel_id.clone(),
+        youtube_api_key_set: yt_set,
+        youtube_api_key_hint: yt_hint,
+        other_platform: cfg.other_platform.clone(),
+        other_handle: cfg.other_handle.clone(),
+        other_profile_url: cfg.other_profile_url.clone(),
+        other_api_key_set: other_set,
+        other_api_key_hint: other_hint,
+        from_db: cfg.from_db,
+    }
+}
+
+pub async fn get_social_view(db: &Database) -> SocialConfigView {
+    to_social_view(&resolved(db).await)
+}
+
+fn validate_social(body: &SocialConfigUpdate) -> Result<(), &'static str> {
+    if !allowed_http_url(&body.instagram_profile_url)
+        || !allowed_http_url(&body.youtube_channel_url)
+        || !allowed_http_url(&body.other_profile_url)
+    {
+        return Err("BAD_URL");
+    }
+    let platform = body.other_platform.trim().to_ascii_lowercase();
+    if !platform.is_empty() {
+        let ok = (2..=20).contains(&platform.len())
+            && platform
+                .chars()
+                .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '-')
+            && platform != "instagram"
+            && platform != "youtube";
+        if !ok {
+            return Err("BAD_PLATFORM");
+        }
+    }
+    if body.instagram_handle.chars().count() > 40
+        || body.youtube_handle.chars().count() > 40
+        || body.other_handle.chars().count() > 40
+    {
+        return Err("BAD_HANDLE");
+    }
+    if body.youtube_channel_id.chars().count() > 64 {
+        return Err("BAD_CHANNEL_ID");
+    }
+    Ok(())
+}
+
+pub async fn update_social(
+    db: &Database,
+    body: SocialConfigUpdate,
+) -> Result<SocialConfigView, &'static str> {
+    validate_social(&body)?;
+    let previous = load_doc(db).await.unwrap_or_else(from_env);
+    // Feed/setup fields stay as stored; only social columns change.
+    let mut doc = previous;
+    doc.id = DOC_ID.into();
+    doc.instagram_access_token =
+        keep_secret(&body.instagram_access_token, doc.instagram_access_token);
+    doc.instagram_handle = body.instagram_handle.trim().to_string();
+    doc.instagram_profile_url = body
+        .instagram_profile_url
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
+    doc.youtube_api_key = keep_secret(&body.youtube_api_key, doc.youtube_api_key);
+    doc.youtube_channel_id = body.youtube_channel_id.trim().to_string();
+    doc.youtube_channel_url = body
+        .youtube_channel_url
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
+    doc.youtube_handle = body.youtube_handle.trim().to_string();
+    doc.other_platform = body.other_platform.trim().to_ascii_lowercase();
+    doc.other_handle = body.other_handle.trim().to_string();
+    doc.other_profile_url = body
+        .other_profile_url
+        .trim()
+        .trim_end_matches('/')
+        .to_string();
+    doc.other_api_key = keep_secret(&body.other_api_key, doc.other_api_key);
+
+    let coll = db.collection::<SiteConfigDoc>(COLLECTION);
+    coll.replace_one(doc! { "_id": DOC_ID }, &doc)
+        .upsert(true)
+        .await
+        .map_err(|_| "SAVE_FAILED")?;
+
+    info!("site_config social integrations saved");
+    Ok(to_social_view(&doc_to_resolved(doc, true)))
 }
 
 pub fn immich_ready(cfg: &ResolvedConfig) -> bool {
@@ -424,5 +647,27 @@ mod tests {
         assert!(validate_update(&body).is_ok());
         body.feed_provider = "nextcloud".into();
         assert_eq!(validate_update(&body), Err("NEXTCLOUD_REQUIRED"));
+    }
+
+    #[test]
+    fn social_update_rejects_bad_other_platform_and_urls() {
+        let mut body = SocialConfigUpdate {
+            instagram_handle: "@x".into(),
+            instagram_profile_url: "https://instagram.com/x".into(),
+            instagram_access_token: String::new(),
+            youtube_handle: String::new(),
+            youtube_channel_url: String::new(),
+            youtube_channel_id: String::new(),
+            youtube_api_key: String::new(),
+            other_platform: "instagram".into(),
+            other_handle: "@x".into(),
+            other_profile_url: "https://example.com/x".into(),
+            other_api_key: String::new(),
+        };
+        assert_eq!(validate_social(&body), Err("BAD_PLATFORM"));
+        body.other_platform = "tiktok".into();
+        assert!(validate_social(&body).is_ok());
+        body.other_profile_url = "javascript:alert(1)".into();
+        assert_eq!(validate_social(&body), Err("BAD_URL"));
     }
 }

@@ -1,11 +1,13 @@
 use crate::{
     models::social::{SocialAccount, SocialHubResponse},
-    services::{instagram_service, youtube_service},
+    services::{instagram_service, site_config_service, youtube_service},
 };
 use awc::Client;
+use mongodb::Database;
 use std::env;
 
-pub async fn hub_config(client: &Client) -> SocialHubResponse {
+pub async fn hub_config(db: &Database, client: &Client) -> SocialHubResponse {
+    let cfg = site_config_service::resolved(db).await;
     let json = env::var("YEW_FULLSTACK_SOCIAL_HUB_JSON").unwrap_or_default();
     let mut accounts: Vec<SocialAccount> = vec![];
     let mut static_posts: Vec<crate::models::social::SocialPost> = vec![];
@@ -19,8 +21,8 @@ pub async fn hub_config(client: &Client) -> SocialHubResponse {
         }
     }
 
-    let instagram_handle = instagram_service::instagram_handle();
-    let instagram_profile = instagram_service::instagram_profile_url();
+    let instagram_handle = instagram_service::instagram_handle(&cfg);
+    let instagram_profile = instagram_service::instagram_profile_url(&cfg);
 
     if !accounts.iter().any(|a| a.platform == "instagram") {
         accounts.insert(
@@ -37,10 +39,22 @@ pub async fn hub_config(client: &Client) -> SocialHubResponse {
     if !accounts.iter().any(|a| a.platform == "youtube") {
         accounts.push(SocialAccount {
             platform: String::from("youtube"),
-            handle: String::from("@jheffmedia"),
-            profile_url: youtube_service::channel_url(),
+            handle: youtube_service::channel_handle(&cfg),
+            profile_url: youtube_service::channel_url(&cfg),
             display_name: Some(String::from("jheffmedia")),
         });
+    }
+
+    // Admin "Other" integration sits above env extras.
+    if let Some(other) = other_from_cfg(&cfg) {
+        if !accounts.iter().any(|a| a.platform == other.platform) {
+            accounts.push(SocialAccount {
+                platform: other.platform.clone(),
+                handle: other.handle.clone(),
+                profile_url: other.profile_url.clone(),
+                display_name: None,
+            });
+        }
     }
 
     for channel in extra_channels() {
@@ -56,8 +70,8 @@ pub async fn hub_config(client: &Client) -> SocialHubResponse {
     }
 
     let (instagram_posts, instagram_source) =
-        instagram_service::instagram_posts_or_fallback(client, 12).await;
-    let youtube_posts = youtube_service::fetch_channel_videos(client, 6)
+        instagram_service::instagram_posts_or_fallback(client, 12, &cfg).await;
+    let youtube_posts = youtube_service::fetch_channel_videos(client, 6, &cfg)
         .await
         .unwrap_or_default();
     let has_instagram = !instagram_posts.is_empty();
@@ -89,6 +103,13 @@ pub struct ChannelView {
     pub posts: Vec<crate::models::social::SocialPost>,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SocialAdminResponse {
+    pub config: site_config_service::SocialConfigView,
+    pub channels: Vec<ChannelView>,
+}
+
 #[derive(Debug, Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ChannelConfig {
@@ -99,12 +120,48 @@ struct ChannelConfig {
     key_env: String,
 }
 
-pub async fn channels(client: &Client) -> Vec<ChannelView> {
-    let hub = hub_config(client).await;
+struct OtherChannel {
+    platform: String,
+    handle: String,
+    profile_url: String,
+}
+
+fn other_from_cfg(cfg: &site_config_service::ResolvedConfig) -> Option<OtherChannel> {
+    let platform = cfg.other_platform.trim().to_ascii_lowercase();
+    let handle = cfg.other_handle.trim();
+    let profile_url = cfg.other_profile_url.trim();
+    if platform.is_empty() || handle.is_empty() || profile_url.is_empty() {
+        return None;
+    }
+    Some(OtherChannel {
+        platform,
+        handle: handle.to_string(),
+        profile_url: profile_url.to_string(),
+    })
+}
+
+pub async fn admin_social(db: &Database, client: &Client) -> SocialAdminResponse {
+    let cfg_view = site_config_service::get_social_view(db).await;
+    let channels = channels(db, client).await;
+    SocialAdminResponse {
+        config: cfg_view,
+        channels,
+    }
+}
+
+pub async fn channels(db: &Database, client: &Client) -> Vec<ChannelView> {
+    let cfg = site_config_service::resolved(db).await;
+    let hub = hub_config(db, client).await;
     hub.accounts
         .into_iter()
         .map(|account| {
             let key_env = key_env_for(&account.platform);
+            let keyed = match account.platform.as_str() {
+                "instagram" => !cfg.instagram_access_token.trim().is_empty(),
+                "youtube" => !cfg.youtube_api_key.trim().is_empty(),
+                other if other == cfg.other_platform => !cfg.other_api_key.trim().is_empty(),
+                _ => env_ready(&key_env),
+            };
             let posts = hub
                 .posts
                 .iter()
@@ -113,7 +170,7 @@ pub async fn channels(client: &Client) -> Vec<ChannelView> {
                 .cloned()
                 .collect();
             ChannelView {
-                keyed: env_ready(&key_env),
+                keyed,
                 platform: account.platform,
                 handle: account.handle,
                 profile_url: account.profile_url,
@@ -124,6 +181,64 @@ pub async fn channels(client: &Client) -> Vec<ChannelView> {
         .collect()
 }
 
+/// Public `/links` integrations — profile URLs when connected (token/key or profile set).
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicIntegrationLink {
+    pub platform: String,
+    pub label: String,
+    pub url: String,
+    pub live: bool,
+}
+
+pub async fn public_integration_links(db: &Database) -> Vec<PublicIntegrationLink> {
+    let cfg = site_config_service::resolved(db).await;
+    let mut out = Vec::new();
+
+    let ig_url = instagram_service::instagram_profile_url(&cfg);
+    let ig_live = !cfg.instagram_access_token.trim().is_empty();
+    if ig_live || !cfg.instagram_profile_url.trim().is_empty() {
+        out.push(PublicIntegrationLink {
+            platform: "instagram".into(),
+            label: "Instagram".into(),
+            url: ig_url,
+            live: ig_live,
+        });
+    }
+
+    let yt_url = youtube_service::channel_url(&cfg);
+    let yt_live = !cfg.youtube_api_key.trim().is_empty();
+    if yt_live
+        || !cfg.youtube_channel_url.trim().is_empty()
+        || !cfg.youtube_channel_id.trim().is_empty()
+    {
+        out.push(PublicIntegrationLink {
+            platform: "youtube".into(),
+            label: "YouTube".into(),
+            url: yt_url,
+            live: yt_live,
+        });
+    }
+
+    if let Some(other) = other_from_cfg(&cfg) {
+        let label = {
+            let mut chars = other.platform.chars();
+            match chars.next() {
+                Some(c) => format!("{}{}", c.to_uppercase(), chars.as_str()),
+                None => other.platform.clone(),
+            }
+        };
+        out.push(PublicIntegrationLink {
+            platform: other.platform,
+            label,
+            url: other.profile_url,
+            live: !cfg.other_api_key.trim().is_empty(),
+        });
+    }
+
+    out
+}
+
 fn merge_posts(
     static_posts: Vec<crate::models::social::SocialPost>,
     instagram: Vec<crate::models::social::SocialPost>,
@@ -131,12 +246,22 @@ fn merge_posts(
 ) -> Vec<crate::models::social::SocialPost> {
     let mut posts = Vec::new();
     if instagram.is_empty() {
-        posts.extend(static_posts.iter().filter(|post| post.platform == "instagram").cloned());
+        posts.extend(
+            static_posts
+                .iter()
+                .filter(|post| post.platform == "instagram")
+                .cloned(),
+        );
     } else {
         posts.extend(instagram);
     }
     if youtube.is_empty() {
-        posts.extend(static_posts.iter().filter(|post| post.platform == "youtube").cloned());
+        posts.extend(
+            static_posts
+                .iter()
+                .filter(|post| post.platform == "youtube")
+                .cloned(),
+        );
     } else {
         posts.extend(youtube);
     }

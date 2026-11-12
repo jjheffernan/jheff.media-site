@@ -18,8 +18,8 @@ pub async fn feed(
     )
 }
 
-pub async fn instagram_featured() -> Result<HttpResponse> {
-    match media_feed_service::instagram_featured() {
+pub async fn instagram_featured(db: web::Data<mongodb::Database>) -> Result<HttpResponse> {
+    match media_feed_service::instagram_featured(&db).await {
         Some(featured) => Ok(HttpResponse::Ok().json(featured)),
         None => Ok(HttpResponse::NoContent().finish()),
     }

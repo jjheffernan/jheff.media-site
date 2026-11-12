@@ -1,11 +1,11 @@
 use crate::{
     error::{ServiceError, ServiceResult},
     models::social::SocialPost,
+    services::site_config_service::ResolvedConfig,
 };
 use actix_web::http::StatusCode;
 use awc::Client;
 use serde::Deserialize;
-use std::env;
 
 const DEFAULT_LIMIT: usize = 12;
 const INSTAGRAM_HANDLE: &str = "jheffmedia";
@@ -27,31 +27,34 @@ struct InstagramMedia {
     timestamp: Option<String>,
 }
 
-pub fn instagram_profile_url() -> String {
-    env::var("YEW_FULLSTACK_INSTAGRAM_PROFILE_URL")
-        .ok()
-        .filter(|u| !u.is_empty())
-        .unwrap_or_else(|| INSTAGRAM_PROFILE_URL.to_string())
+pub fn instagram_profile_url(cfg: &ResolvedConfig) -> String {
+    if !cfg.instagram_profile_url.trim().is_empty() {
+        cfg.instagram_profile_url.clone()
+    } else {
+        INSTAGRAM_PROFILE_URL.to_string()
+    }
 }
 
-pub fn instagram_handle() -> String {
-    env::var("YEW_FULLSTACK_INSTAGRAM_HANDLE")
-        .ok()
-        .filter(|h| !h.is_empty())
-        .unwrap_or_else(|| format!("@{}", INSTAGRAM_HANDLE))
+pub fn instagram_handle(cfg: &ResolvedConfig) -> String {
+    if !cfg.instagram_handle.trim().is_empty() {
+        cfg.instagram_handle.clone()
+    } else {
+        format!("@{}", INSTAGRAM_HANDLE)
+    }
 }
 
-pub async fn fetch_instagram_posts(client: &Client, limit: usize) -> ServiceResult<Vec<SocialPost>> {
-    let token = env::var("YEW_FULLSTACK_INSTAGRAM_ACCESS_TOKEN")
-        .ok()
-        .filter(|t| !t.is_empty());
-
-    if token.is_none() {
+pub async fn fetch_instagram_posts(
+    client: &Client,
+    limit: usize,
+    cfg: &ResolvedConfig,
+) -> ServiceResult<Vec<SocialPost>> {
+    let token = cfg.instagram_access_token.trim();
+    if token.is_empty() {
         return Ok(vec![]);
     }
 
-    let token = token.unwrap();
-    let limit = limit.clamp(1, 25);
+    let limit = if limit == 0 { DEFAULT_LIMIT } else { limit }.clamp(1, 25);
+    let profile = instagram_profile_url(cfg);
     let url = format!(
         "https://graph.instagram.com/me/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp&limit={}&access_token={}",
         limit, token
@@ -103,9 +106,7 @@ pub async fn fetch_instagram_posts(client: &Client, limit: usize) -> ServiceResu
                 id: item.id,
                 platform: String::from("instagram"),
                 title,
-                url: item
-                    .permalink
-                    .unwrap_or_else(|| instagram_profile_url()),
+                url: item.permalink.unwrap_or_else(|| profile.clone()),
                 thumbnail_url,
                 published_at: item.timestamp,
             }
@@ -116,8 +117,9 @@ pub async fn fetch_instagram_posts(client: &Client, limit: usize) -> ServiceResu
 pub async fn instagram_posts_or_fallback(
     client: &Client,
     limit: usize,
+    cfg: &ResolvedConfig,
 ) -> (Vec<SocialPost>, String) {
-    match fetch_instagram_posts(client, limit).await {
+    match fetch_instagram_posts(client, limit, cfg).await {
         Ok(posts) if !posts.is_empty() => (posts, String::from("instagram")),
         Ok(_) => (vec![], String::from("none")),
         Err(err) => {

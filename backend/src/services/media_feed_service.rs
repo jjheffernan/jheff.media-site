@@ -1,6 +1,6 @@
 use crate::error::ServiceError;
 use crate::models::media::{InstagramFeatured, MediaFeedItem, MediaFeedResponse};
-use crate::services::{content_service, instagram_service, youtube_service};
+use crate::services::{content_service, instagram_service, site_config_service, youtube_service};
 use actix_web::http::StatusCode;
 use awc::Client;
 use mongodb::Database;
@@ -27,10 +27,11 @@ pub async fn unified_feed(
     let mut items: Vec<MediaFeedItem> = vec![];
     let mut sources: Vec<String> = vec![];
     let include = |name: &str| source.is_none() || source == Some(name);
+    let cfg = site_config_service::resolved(db).await;
 
     if include("instagram") {
         let (instagram_posts, ig_source) =
-            instagram_service::instagram_posts_or_fallback(client, limit).await;
+            instagram_service::instagram_posts_or_fallback(client, limit, &cfg).await;
         if !instagram_posts.is_empty() {
             sources.push(ig_source);
             for post in instagram_posts {
@@ -57,7 +58,7 @@ pub async fn unified_feed(
     }
 
     if include("youtube") {
-        if let Ok(youtube_posts) = youtube_service::fetch_channel_videos(client, limit).await {
+        if let Ok(youtube_posts) = youtube_service::fetch_channel_videos(client, limit, &cfg).await {
             if !youtube_posts.is_empty() {
                 sources.push(String::from("youtube"));
                 for post in youtube_posts {
@@ -204,7 +205,7 @@ mod tests {
     }
 }
 
-pub fn instagram_featured() -> Option<InstagramFeatured> {
+pub async fn instagram_featured(db: &Database) -> Option<InstagramFeatured> {
     let post_url = env::var("YEW_FULLSTACK_INSTAGRAM_FEATURED_POST_URL")
         .ok()
         .filter(|u| !u.is_empty())?;
@@ -215,12 +216,13 @@ pub fn instagram_featured() -> Option<InstagramFeatured> {
         .ok()
         .filter(|t| !t.is_empty())
         .or_else(|| Some(String::from("Latest from @jheffmedia")));
+    let cfg = site_config_service::resolved(db).await;
 
     Some(InstagramFeatured {
         post_url,
         thumbnail_url: thumbnail,
         title,
-        profile_url: instagram_service::instagram_profile_url(),
-        handle: instagram_service::instagram_handle(),
+        profile_url: instagram_service::instagram_profile_url(&cfg),
+        handle: instagram_service::instagram_handle(&cfg),
     })
 }
