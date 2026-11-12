@@ -17,6 +17,10 @@ Implementation: `backend/src/models/response.rs`, handlers in `backend/src/api/a
 
 ## Endpoints
 
+### `GET /healthz`
+
+No auth. Orchestrator / Compose healthcheck. Returns `200` `{"ok":true}` when Mongo answers a ping; `503` `{"ok":false,"db":false}` when it does not. Outside `/api` (same pattern as `/metrics`).
+
 ### `POST /api/auth/signup`
 
 Create a new user.
@@ -42,8 +46,12 @@ Create a new user.
 
 | Status | `message` | When |
 |--------|-----------|------|
-| 400 | `USER_ALREADY_EXISTS` | Email or username taken |
-| 500 | `MONGO_ERROR` | Database insert failed |
+| 400 | `Email or username already registered.` | Email or username taken |
+| 429 | `Too many attempts. Try again later.` | Rate limited |
+| 503 | `Database unavailable. Try again shortly.` | Mongo unreachable / auth / selection timeout |
+| 500 | `Could not create account. Try again later.` | Other insert failure (details only in backend logs) |
+
+Machine codes (`USER_ALREADY_EXISTS`, `DATABASE_UNAVAILABLE`, `MONGO_ERROR`) are logged server-side; the API returns the human `message` above.
 
 ### `POST /api/auth/login`
 
@@ -110,6 +118,18 @@ Invalidate server session for the token.
 |--------|-----------|------|
 | 400 | `MISSING_TOKEN` | No `Authorization` header |
 | 500 | `TOKEN_PROCESSING_ERROR` | Invalid token, user not found, or session mismatch |
+
+### `GET /api/auth/me`
+
+Bearer JWT. Current user profile (no password hash).
+
+### `POST /api/auth/password` · `POST /api/auth/2fa/enroll` · `POST /api/auth/2fa/confirm` · `POST /api/auth/2fa/disable`
+
+Bearer JWT. Account settings used by the account page. See [authentication.md](./authentication.md).
+
+### `POST /api/auth/email-change`
+
+Bearer JWT. Backend still accepts email-change requests; the account UI no longer exposes the form.
 
 ### `GET /api/feed`
 
@@ -303,7 +323,9 @@ Admin only. Page-view totals for the last 14 days.
 
 ### `GET /metrics`
 
-Prometheus text. Request counts by method and status, plus `telemetry_events_total`. Scrapes of this path are not counted. Counters reset when the API process restarts. Point an existing Prometheus at this path (`scripts/observability/prometheus.yml`) and use that Prometheus as a Grafana datasource. Import `scripts/observability/grafana/dashboards/site.json` into that Grafana. The production stack does not run either service.
+No auth. Prometheus text. Request counts by method and status, plus `telemetry_events_total`. Scrapes of this path are not counted. Counters reset when the API process restarts. Point an existing Prometheus at this path (`scripts/observability/prometheus.yml`) and use that Prometheus as a Grafana datasource. Import `scripts/observability/grafana/dashboards/site.json` into that Grafana. The production stack does not run either service.
+
+On a shared host/LXC this exposes process counters publicly on the app port — bind with `HTTP_BIND=127.0.0.1` or allowlist scrapes at the reverse proxy. Not gated like `/api/admin/*` (scrapers typically cannot send JWTs).
 
 ### `PUT /api/admin/links`
 
@@ -418,7 +440,11 @@ Admin JWT. Site setup wizard: feed provider (`none` | `static` | `immich` | `nex
 
 ### `GET /api/admin/diagnostics`
 
-Admin JWT. Non-secret runtime snapshot for live troubleshooting: `dbReachable`, `feedProvider`, `rustLog` (env value only), `uptimeSecs`, `version`. No connection strings, keys, or JWTs.
+Admin JWT. Non-secret runtime snapshot for live troubleshooting: `dbReachable`, `feedProvider`, `rustLog` (env value only), `uptimeSecs`, `version`, `buildId` (`YEW_FULLSTACK_BUILD_ID`, often a git SHA). No connection strings, keys, or JWTs.
+
+### `GET /api/admin/social`
+
+Admin JWT. Channel status for Instagram/YouTube (and env extras): whether each source is live or fallback. No tokens in the response. No first-party UI caller today; kept for admin tooling / curl.
 
 ### `GET /api/admin/library`
 

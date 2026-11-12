@@ -179,7 +179,7 @@ More: [development.md#troubleshooting](./development.md#troubleshooting).
 
 ## Production deployment
 
-Prod uses a single image (`scripts/build.sh` → `scripts/run.sh`), static frontend, no Trunk proxy. Env vars must use `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (fixed in `scripts/docker-compose.yml`). Details: [architecture.md](./architecture.md#dev-vs-production).
+Prod uses a single image (`scripts/build.sh` → `scripts/run.sh`), static frontend, no Trunk proxy. Env vars must use `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (canonical compose: `install/common/docker-compose.yml`). Details: [architecture.md](./architecture.md#dev-vs-production).
 
 ## Checklist
 

@@ -152,14 +152,14 @@ cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 | Factor | Status | Notes |
 |--------|--------|-------|
 | I Codebase | ✅ | Single repo, Cargo workspace |
-| II Dependencies | ⚠️ | `package-lock.json` is committed. `Cargo.lock` is gitignored |
+| II Dependencies | ✅ | Root `Cargo.lock` + `package-lock.json` committed (`frontend/Cargo.lock` gitignored) |
 | III Config | ✅ | `YEW_FULLSTACK_*` env vars; runtime JWT secret |
 | IV Backing services | ✅ | MongoDB as attachable service in Compose |
-| V Build/release | ✅ | Multi-stage `Dockerfile`, `scripts/prod.sh` |
-| VI Processes | ✅ | Stateless Actix workers |
+| V Build/release | ✅ | Multi-stage `Dockerfile`, optional `YEW_FULLSTACK_BUILD_ID`, `scripts/prod.sh` |
+| VI Processes | ✅ | Single-replica Actix; durable upload volume documented |
 | VII Port binding | ✅ | `YEW_FULLSTACK_HOST` / `PORT` |
 | VIII Concurrency | ✅ | Actix async model |
-| IX Disposability | ⚠️ | Not explicitly documented |
+| IX Disposability | ✅ | `GET /healthz` + Compose healthchecks; restart-friendly |
 | X Dev/prod parity | ✅ | `scripts/dev.sh`, install targets |
 | XI Logs | ✅ | `env_logger` / `RUST_LOG` |
 | XII Admin processes | ✅ | Admin API, install scripts, one-off migrations manual |
@@ -167,7 +167,7 @@ cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 ### Gaps
 
 - Legacy `YEW_FULLSTACK_*` env prefix (docker tags renamed to `jheffmedia-*`)
-- Health check endpoint + Compose `healthcheck` not yet added
+- Graceful shutdown / Mongo backup-restore still light on procedure detail
 
 ### To reach 4
 
@@ -177,7 +177,7 @@ cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 
 ### To reach 5
 
-- [ ] Health check endpoint + Compose `healthcheck`
+- [x] Health check endpoint + Compose `healthcheck` (`GET /healthz`)
 - [ ] Documented graceful shutdown and backup/restore for MongoDB
 
 ---

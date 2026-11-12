@@ -22,11 +22,12 @@ Dev Docker and local watch use `forward-frontend`. Production binary serves bake
 | `YEW_FULLSTACK_HOST` | `127.0.0.1` | Bind address |
 | `YEW_FULLSTACK_PORT` | `3000` (Docker: `8080`) | Listen port |
 | `YEW_FULLSTACK_STATIC` | `/usr/local/share/yew-fullstack/www` | Static root (prod) |
-| `YEW_FULLSTACK_FORWARD_FRONTEND_URL` | `http://localhost:8080` | Upstream Trunk dev server (dev) |
+| `YEW_FULLSTACK_FORWARD_FRONTEND_URL` | `http://localhost:8000` | Upstream Trunk dev server (dev) |
 | `YEW_FULLSTACK_DB_CONNSTR` | `mongodb://localhost:27017` | MongoDB connection string |
 | `YEW_FULLSTACK_DB_NAME` | `yew-fullstack` | Database name |
-| `YEW_FULLSTACK_JWT_SECRET_FILE` | — | Path to 32-byte JWT signing key (production) |
+| `YEW_FULLSTACK_JWT_SECRET_FILE` | — | Path to 32-byte JWT signing key (production; never baked into the image) |
 | `YEW_FULLSTACK_JWT_SECRET` | — | Hex-encoded 32-byte JWT key (alternative to file) |
+| `YEW_FULLSTACK_BUILD_ID` | empty | Optional release identity (git SHA); shown in admin diagnostics |
 | `YEW_FULLSTACK_FEED_PROVIDER` | `none` | Bootstrap default: `immich`, `static`, `nextcloud`, or `none`. Overridden by Mongo `site_config` after Admin → Setup |
 | `YEW_FULLSTACK_IMMICH_URL` | — | Immich base URL (no trailing slash) |
 | `YEW_FULLSTACK_IMMICH_API_KEY` | — | Immich API key (server-side only) |
@@ -57,10 +58,10 @@ JWT signing key (32 bytes). Loaded at **runtime**, not compile time:
 
 | Variable | Purpose |
 |----------|---------|
-| `YEW_FULLSTACK_JWT_SECRET_FILE` | Path to 32-byte file (production compose mounts `backend/src/secret.key`) |
-| `YEW_FULLSTACK_JWT_SECRET` | Hex-encoded 32 bytes (`openssl rand -hex 32`) — alternative to file |
+| `YEW_FULLSTACK_JWT_SECRET_FILE` | Path to 32-byte file (production compose mounts host `backend/src/secret.key` → `/run/secrets/jwt_secret`) |
+| `YEW_FULLSTACK_JWT_SECRET` | Hex-encoded 32 bytes (`openssl rand -hex 32`) — alternative to file (Coolify, etc.) |
 
-Dev/local fallback: `backend/src/secret.key` if present (**gitignored**).
+The production image does **not** `COPY` `secret.key`. Dev/local fallback: `backend/src/secret.key` if present (**gitignored**).
 
 ```bash
 openssl rand -out backend/src/secret.key 32

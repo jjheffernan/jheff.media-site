@@ -105,7 +105,7 @@ Production compose for install targets lives at `install/common/docker-compose.y
 Manual equivalent using legacy scripts path:
 
 ```bash
-docker compose -f scripts/docker-compose.yml --env-file scripts/.env.production up -d
+docker compose -f install/common/docker-compose.yml --env-file install/common/.env.production up -d
 ```
 
 Default compose exposes **8080**. MongoDB is not published. `scripts/prod.sh` reads `MONGO_PASSWORD` from `scripts/.env.production`.
@@ -159,7 +159,7 @@ Production deploys should track **`main`**:
 git checkout main && git pull
 # Keep existing backend/src/secret.key — changing it invalidates sessions
 scripts/build.sh
-docker compose -f scripts/docker-compose.yml --env-file scripts/.env.production up -d --build
+docker compose -f install/common/docker-compose.yml --env-file install/common/.env.production up -d --build
 scripts/smoke.sh
 ```
 

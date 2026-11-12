@@ -74,6 +74,9 @@ Bundling: [Trunk](https://trunk-rs.github.io/trunk/) (`frontend/Trunk.toml`), no
 |----------|------------------|-------------|----------------------|
 | `YEW_FULLSTACK_DB_CONNSTR` | yes | `mongodb://db:27017` | `mongodb://root:${MONGO_PASSWORD}@db:27017/jheffmedia?authSource=admin` |
 | `YEW_FULLSTACK_DB_NAME` | yes | `jheffmedia_dev` | `jheffmedia` |
+| `YEW_FULLSTACK_JWT_SECRET_FILE` | yes | — | `/run/secrets/jwt_secret` (host `secret.key` mount) |
+| `YEW_FULLSTACK_JWT_SECRET` | yes | — | hex alternative (Coolify); not both required |
+| `YEW_FULLSTACK_BUILD_ID` | yes | optional | optional git SHA → admin diagnostics `buildId` |
 | `YEW_FULLSTACK_DB_URL` | **no** | — | removed (legacy) |
 | `YEW_FULLSTACK_DB_USER` | **no** | — | removed (legacy) |
 | `YEW_FULLSTACK_DB_PASSWORD` | **no** | — | removed (legacy) |

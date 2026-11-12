@@ -60,16 +60,16 @@ Decisions are recorded in [design.md](./design.md#decided).
 ### API client
 
 - [ ] **Shared fetch helper** — `frontend/src/services/api.rs` is only `auth_header`. The same gloo-net parse pattern is copied across pages
-- [ ] **Retire `GET /api/feed`** — homepage uses `/api/media/feed`. Remove `feed_service` after Immich thumbnails go through the unified feed, or document why the legacy route stays
+- [ ] **Retire `GET /api/feed`** — homepage uses `/api/media/feed`. Thumbnails still use `/api/feed/thumbnail/{id}`; Admin Dev probes hit `/api/feed`. Remove `feed_service` after Immich thumbnails go through the unified feed
 
 ### Hardening
 
 - [ ] **Content-Security-Policy** for WASM and embeds
-- [ ] **Health check** plus a Compose healthcheck
+- [x] **Health check** plus a Compose healthcheck (`GET /healthz`)
 - [ ] **Cache-Control** on static files and the thumbnail proxy (`serve_frontend.rs` still has an ETag TODO)
 - [ ] **Clippy** — backend warnings, then `cargo clippy` in CI
-- [ ] **Browser test** — `frontend/tests/web.rs` is `1 + 1 == 2`. `scripts/smoke.sh` only checks the homepage and login reachability
-- [ ] **Commit `Cargo.lock`** — it is gitignored, so builds are not pinned
+- [ ] **Browser test** — `frontend/tests/web.rs` is `1 + 1 == 2`. `scripts/smoke.sh` checks `/`, `/healthz`, and login reachability
+- [x] **Commit `Cargo.lock`** — workspace root lockfile is tracked (only `frontend/Cargo.lock` is gitignored for the WASM crate)
 
 ### Operator setup
 

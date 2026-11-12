@@ -57,9 +57,12 @@ Invalid or expired JWT → decode fails. Valid JWT but wrong/missing session →
 ## Signup flow
 
 1. Client `POST /api/auth/signup` with user JSON (`email`, `username`, `password` camelCase).
-2. Duplicate email/username → `400` with `USER_ALREADY_EXISTS`.
-3. Password hashed with bcrypt; user inserted.
+2. Duplicate email/username → `400` with a human message (email/username taken).
+3. Password hashed with bcrypt; user inserted into `users`.
 4. Success → `200` with `SUCCESS` and new user id (hex string).
+5. Insert failures: Mongo driver errors are logged (`user signup insert failed: …`); the client gets a short message (unavailable vs generic), not raw JSON.
+
+Admin bootstrap on install: sign up with an address listed in `ADMIN_EMAILS` / `YEW_FULLSTACK_ADMIN_EMAILS` (from `install/common/.env.production`, not a separate creds file). Generated pattern is `admin@<8 alnum>.local` (e.g. `admin@npWyEqU6.local`) — that is intentional for first login, then change email later if desired. Show again: `jheffmedia --postinstall` (paths only with `--show-creds`).
 
 Signup does **not** log the user in automatically—the header still shows login/signup until they authenticate.
 

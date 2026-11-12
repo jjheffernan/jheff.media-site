@@ -67,9 +67,9 @@ CORS allows only origins listed in `YEW_FULLSTACK_CORS_ORIGINS` (comma-separated
 
 Backend env sets `YEW_FULLSTACK_FORWARD_FRONTEND_URL=http://frontend:8000`.
 
-### Prod (`scripts/docker-compose.yml`)
+### Prod (`install/common/docker-compose.yml`)
 
-App container and MongoDB (`mongo:7.0`). `GET /metrics` is Prometheus text for an existing Prometheus and Grafana. Prod compose uses `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (legacy `YEW_FULLSTACK_DB_URL` removed). Deploy guide: [deployment-dev.md](./deployment-dev.md) (dev) · version pins: [version-matrix.md](./version-matrix.md).
+App container and MongoDB (`mongo:7.0`). `GET /healthz` for Compose healthchecks; `GET /metrics` is Prometheus text for an existing Prometheus. Prod compose uses `YEW_FULLSTACK_DB_CONNSTR` + `YEW_FULLSTACK_DB_NAME` (legacy `YEW_FULLSTACK_DB_URL` removed). `scripts/docker-compose.yml` is a thin `include` of the install/common file. Deploy guide: [deployment.md](./deployment.md) · version pins: [version-matrix.md](./version-matrix.md).
 
 ## Frontend application structure
 
@@ -109,4 +109,4 @@ GitHub Actions (`.github/workflows/rust.yml`):
 | Dev proxy | `backend/src/services/forward_frontend.rs` |
 | Static serving | `backend/src/services/serve_frontend.rs` |
 | Compose dev | `scripts/docker-compose.dev.yml` |
-| Compose prod | `scripts/docker-compose.yml` |
+| Compose prod | `install/common/docker-compose.yml` (`scripts/docker-compose.yml` includes it) |

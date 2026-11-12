@@ -17,7 +17,7 @@ Legacy env prefix `YEW_FULLSTACK_*` still used in Docker and scripts.
 
 ## Secrets
 
-- `backend/src/secret.key` — 32-byte JWT signing key, **gitignored**, required at compile time
+- `backend/src/secret.key` — 32-byte JWT signing key, **gitignored**, loaded at **runtime** (prod: mount/`YEW_FULLSTACK_JWT_SECRET*`)
 - Generate: `openssl rand -out backend/src/secret.key 32`
 - Never commit secrets or log tokens
 
