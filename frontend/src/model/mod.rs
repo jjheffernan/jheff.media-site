@@ -11,8 +11,8 @@ pub use auth::Login;
 pub use auth::Signup;
 pub use auth::User;
 pub use content::{
-    BookingConfig, ContactSubmission, ContentCollection, ContentCollectionSummary,
-    ContentHubResponse, ContentListResponse, MediaItem, OtherSite, OtherSitesResponse,
+    ContactSubmission, ContentCollection, ContentCollectionSummary, ContentHubResponse,
+    ContentListResponse, MediaItem, OtherSite, OtherSitesResponse,
 };
 pub use feed::{FeedItem, FeedResponse};
 pub use media::{

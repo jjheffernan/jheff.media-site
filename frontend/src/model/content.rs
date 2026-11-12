@@ -57,14 +57,6 @@ pub struct ContentHubResponse {
     pub galleries: ContentListResponse,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BookingConfig {
-    pub embed_url: Option<String>,
-    pub contact_email: Option<String>,
-    pub source: String,
-}
-
 fn default_contact_kind() -> String {
     "contact".into()
 }

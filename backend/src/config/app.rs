@@ -47,10 +47,6 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                     .route("/{id}", web::get().to(content_controller::get_shoot)),
             )
             .service(
-                web::scope("/booking")
-                    .route("", web::get().to(content_controller::booking)),
-            )
-            .service(
                 web::scope("/sites")
                     .route("/other", web::get().to(content_controller::other_sites)),
             )

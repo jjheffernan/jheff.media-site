@@ -90,14 +90,6 @@ pub struct ContactSubmission {
     pub preferred_at: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BookingConfig {
-    pub embed_url: Option<String>,
-    pub contact_email: Option<String>,
-    pub source: String,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OtherSite {
