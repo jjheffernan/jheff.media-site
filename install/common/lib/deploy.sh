@@ -43,6 +43,29 @@ harden_install_perms() {
   fi
 }
 
+# Git ops as the install owner — avoids "dubious ownership" when root runs --update
+# on a tree owned by jheffmedia (uid 10001). Prefer runuser over safe.directory.
+install_git() {
+  local user="${SERVICE_USER:-jheffmedia}"
+  if [[ ! -d "${INSTALL_DIR}/.git" ]]; then
+    return 1
+  fi
+  if [[ "$(id -un 2>/dev/null || true)" == "$user" ]]; then
+    git -C "$INSTALL_DIR" "$@"
+    return
+  fi
+  if [[ ${EUID:-0} -eq 0 ]] && id -u "$user" >/dev/null 2>&1; then
+    if command -v runuser >/dev/null 2>&1; then
+      runuser -u "$user" -- git -C "$INSTALL_DIR" "$@"
+    else
+      su -s /bin/sh "$user" -c "git -C $(printf '%q' "$INSTALL_DIR") $(printf '%q ' "$@")"
+    fi
+    return
+  fi
+  # Same-machine operator without matching uid: scoped exception (not --global).
+  git -c "safe.directory=${INSTALL_DIR}" -C "$INSTALL_DIR" "$@"
+}
+
 write_env_file() {
   local env_file=$1
   cat >"$env_file" <<EOF
@@ -190,7 +213,7 @@ EOF
 # Optional release identity for Admin → Dev / diagnostics (override by exporting first).
 export_build_id() {
   if [[ -z "${YEW_FULLSTACK_BUILD_ID:-}" && -d "${INSTALL_DIR}/.git" ]]; then
-    YEW_FULLSTACK_BUILD_ID="$(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || true)"
+    YEW_FULLSTACK_BUILD_ID="$(install_git rev-parse --short HEAD 2>/dev/null || true)"
   fi
   export YEW_FULLSTACK_BUILD_ID="${YEW_FULLSTACK_BUILD_ID:-}"
 }
@@ -286,9 +309,11 @@ update_stack() {
 
   ensure_service_user
   msg_info "Pulling latest ${BRANCH} from origin"
-  git -C "$INSTALL_DIR" fetch origin "$BRANCH"
-  git -C "$INSTALL_DIR" checkout "$BRANCH"
-  git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
+  # HTTPS GitHub clone (TLS). Day-2 updates use this tree — prefer jheffmedia --update
+  # over curl|bash so you are not re-fetching install scripts from raw CDN each time.
+  install_git fetch origin "$BRANCH"
+  install_git checkout "$BRANCH"
+  install_git pull --ff-only origin "$BRANCH"
   msg_ok "Repository updated"
 
   cd "$compose_dir"
@@ -320,7 +345,10 @@ clone_repo() {
   if [[ -d "${INSTALL_DIR}/.git" ]]; then
     msg_ok "Using existing clone at ${INSTALL_DIR}"
   else
+    # Clone over HTTPS (TLS to github.com). Depth-1 pin to BRANCH.
     $STD git clone --branch "$BRANCH" --depth 1 "$REPO" "$INSTALL_DIR"
+    # Mark directory safe for any later root-owned tooling; primary path is install_git.
+    git -C "$INSTALL_DIR" config --local --add safe.directory "$INSTALL_DIR" 2>/dev/null || true
     msg_ok "Cloned repository"
   fi
   COMMON_DIR="${INSTALL_DIR}/install/common"

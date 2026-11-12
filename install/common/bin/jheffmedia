@@ -501,10 +501,21 @@ cmd_status() {
   require_install
   container_bin
   load_env
+  if [[ -f "${COMPOSE_DIR}/lib/deploy.sh" ]]; then
+    source_deploy 2>/dev/null || true
+  fi
+  local branch commit
+  if declare -F install_git >/dev/null 2>&1; then
+    branch="$(install_git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+    commit="$(install_git rev-parse --short HEAD 2>/dev/null || echo '?')"
+  else
+    branch="$(git -c "safe.directory=${INSTALL_DIR}" -C "$INSTALL_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+    commit="$(git -c "safe.directory=${INSTALL_DIR}" -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  fi
   echo "Install: ${INSTALL_DIR}"
   echo "User:    ${SERVICE_USER} (host); app container uid 10001"
-  echo "Branch:  $(git -C "$INSTALL_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
-  echo "Commit:  $(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  echo "Branch:  ${branch}"
+  echo "Commit:  ${commit}"
   echo "Listen:  ${HTTP_BIND}:${HTTP_PORT} (host publish; app binds 0.0.0.0 in-container)"
   if [[ "${HTTP_BIND}" == "127.0.0.1" || "${HTTP_BIND}" == "localhost" ]]; then
     echo "[!!] HTTP_BIND=${HTTP_BIND} — only reachable on this LXC. Set HTTP_BIND=0.0.0.0 in .env.production for LAN access."
@@ -558,9 +569,18 @@ cmd_diagnostics() {
   load_env
   cd "$COMPOSE_DIR"
 
+  if [[ -f "${COMPOSE_DIR}/lib/deploy.sh" ]]; then
+    source_deploy 2>/dev/null || true
+  fi
+  local commit='?'
+  if declare -F install_git >/dev/null 2>&1; then
+    commit="$(install_git rev-parse --short HEAD 2>/dev/null || echo '?')"
+  else
+    commit="$(git -c "safe.directory=${INSTALL_DIR}" -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  fi
   echo "=== jheffmedia diagnostics ==="
   echo "Install: ${INSTALL_DIR}"
-  echo "Commit:  $(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  echo "Commit:  ${commit}"
   echo "Listen:  ${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-8080}"
   echo
   echo "--- compose ps ---"

@@ -196,6 +196,20 @@ JWT: the image never bakes `secret.key`. Runtime loads `YEW_FULLSTACK_JWT_SECRET
 
 The production `Dockerfile` uses **BuildKit cache mounts** for Cargo registry/git/`target`, and installs **Trunk from GitHub release binaries** (not `cargo install`). `jheffmedia --update` enables BuildKit automatically. Prefer normal rebuilds over `--no-cache` unless a layer is corrupt — cold WASM+release compiles are still expensive; warm caches are not.
 
+### Git ownership (`dubious ownership`)
+
+The install tree is owned by `jheffmedia` (uid 10001). If you run updates as **root**, older CLIs hit `fatal: detected dubious ownership`. Do **not** need a reinstall — and prefer **not** adding a global `safe.directory` forever. Current `jheffmedia --update` runs `git` as the install owner (`runuser`). After pulling a fixed CLI, re-run `--update`.
+
+### Fetch trust (MITM)
+
+| Path | Trust |
+|------|--------|
+| Day-2 `jheffmedia --update` | `git fetch`/`pull` over **HTTPS** to GitHub from the on-disk clone — best default |
+| First install `curl \| bash` raw.githubusercontent.com | TLS to GitHub; still “run remote shell”. Pin with `INSTALL_REF`/`BRANCH` when possible |
+| App image build | Pulls crates.io + Trunk/Tailwind release URLs over HTTPS inside Docker |
+
+Mitigations we accept for a single-node LXC: HTTPS only (no plain HTTP remotes), prefer installed CLI over re-curling install scripts, optional later: verify release commit SHA before pull. Full supply-chain (sigstore/cosign on images) is out of scope for this deploy size.
+
 `GET /metrics` is unauthenticated Prometheus text on the app port. On a shared LXC, prefer `HTTP_BIND=127.0.0.1` (or scrape only via a reverse-proxy allowlist) so metrics are not world-reachable.
 
 ## Checklist
