@@ -1,4 +1,7 @@
-use crate::model::{ContactSubmission, ServerResponse};
+use crate::{
+    model::{ContactSubmission, ServerResponse},
+    utils::{timezone_caption, with_local_offset},
+};
 use gloo_net::http::Request;
 use js_sys::Date;
 use wasm_bindgen_futures::spawn_local;
@@ -63,12 +66,15 @@ fn day_key(year: i32, month: i32, day: u32) -> String {
 
 fn combine_preferred(date: &str, time: &str) -> String {
     if date.is_empty() {
-        String::new()
-    } else if time.is_empty() {
+        return String::new();
+    }
+    let naive = if time.is_empty() {
         format!("{date}T12:00")
     } else {
         format!("{date}T{time}")
-    }
+    };
+    // RFC3339 with browser offset so preferredAt is not ambiguous.
+    with_local_offset(&naive)
 }
 
 #[derive(Properties, PartialEq)]
@@ -208,6 +214,7 @@ fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
                     disabled={props.disabled}
                 />
             </label>
+            <p class="muted">{ timezone_caption() }</p>
             if !(*selected_day).is_empty() {
                 <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_clear}>
                     { "Clear" }

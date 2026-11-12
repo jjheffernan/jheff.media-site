@@ -20,14 +20,14 @@ Yew 0.23 WASM client for **automotive photography** workflows: `jheffmedia-site-
 |------|------|
 | `/` | Home |
 | `/content` | Content |
-| `/schedule` | Schedule |
+| `/schedule` | Schedule. Event times shown in viewer local TZ |
 | `/search` | Search |
 | `/social` | Social |
 | `/shoots` | Shoots |
 | `/shoots/:id` | Shoot detail |
 | `/galleries` | Galleries |
 | `/galleries/:id` | Gallery detail |
-| `/booking` | Booking. Optional preferred time |
+| `/booking` | Booking. Optional preferred time (RFC3339 with browser offset) |
 | `/contact` | Contact |
 | `/legal/terms` | Terms |
 | `/legal/privacy` | Privacy |

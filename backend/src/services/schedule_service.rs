@@ -234,6 +234,11 @@ mod tests {
             parse_starts_at("2026-11-02T15:45:30Z"),
             Some(at("2026-11-02T15:45:30Z"))
         );
+        // Offset form — preferred booking wire format.
+        assert_eq!(
+            parse_starts_at("2026-11-02T15:45:00-05:00"),
+            Some(at("2026-11-02T20:45:00Z"))
+        );
         assert!(parse_starts_at("not-a-date").is_none());
         assert!(parse_starts_at("").is_none());
     }

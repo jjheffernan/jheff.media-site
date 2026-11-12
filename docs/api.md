@@ -148,7 +148,7 @@ Backend env: [backend.md](./backend.md#photo-feed).
 
 ### `GET /api/feed/thumbnail/{asset_id}`
 
-Proxies a preview thumbnail from Immich for use in `<img src="...">`. Only available when `YEW_FULLSTACK_FEED_PROVIDER=immich`.
+Proxies a preview thumbnail from Immich or Nextcloud for use in `<img src="...">`. Public, but `asset_id` must pass ID validation and stay inside the configured Immich album (or recent-search window when no album is set) / Nextcloud folder. Arbitrary Immich UUIDs outside that set return `404`.
 
 **Success** `200` — image bytes (`image/jpeg` or `image/webp`).
 
@@ -457,7 +457,7 @@ Public inquiry. Stores the message in MongoDB `contacts`. When `YEW_FULLSTACK_SM
 | `kind` | string | no |
 | `preferredAt` | string | no |
 
-`kind` is `booking` for a booking request and `contact` otherwise. A missing or unknown value is stored as `contact`. Booking mail uses the subject prefix `Booking:`. `preferredAt` is an optional booking time (`2026-11-02T15:45`). Leave it out, or send it empty, to book without a time. A booking with a value that is not a date returns 400 `Preferred time is not a date.` Contact messages drop the field. New documents store `status` as `new`. Older documents with no `status` are treated as `new` when listed. The inbox returns `preferredAt` as an empty string when none was sent.
+`kind` is `booking` for a booking request and `contact` otherwise. A missing or unknown value is stored as `contact`. Booking mail uses the subject prefix `Booking:`. `preferredAt` is an optional booking time. Prefer RFC3339 with offset (`2026-11-02T15:45:00-05:00`); naive `YYYY-MM-DDTHH:MM` is still accepted and treated as UTC. Leave it out, or send it empty, to book without a time. A booking with a value that is not a date returns 400 `Preferred time is not a date.` Contact messages drop the field. New documents store `status` as `new`. Older documents with no `status` are treated as `new` when listed. The inbox returns `preferredAt` as an empty string when none was sent.
 
 `website` is a honeypot. Leave it empty. A non-empty value returns the success envelope and is not stored.
 
@@ -543,9 +543,11 @@ Auth required. Snapshots the current selections into `print_orders` with status 
 
 Public. `embedUrl` and `source` stay as before. `events` lists public `schedule_events` whose `startsAt` is in the future, oldest first. Each event has `id`, `title`, `startsAt`, `kind` (`shoot`, `instruction`, or `other`), and optional `location`.
 
+`startsAt` is stored as RFC3339 with offset when created from the admin UI (e.g. `2026-11-02T15:45:00-05:00`). Legacy naive stamps are treated as UTC when filtering. The schedule UI shows times in the viewer's local timezone.
+
 ### `POST /api/admin/schedule`
 
-Admin JWT. Body: `title`, `startsAt`, optional `location`, `kind`. Success `200` `{ "message": "CREATED", "data": { "id": "<objectId>" } }`. `400` `INVALID_EVENT` when the title, start, or kind is unusable.
+Admin JWT. Body: `title`, `startsAt`, optional `location`, `kind`. Prefer RFC3339 with offset; naive `YYYY-MM-DDTHH:MM` is accepted as UTC. Success `200` `{ "message": "CREATED", "data": { "id": "<objectId>" } }`. `400` `INVALID_EVENT` when the title, start, or kind is unusable.
 
 ### `DELETE /api/admin/schedule/{id}`
 

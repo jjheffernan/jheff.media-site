@@ -3,6 +3,7 @@ use crate::{
         ui::{Heading, HeadingLevel, Spinner},
         ContactForm,
     },
+    utils::{format_event_local, timezone_caption},
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
@@ -35,6 +36,7 @@ fn event_list(events: &[ScheduleEvent]) -> Html {
     html! {
         <section class="space-y-3">
             <h2 class="title-sm">{ "Availability" }</h2>
+            <p class="muted">{ timezone_caption() }</p>
             <ul class="space-y-3">
                 { for events.iter().map(|event| {
                     let location = event.location.clone().filter(|value| !value.is_empty());
@@ -42,7 +44,7 @@ fn event_list(events: &[ScheduleEvent]) -> Html {
                         <li class="card">
                             <p>{ event.title.clone() }</p>
                             <p class="muted">{ event.kind.clone() }</p>
-                            <p class="muted">{ event.starts_at.clone() }</p>
+                            <p class="muted">{ format_event_local(&event.starts_at) }</p>
                             if let Some(location) = location {
                                 <p class="muted">{ location }</p>
                             }

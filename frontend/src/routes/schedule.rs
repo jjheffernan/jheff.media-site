@@ -2,6 +2,7 @@ use crate::{
     components::ui::{Heading, HeadingLevel, Spinner},
     model::ServerResponse,
     routes::AppRoutes,
+    utils::{event_local_day, event_local_time, timezone_caption},
 };
 use gloo_net::http::Request;
 use js_sys::Date;
@@ -81,28 +82,6 @@ fn shift_month(year: i32, month: i32, delta: i32) -> (i32, i32) {
     (index.div_euclid(12), index.rem_euclid(12))
 }
 
-fn event_day(starts_at: &str) -> Option<&str> {
-    let value = starts_at.trim();
-    let bytes = value.as_bytes();
-    if bytes.len() >= 10 && bytes[4] == b'-' && bytes[7] == b'-' {
-        Some(&value[..10])
-    } else {
-        None
-    }
-}
-
-fn event_time(starts_at: &str) -> String {
-    let Some(time) = starts_at.split('T').nth(1) else {
-        return String::new();
-    };
-    let time = time.trim_end_matches('Z');
-    if time.len() >= 5 {
-        time[..5].to_string()
-    } else {
-        time.to_string()
-    }
-}
-
 fn day_key(year: i32, month: i32, day: u32) -> String {
     format!("{year:04}-{:02}-{:02}", month + 1, day)
 }
@@ -152,7 +131,7 @@ fn month_calendar(props: &CalendarProps) -> Html {
         let count = props
             .events
             .iter()
-            .filter(|event| event_day(&event.starts_at) == Some(key.as_str()))
+            .filter(|event| event_local_day(&event.starts_at).as_deref() == Some(key.as_str()))
             .count();
         let selected = props.selected.as_deref() == Some(key.as_str());
         let is_today = props.year == today_y && props.month == today_m && day == today_d;
@@ -214,7 +193,7 @@ fn month_calendar(props: &CalendarProps) -> Html {
 fn day_events(events: &[ScheduleEvent], day: &str) -> Vec<ScheduleEvent> {
     events
         .iter()
-        .filter(|event| event_day(&event.starts_at) == Some(day))
+        .filter(|event| event_local_day(&event.starts_at).as_deref() == Some(day))
         .cloned()
         .collect()
 }
@@ -241,10 +220,12 @@ pub fn schedule() -> Html {
                     Ok(resp) if resp.ok() => {
                         match resp.json::<ScheduleConfig>().await {
                             Ok(next) => {
-                                if let Some(day) =
-                                    next.events.iter().find_map(|event| event_day(&event.starts_at))
+                                if let Some(day) = next
+                                    .events
+                                    .iter()
+                                    .find_map(|event| event_local_day(&event.starts_at))
                                 {
-                                    if let Some((year, month)) = month_of(day) {
+                                    if let Some((year, month)) = month_of(&day) {
                                         cursor.set((year, month));
                                     }
                                     selected.set(Some(day.to_string()));
@@ -323,6 +304,7 @@ pub fn schedule() -> Html {
                 on_shift={on_shift}
                 on_select={on_select}
             />
+            <p class="muted">{ timezone_caption() }</p>
             if let Some(day) = &*selected {
                 <section class="space-y-2">
                     <h2 class="title-sm">{ format_day(day) }</h2>
@@ -332,7 +314,7 @@ pub fn schedule() -> Html {
                         <ul class="space-y-2">
                             { for chosen.iter().map(|event| {
                                 let location = event.location.clone().filter(|value| !value.is_empty());
-                                let time = event_time(&event.starts_at);
+                                let time = event_local_time(&event.starts_at);
                                 html! {
                                     <li class="card">
                                         <p>{ event.title.clone() }</p>

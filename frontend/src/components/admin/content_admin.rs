@@ -5,32 +5,12 @@ use crate::{
     context::AuthContext,
     model::AdminPrintOrder,
     services::auth_header,
+    utils::with_local_offset,
 };
 use gloo_net::http::Request;
-use wasm_bindgen::JsValue;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
-
-fn starts_at_with_offset(value: &str) -> String {
-    let value = value.trim();
-    if value.len() < 16 || value.contains('Z') || value.contains('+') || value[10..].contains('-') {
-        return value.to_string();
-    }
-    let date = js_sys::Date::new(&JsValue::from_str(value));
-    if date.get_time().is_nan() {
-        return value.to_string();
-    }
-    let offset_min = date.get_timezone_offset() as i32;
-    let sign = if offset_min > 0 { '-' } else { '+' };
-    let abs = offset_min.unsigned_abs();
-    let stamp = if value.len() == 16 {
-        format!("{value}:00")
-    } else {
-        value.to_string()
-    };
-    format!("{stamp}{sign}{:02}:{:02}", abs / 60, abs % 60)
-}
 
 
 async fn admin_json(
@@ -109,7 +89,7 @@ fn schedule_payload(
     kind: &str,
 ) -> Result<serde_json::Value, String> {
     let title = title.trim().to_string();
-    let starts_at = starts_at_with_offset(starts);
+    let starts_at = with_local_offset(starts);
     let location = location.trim().to_string();
     let kind = if kind.trim().is_empty() {
         "shoot".to_string()
@@ -214,7 +194,7 @@ pub fn content_admin() -> Html {
         let message = message.clone();
         Callback::from(move |_| {
             let title = date_title.trim().to_string();
-            let starts_at = starts_at_with_offset(&date_starts);
+            let starts_at = with_local_offset(&date_starts);
             let location = date_location.trim().to_string();
             let kind = if date_kind.trim().is_empty() {
                 "shoot".to_string()

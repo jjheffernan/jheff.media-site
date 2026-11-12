@@ -219,7 +219,8 @@ fn clean_preferred(value: &str) -> ServiceResult<String> {
     if value.is_empty() {
         return Ok(String::new());
     }
-    if value.len() > 40 || super::schedule_service::parse_starts_at(value).is_none() {
+    // RFC3339 with offset fits under 48 (`2026-11-02T15:45:00-05:00`).
+    if value.len() > 48 || super::schedule_service::parse_starts_at(value).is_none() {
         return Err(ServiceError::new(
             StatusCode::BAD_REQUEST,
             "Preferred time is not a date.",
@@ -286,8 +287,12 @@ mod tests {
             super::clean_preferred("2026-11-02T15:45").as_deref(),
             Ok("2026-11-02T15:45")
         ));
+        assert!(matches!(
+            super::clean_preferred("2026-11-02T15:45:00-05:00").as_deref(),
+            Ok("2026-11-02T15:45:00-05:00")
+        ));
         assert!(super::clean_preferred("tomorrow").is_err());
-        assert!(super::clean_preferred(&"x".repeat(41)).is_err());
+        assert!(super::clean_preferred(&"x".repeat(49)).is_err());
     }
 
     #[test]
