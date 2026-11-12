@@ -41,6 +41,12 @@ Usage:
       --yes / -y        Skip non-volume confirms (volumes always confirm unless
                         JM_PURGE_VOLUMES=yes)
   jheffmedia --status
+  jheffmedia --diagnostics
+      Container + /healthz + Mongo auth ping (no secrets printed).
+  jheffmedia --reset-db [--yes|-y]
+      Wipe Mongo data volume only (users/schedule/site_config). Keeps
+      uploads + .env.production. Recreates DB with current MONGO_PASSWORD.
+      --yes still requires typing RESET unless JM_RESET_DB=yes.
   jheffmedia --restart
   jheffmedia --postinstall [--show-creds]
       Admin signup reminder (ADMIN_EMAILS → Admin → Setup).
@@ -51,11 +57,14 @@ Usage:
 When to use what:
   --cleanup     leaks / wrong owner / leftover /root/*.creds / bad User=
   --reinstall   partial or broken install; refresh stack, keep data
+  --reset-db    Mongo password mismatch or wipe users; keep media uploads
   --update      routine pull on a working install
+  --diagnostics site/container health before opening a ticket
 
 Privilege:
-  --update / --restart / --cleanup / --reinstall need root or docker-group
-  (service user jheffmedia). User/perms/systemd fixes need root.
+  --update / --restart / --cleanup / --reinstall / --reset-db / --diagnostics
+  need root or docker-group (service user jheffmedia). User/perms/systemd
+  fixes need root.
   --status / --postinstall need read access to the install tree.
   First-time install (Docker engine, LXC create) still requires root.
 
@@ -66,6 +75,7 @@ Env:
   SERVICE_UID    Host/container uid (default 10001)
   JM_PURGE_VOLUMES  Set to yes with --reinstall --purge --yes to also
                     delete jheffmedia-mongo / jheffmedia-content-uploads
+  JM_RESET_DB       Set to yes to allow --reset-db --yes without typing RESET
 EOF
 }
 
@@ -505,6 +515,15 @@ cmd_status() {
   "$CONTAINER_BIN" port jheffmedia-application 8080 2>/dev/null || true
   "$CONTAINER_BIN" exec jheffmedia-application printenv YEW_FULLSTACK_HOST 2>/dev/null \
     | sed 's/^/YEW_FULLSTACK_HOST=/' || true
+  local hz
+  hz="$(curl -fsS --max-time 3 "http://127.0.0.1:${HTTP_PORT}/healthz" 2>/dev/null || true)"
+  if [[ "$hz" == *'"ok":true'* || "$hz" == *'"ok": true'* ]]; then
+    echo "healthz: ok"
+  else
+    echo "[!!] healthz failed (${hz:-no response}) — Mongo auth/conn often wrong."
+    echo "      Check: docker logs jheffmedia-application --tail 40 | grep -i signup"
+    echo "      Password vs volume: see docs/deployment.md § Signup fails"
+  fi
 }
 
 cmd_restart() {
@@ -518,6 +537,118 @@ cmd_restart() {
     systemctl restart site 2>/dev/null || true
   fi
   echo "[OK] Restarted — http://127.0.0.1:${HTTP_PORT}/"
+}
+
+mongo_volume_names() {
+  local bin="${CONTAINER_BIN:-docker}"
+  local v
+  for v in jheffmedia-mongo common_jheffmedia-mongo; do
+    if "$bin" volume inspect "$v" >/dev/null 2>&1; then
+      echo "$v"
+    fi
+  done
+  # Project-prefixed leftovers
+  "$bin" volume ls -q 2>/dev/null | grep -E 'jheffmedia-mongo$' || true
+}
+
+cmd_diagnostics() {
+  require_operator
+  require_install
+  container_bin
+  load_env
+  cd "$COMPOSE_DIR"
+
+  echo "=== jheffmedia diagnostics ==="
+  echo "Install: ${INSTALL_DIR}"
+  echo "Commit:  $(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  echo "Listen:  ${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-8080}"
+  echo
+  echo "--- compose ps ---"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production ps || true
+  echo
+  echo "--- /healthz ---"
+  local hz
+  hz="$(curl -fsS --max-time 5 "http://127.0.0.1:${HTTP_PORT}/healthz" 2>/dev/null || echo FAIL)"
+  echo "$hz"
+  if [[ "$hz" != *'"ok":true'* && "$hz" != *'"ok": true'* ]]; then
+    echo "[!!] healthz not ok — often MONGO_PASSWORD ≠ volume (use --reset-db or fix env)."
+  fi
+  echo
+  echo "--- app env (non-secret) ---"
+  "$CONTAINER_BIN" exec jheffmedia-application printenv \
+    YEW_FULLSTACK_HOST YEW_FULLSTACK_PORT YEW_FULLSTACK_DB_NAME YEW_FULLSTACK_BUILD_ID \
+    YEW_FULLSTACK_FEED_PROVIDER RUST_LOG 2>/dev/null || echo "(app container not running)"
+  echo
+  echo "--- mongo auth ping (inside db container) ---"
+  if [[ -n "${MONGO_PASSWORD:-}" ]]; then
+    if "$CONTAINER_BIN" exec jheffmedia-database mongosh -u root -p "$MONGO_PASSWORD" \
+      --authenticationDatabase admin --quiet --eval 'db.adminCommand({ping:1}).ok' 2>/dev/null \
+      | grep -q 1; then
+      echo "mongo: auth ping ok"
+    else
+      echo "[!!] mongo: auth ping FAILED — password/volume mismatch. Try: jheffmedia --reset-db"
+    fi
+  else
+    echo "[!!] MONGO_PASSWORD not loaded from .env.production"
+  fi
+  echo
+  echo "--- recent app log (signup / auth) ---"
+  "$CONTAINER_BIN" logs --tail 30 jheffmedia-application 2>/dev/null \
+    | grep -iE 'signup|auth|mongo|error|DATABASE' || echo "(no matching lines)"
+  echo
+  echo "Admin → Dev on the site shows dbTests + production warnings after signup."
+}
+
+cmd_reset_db() {
+  ASSUME_YES=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --yes | -y) ASSUME_YES=1; shift ;;
+      *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    esac
+  done
+
+  require_operator
+  require_install
+  container_bin
+  load_env
+  cd "$COMPOSE_DIR"
+
+  echo "This DELETES Mongo data (users, schedule, site_config)."
+  echo "Keeps: content uploads volume, .env.production, JWT secret."
+  echo "New empty DB will use MONGO_PASSWORD from .env.production."
+  local ans=
+  if [[ "${JM_RESET_DB:-}" == "yes" ]]; then
+    ans=RESET
+  elif [[ "${ASSUME_YES:-0}" -eq 1 ]]; then
+    read -r -p "Type RESET to confirm: " ans || true
+  else
+    read -r -p "Type RESET to wipe Mongo volume: " ans || true
+  fi
+  if [[ "$ans" != "RESET" ]]; then
+    echo "Aborted."
+    exit 1
+  fi
+
+  echo "[..] stopping stack"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production down --remove-orphans || true
+
+  local v seen=""
+  while IFS= read -r v; do
+    [[ -z "$v" || "$seen" == *"|$v|"* ]] && continue
+    seen+="|$v|"
+    if "$CONTAINER_BIN" volume rm "$v"; then
+      echo "[fixed] removed volume ${v}"
+    else
+      echo "[skip]  could not remove ${v}"
+    fi
+  done < <(mongo_volume_names | awk 'NF && !seen[$0]++')
+
+  echo "[..] starting stack (Mongo re-inits with current MONGO_PASSWORD)"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
+  echo "[OK] Mongo reset. Sign up again with:"
+  grep -E '^ADMIN_EMAILS=' "$ENV_FILE" 2>/dev/null || true
+  echo "Then: jheffmedia --diagnostics"
 }
 
 cmd_postinstall() {
@@ -543,6 +674,8 @@ main() {
       cmd_reinstall "$@"
       ;;
     --status | status) cmd_status ;;
+    --diagnostics | diagnostics) cmd_diagnostics ;;
+    --reset-db | reset-db) cmd_reset_db "$@" ;;
     --restart | restart) cmd_restart ;;
     --postinstall | postinstall) cmd_postinstall "$@" ;;
     --help | -h | help | "") usage ;;

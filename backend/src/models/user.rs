@@ -159,19 +159,18 @@ impl From<User> for PublicUserDTO {
 
 impl User {
     pub async fn signup(user: User, db: &Database) -> Result<ObjectId, String> {
-        if Self::find_by_email_or_username(user.username.as_str(), db)
-            .await
-            .is_some()
-        {
-            return Err("USER_ALREADY_EXISTS".to_string());
-        }
-        if Self::find_by_email_or_username(user.email.as_str(), db)
-            .await
-            .is_some()
-        {
-            return Err("USER_ALREADY_EXISTS".to_string());
-        }
         let coll = db.collection::<User>(USERS_COLLECTION);
+        // Do not treat find I/O/auth failures as "user missing" — that hid DATABASE_UNAVAILABLE.
+        for key in [user.username.as_str(), user.email.as_str()] {
+            match coll
+                .find_one(doc! {"$or": [{"username": key}, {"email": key}]})
+                .await
+            {
+                Ok(Some(_)) => return Err("USER_ALREADY_EXISTS".to_string()),
+                Ok(None) => {}
+                Err(err) => return Err(classify_signup_insert_err(&err).to_string()),
+            }
+        }
         let hashed_pwd = hash(&user.password, DEFAULT_COST).unwrap();
         let user = Self {
             password: hashed_pwd,

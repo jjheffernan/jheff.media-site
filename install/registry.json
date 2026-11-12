@@ -80,6 +80,8 @@
         "cleanup": "jheffmedia --cleanup",
         "reinstall": "jheffmedia --reinstall",
         "status": "jheffmedia --status",
+        "diagnostics": "jheffmedia --diagnostics",
+        "reset_db": "jheffmedia --reset-db",
         "restart": "jheffmedia --restart",
         "postinstall": "jheffmedia --postinstall",
         "healthz": "GET /healthz"

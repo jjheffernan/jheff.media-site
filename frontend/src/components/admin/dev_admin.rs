@@ -2,7 +2,7 @@ use crate::context::{AuthContext, DevModeContext, ThemeContext};
 use crate::routes::AppRoutes;
 use crate::services::{api_errors, auth_header};
 use gloo_net::http::Request;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{Event, HtmlTextAreaElement, MouseEvent};
@@ -11,9 +11,40 @@ use yew_router::prelude::*;
 
 #[derive(Clone, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+struct DbTestResult {
+    #[serde(default)]
+    ok: bool,
+    #[serde(default)]
+    detail: String,
+}
+
+#[derive(Clone, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct DbTests {
+    #[serde(default)]
+    ping: DbTestResult,
+    #[serde(default)]
+    list_collections: DbTestResult,
+    #[serde(default)]
+    users_readable: DbTestResult,
+}
+
+#[derive(Clone, Default, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+struct ProdWarning {
+    #[serde(default)]
+    code: String,
+    #[serde(default)]
+    message: String,
+}
+
+#[derive(Clone, Default, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 struct ServerDiag {
     #[serde(default)]
     db_reachable: bool,
+    #[serde(default)]
+    db_tests: DbTests,
     #[serde(default)]
     feed_provider: String,
     #[serde(default)]
@@ -24,6 +55,10 @@ struct ServerDiag {
     version: String,
     #[serde(default)]
     build_id: String,
+    #[serde(default)]
+    compress_enabled: bool,
+    #[serde(default)]
+    warnings: Vec<ProdWarning>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -103,8 +138,11 @@ pub fn dev_admin() -> Html {
                                         path: "/api/admin/diagnostics".into(),
                                         ok: true,
                                         detail: format!(
-                                            "db={} provider={} uptime={}s",
-                                            body.db_reachable, body.feed_provider, body.uptime_secs
+                                            "db={} ping={} provider={} uptime={}s",
+                                            body.db_reachable,
+                                            body.db_tests.ping.ok,
+                                            body.feed_provider,
+                                            body.uptime_secs
                                         ),
                                     });
                                     server.set(body);
@@ -138,17 +176,25 @@ pub fn dev_admin() -> Html {
                 }
 
                 for path in ["/healthz", "/api/feed", "/api/schedule", "/metrics"] {
-                    match Request::get(path).send().await {
+                    match Request::get(path)
+                        .header("Accept-Encoding", "gzip, deflate, br")
+                        .send()
+                        .await
+                    {
                         Ok(resp) => {
                             let status = resp.status();
                             let ok = resp.ok();
+                            let encoding = resp
+                                .headers()
+                                .get("content-encoding")
+                                .unwrap_or_else(|| "-".into());
                             if !ok {
                                 api_errors::push(path, status);
                             }
                             rows.push(ProbeRow {
                                 path: path.into(),
                                 ok,
-                                detail: status.to_string(),
+                                detail: format!("{status} encoding={encoding}"),
                             });
                         }
                         Err(err) => {
@@ -215,6 +261,17 @@ pub fn dev_admin() -> Html {
         server.feed_provider.clone()
     };
 
+    let mut warnings = server.warnings.clone();
+    if !server.version.is_empty() && server.version != frontend_version {
+        warnings.push(ProdWarning {
+            code: "VERSION_MISMATCH".into(),
+            message: format!(
+                "Frontend {frontend_version} ≠ backend {} — stale WASM or mixed deploy.",
+                server.version
+            ),
+        });
+    }
+
     let snapshot = json!({
         "role": role,
         "route": route_label,
@@ -224,11 +281,18 @@ pub fn dev_admin() -> Html {
         "feedProvider": feed,
         "server": {
             "dbReachable": server.db_reachable,
+            "dbTests": {
+                "ping": { "ok": server.db_tests.ping.ok, "detail": server.db_tests.ping.detail },
+                "listCollections": { "ok": server.db_tests.list_collections.ok, "detail": server.db_tests.list_collections.detail },
+                "usersReadable": { "ok": server.db_tests.users_readable.ok, "detail": server.db_tests.users_readable.detail },
+            },
             "rustLog": server.rust_log,
             "uptimeSecs": server.uptime_secs,
             "version": server.version,
             "buildId": server.build_id,
+            "compressEnabled": server.compress_enabled,
         },
+        "warnings": warnings,
         "recentErrors": &*errors,
         // Never include jwt / Authorization / secrets.
     });
@@ -261,12 +325,31 @@ pub fn dev_admin() -> Html {
                         <dt>{ "API base" }</dt><dd><code>{ api_base.clone() }</code></dd>
                         <dt>{ "Feed provider" }</dt><dd>{ feed.clone() }</dd>
                         <dt>{ "DB reachable" }</dt><dd>{ server.db_reachable.to_string() }</dd>
+                        <dt>{ "DB ping" }</dt><dd>{ format!("{} — {}", server.db_tests.ping.ok, server.db_tests.ping.detail) }</dd>
+                        <dt>{ "DB collections" }</dt><dd>{ format!("{} — {}", server.db_tests.list_collections.ok, server.db_tests.list_collections.detail) }</dd>
+                        <dt>{ "DB users" }</dt><dd>{ format!("{} — {}", server.db_tests.users_readable.ok, server.db_tests.users_readable.detail) }</dd>
+                        <dt>{ "Compression" }</dt><dd>{ if server.compress_enabled { "enabled" } else { "disabled" } }</dd>
                         <dt>{ "RUST_LOG" }</dt><dd>{ if server.rust_log.is_empty() { "—" } else { server.rust_log.as_str() } }</dd>
                         <dt>{ "Uptime" }</dt><dd>{ format!("{}s", server.uptime_secs) }</dd>
                         <dt>{ "Backend version" }</dt><dd>{ if server.version.is_empty() { "—" } else { server.version.as_str() } }</dd>
                         <dt>{ "Build id" }</dt><dd>{ if server.build_id.is_empty() { "—" } else { server.build_id.as_str() } }</dd>
                     </dl>
                 </section>
+
+                if !warnings.is_empty() {
+                    <section class="card space-y-2">
+                        <p class="label-xs">{ "Production warnings" }</p>
+                        <ul class="dev-list">
+                            { for warnings.iter().map(|w| html! {
+                                <li class="dev-bad">
+                                    <code>{ &w.code }</code>
+                                    { " — " }
+                                    { &w.message }
+                                </li>
+                            }) }
+                        </ul>
+                    </section>
+                }
 
                 <section class="card space-y-2">
                     <div class="row-actions" style="align-items:center;justify-content:space-between;">

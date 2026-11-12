@@ -4,13 +4,14 @@ use crate::{
         content::{ContentCollection, ReorderMediaRequest, UpdateContentCollection},
         response::ResponseBody,
     },
-    services::{content_service, library_import_service, site_config_service},
+    services::{
+        content_service, diagnostics_service, library_import_service, site_config_service,
+    },
     utils::auth::require_admin,
 };
 use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use awc::Client;
-use bson::doc;
 use futures_util::StreamExt;
 use mongodb::Database;
 use serde::Deserialize;
@@ -33,7 +34,8 @@ pub async fn diagnostics(req: HttpRequest, db: web::Data<Database>) -> Result<Ht
         return Ok(resp);
     }
     mark_boot();
-    let db_reachable = db.run_command(doc! { "ping": 1 }).await.is_ok();
+    let db_tests = diagnostics_service::run_db_tests(&db).await;
+    let db_reachable = db_tests.ping.ok;
     let cfg = site_config_service::resolved(&db).await;
     let rust_log = env::var("RUST_LOG").unwrap_or_default();
     let uptime_secs = BOOT
@@ -41,14 +43,19 @@ pub async fn diagnostics(req: HttpRequest, db: web::Data<Database>) -> Result<Ht
         .map(|t| t.elapsed().as_secs())
         .unwrap_or(0);
     let build_id = env::var("YEW_FULLSTACK_BUILD_ID").unwrap_or_default();
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-        "dbReachable": db_reachable,
-        "feedProvider": cfg.feed_provider,
-        "rustLog": rust_log,
-        "uptimeSecs": uptime_secs,
-        "version": env!("CARGO_PKG_VERSION"),
-        "buildId": build_id,
-    })))
+    let compress_enabled = true; // Compress middleware is always wrapped in main.
+    let warnings = diagnostics_service::production_warnings(&build_id, compress_enabled);
+    Ok(HttpResponse::Ok().json(diagnostics_service::DiagnosticsSnapshot {
+        db_reachable,
+        db_tests,
+        feed_provider: cfg.feed_provider,
+        rust_log,
+        uptime_secs,
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        build_id,
+        compress_enabled,
+        warnings,
+    }))
 }
 
 pub async fn list_galleries(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {

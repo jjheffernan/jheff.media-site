@@ -440,7 +440,7 @@ Admin JWT. Site setup wizard: feed provider (`none` | `static` | `immich` | `nex
 
 ### `GET /api/admin/diagnostics`
 
-Admin JWT. Non-secret runtime snapshot for live troubleshooting: `dbReachable`, `feedProvider`, `rustLog` (env value only), `uptimeSecs`, `version`, `buildId` (`YEW_FULLSTACK_BUILD_ID`, often a git SHA). No connection strings, keys, or JWTs.
+Admin JWT. Non-secret runtime snapshot for live troubleshooting: `dbReachable`, `dbTests` (`ping` / `listCollections` / `usersReadable`), `feedProvider`, `rustLog` (env value only), `uptimeSecs`, `version`, `buildId` (`YEW_FULLSTACK_BUILD_ID`, often a git SHA), `compressEnabled`, and `warnings` (`NO_BUILD_ID`, `CORS_DEFAULT`, …). No connection strings, keys, or JWTs. Admin → Dev also flags frontend/backend `VERSION_MISMATCH` and probes `Content-Encoding` on public routes.
 
 ### `GET /api/admin/social`
 

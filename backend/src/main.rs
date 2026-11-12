@@ -82,6 +82,8 @@ async fn main() -> io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            // Outer: compress JSON/HTML/WASM responses (prod bandwidth).
+            .wrap(actix_web::middleware::Compress::default())
             .wrap(actix_web::middleware::from_fn(services::metrics::track))
             .wrap(actix_web::middleware::Logger::default())
             .wrap(

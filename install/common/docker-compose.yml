@@ -72,7 +72,21 @@ services:
     volumes:
       - jheffmedia-mongo:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      # Auth required — unauthenticated ping can pass while the app cannot write users.
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "-u",
+          "root",
+          "-p",
+          "${MONGO_PASSWORD}",
+          "--authenticationDatabase",
+          "admin",
+          "--quiet",
+          "--eval",
+          "db.adminCommand('ping').ok",
+        ]
       interval: 5s
       timeout: 5s
       retries: 12

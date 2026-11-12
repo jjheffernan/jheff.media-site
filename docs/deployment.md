@@ -128,7 +128,12 @@ Inside the install host/LXC as root or `jheffmedia`:
 jheffmedia --update
 ```
 
-Also: `jheffmedia --status`, `jheffmedia --restart`, `jheffmedia --cleanup`, `jheffmedia --reinstall`.
+Also: `jheffmedia --status`, `jheffmedia --diagnostics`, `jheffmedia --reset-db`, `jheffmedia --restart`, `jheffmedia --cleanup`, `jheffmedia --reinstall`.
+
+```bash
+jheffmedia --diagnostics          # healthz + mongo auth ping + logs
+jheffmedia --reset-db             # wipe Mongo volume only (type RESET); keeps uploads
+```
 
 ### Signup fails with database / MONGO errors
 
@@ -145,7 +150,31 @@ docker compose -f docker-compose.yml --env-file .env.production ps
 docker compose -f docker-compose.yml --env-file .env.production logs --tail=80 db application
 ```
 
-Typical ops causes: `db` not healthy yet, wrong `MONGO_PASSWORD` / `DB_CONNSTR` vs an existing mongo volume, or app started before mongod finished init. Fix: wait for healthy db, or `jheffmedia --restart`. Password mismatch after a reinstall usually needs aligning `.env.production` with the volume (or a deliberate volume reset). Backend logs include the real Mongo driver error; the UI shows a short human message only.
+Typical ops causes: `db` not healthy yet, wrong `MONGO_PASSWORD` / `DB_CONNSTR` vs an existing mongo volume, or app started before mongod finished init. Fix: wait for healthy db, or `jheffmedia --restart`. Backend logs include the real Mongo driver error; the UI shows a short human message only (`Database unavailable…` = auth/connectivity).
+
+**Password ≠ volume (most common after reinstall):** Mongo only applies `MONGO_PASSWORD` on first init of `jheffmedia-mongo`. If `.env.production` was regenerated with a new password, signup and `/healthz` fail while the UI still loads.
+
+```bash
+curl -sS http://127.0.0.1:8080/healthz
+docker logs jheffmedia-application --tail 40   # look for: user signup insert failed / Authentication
+
+# Option A — fresh DB (wipes users/schedule data; keeps uploads volume):
+cd /opt/jheffmedia-site/install/common
+docker compose --env-file .env.production down
+docker volume ls | grep jheffmedia-mongo    # note exact name, often common_jheffmedia-mongo
+docker volume rm common_jheffmedia-mongo    # use the name from ls
+docker compose --env-file .env.production up -d
+# then sign up again with ADMIN_EMAILS from: grep '^ADMIN_EMAILS=' .env.production
+```
+
+Option B — keep the volume: restore the **original** `MONGO_PASSWORD` in `.env.production` (and matching `DB_CONNSTR`) and `jheffmedia --restart`.
+
+Option C — wipe Mongo only (keeps uploads):
+
+```bash
+jheffmedia --reset-db    # type RESET when prompted
+jheffmedia --diagnostics
+```
 
 Curl fallback (or older installs):
 
