@@ -94,7 +94,7 @@ jheffmedia --postinstall              # admin email reminder
 jheffmedia --postinstall --show-creds # admin email + secret paths (not values)
 ```
 
-Use `--cleanup` for leftover `/root/site-install.creds` or root-owned trees; `--reinstall` for broken/partial installs; `--update` for day-2 deploys. Autoupdate writes `install/common/autoupdate.env` (`AUTOUPDATE_CHANNEL=main|testing`) and a systemd timer; logs via `journalctl -u jheffmedia-autoupdate.service`. See [docs/deployment.md](../docs/deployment.md).
+Use `--cleanup` for leftover `/root/site-install.creds` or root-owned trees; `--reinstall` for broken/partial installs; `--update` for day-2 deploys. Autoupdate writes `install/common/autoupdate.env` (`AUTOUPDATE_CHANNEL=main|testing`) and a systemd timer; logs via `journalctl -u jheffmedia-autoupdate.service`. Admin → Dev → Deploy can trigger `--update` / `--update -d` via `var/deploy` + `jheffmedia-gui-update.path` (no docker.sock in the app). See [docs/deployment.md](../docs/deployment.md).
 
 Curl fallback: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"`.
 

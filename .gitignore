@@ -45,6 +45,10 @@ frontend/pkg/
 .dev/
 uploads/
 
+# Host deploy control drop-files (keep directory via .gitkeep)
+var/deploy/*
+!var/deploy/.gitkeep
+
 # Local design working files. Not the published spec.
 local/
 

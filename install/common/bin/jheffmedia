@@ -221,7 +221,8 @@ cmd_update() {
   if [[ ${EUID:-0} -eq 0 && -x "${COMPOSE_DIR}/bin/jheffmedia" ]]; then
     ln -sfn "${COMPOSE_DIR}/bin/jheffmedia" /usr/local/bin/jheffmedia
     printf '%s\n' '#!/bin/sh' 'exec /usr/local/bin/jheffmedia --update "$@"' >/usr/local/bin/site-update
-    chmod +x /usr/local/bin/site-update "${COMPOSE_DIR}/bin/jheffmedia"
+    chmod +x /usr/local/bin/site-update "${COMPOSE_DIR}/bin/jheffmedia" \
+      "${COMPOSE_DIR}/bin/jheffmedia-gui-update" 2>/dev/null || true
   fi
   echo "[OK] Repository updated"
 
@@ -242,7 +243,13 @@ cmd_update() {
     install_systemd
     harden_install_perms
     remove_legacy_creds_file
+  elif declare -F install_gui_deploy >/dev/null 2>&1; then
+    # Service user: still refresh deploy control dir perms when possible.
+    mkdir -p "${INSTALL_DIR}/var/deploy" 2>/dev/null || true
   fi
+  # Channel hint for Admin → Dev deploy panel (bind-mounted).
+  mkdir -p "${INSTALL_DIR}/var/deploy" 2>/dev/null || true
+  echo "${BRANCH}" >"${INSTALL_DIR}/var/deploy/channel-hint" 2>/dev/null || true
   echo "${BRANCH}" >"${COMPOSE_DIR}/.install-version"
   echo "[OK] Stack updated (${BRANCH}) — http://127.0.0.1:${HTTP_PORT}/"
 }
@@ -335,6 +342,9 @@ WantedBy=timers.target
 EOF
       systemctl daemon-reload
       systemctl enable --now jheffmedia-autoupdate.timer
+      mkdir -p "${INSTALL_DIR}/var/deploy" 2>/dev/null || true
+      printf 'enabled=1\nchannel=%s\ninterval=%s\n' "$channel" "$interval" \
+        >"${INSTALL_DIR}/var/deploy/autoupdate-status" 2>/dev/null || true
       echo "[OK] Autoupdate enabled (channel=${channel}, interval=${interval})"
       echo "     Logs: journalctl -u jheffmedia-autoupdate.service -n 50"
       ;;
@@ -344,6 +354,8 @@ EOF
         exit 1
       fi
       systemctl disable --now jheffmedia-autoupdate.timer 2>/dev/null || true
+      mkdir -p "${INSTALL_DIR}/var/deploy" 2>/dev/null || true
+      printf 'enabled=0\nchannel=\n' >"${INSTALL_DIR}/var/deploy/autoupdate-status" 2>/dev/null || true
       echo "[OK] Autoupdate disabled (units left on disk; re-enable anytime)"
       ;;
     status | "")

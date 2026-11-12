@@ -302,6 +302,54 @@ EOF
   ln -sfn "$cli" /usr/local/bin/jheffmedia
   printf '%s\n' '#!/bin/sh' 'exec /usr/local/bin/jheffmedia --update "$@"' >/usr/local/bin/site-update
   chmod +x /usr/local/bin/site-update
+
+  install_gui_deploy
+}
+
+# Admin GUI deploy: app writes var/deploy/request → path unit → jheffmedia --update.
+# App container never gets docker.sock; this is the host bridge.
+install_gui_deploy() {
+  local user="${SERVICE_USER:-jheffmedia}"
+  local ctl="${INSTALL_DIR}/var/deploy"
+  local agent="${INSTALL_DIR}/install/common/bin/jheffmedia-gui-update"
+  mkdir -p "$ctl"
+  chown -R "${user}:${user}" "${INSTALL_DIR}/var" 2>/dev/null || true
+  chmod 755 "${INSTALL_DIR}/var" "$ctl" 2>/dev/null || true
+  chmod +x "$agent" 2>/dev/null || true
+  # Seed empty request so PathChanged has a file; app rewrites it.
+  [[ -f "${ctl}/request" ]] || printf 'JOB_ID=\nCHANNEL=main\n' >"${ctl}/request"
+  chown "${user}:${user}" "${ctl}/request" 2>/dev/null || true
+
+  cat >/etc/systemd/system/jheffmedia-gui-update.service <<EOF
+[Unit]
+Description=jheff.media GUI deploy (jheffmedia --update)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=${user}
+Group=${user}
+SupplementaryGroups=docker
+Environment=INSTALL_DIR=${INSTALL_DIR}
+ExecStart=${agent}
+Nice=5
+TimeoutStartSec=0
+EOF
+
+  cat >/etc/systemd/system/jheffmedia-gui-update.path <<EOF
+[Unit]
+Description=Watch Admin GUI deploy request
+
+[Path]
+PathChanged=${ctl}/request
+Unit=jheffmedia-gui-update.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  systemctl daemon-reload
+  systemctl enable -q --now jheffmedia-gui-update.path
 }
 
 # Optional release identity for Admin → Dev / diagnostics (override by exporting first).

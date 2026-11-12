@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Host agent for Admin → Dev → Deploy. Triggered by systemd path on var/deploy/request.
+# Never accepts shell strings — only CHANNEL=main|testing from the request file.
+set -euo pipefail
+
+INSTALL_DIR="${INSTALL_DIR:-/opt/jheffmedia-site}"
+CTL="${INSTALL_DIR}/var/deploy"
+REQ="${CTL}/request"
+STATUS="${CTL}/status"
+LOG="${CTL}/log"
+CLI="$(command -v jheffmedia || true)"
+[[ -x "$CLI" ]] || CLI=/usr/local/bin/jheffmedia
+[[ -x "$CLI" ]] || CLI="${INSTALL_DIR}/install/common/bin/jheffmedia"
+
+mkdir -p "$CTL"
+exec 9>"${CTL}/lock"
+if ! flock -n 9; then
+  echo "[skip] gui-update already running" >>"$LOG"
+  exit 0
+fi
+
+if [[ ! -f "$REQ" ]]; then
+  exit 0
+fi
+
+# shellcheck disable=SC1090
+JOB_ID=""
+CHANNEL="main"
+while IFS='=' read -r k v; do
+  k="${k//$'\r'/}"
+  v="${v//$'\r'/}"
+  case "$k" in
+    JOB_ID) JOB_ID="$v" ;;
+    CHANNEL) CHANNEL="$v" ;;
+  esac
+done <"$REQ"
+
+case "$CHANNEL" in
+  main | prod | production) CHANNEL=main ;;
+  testing | dev) CHANNEL=testing ;;
+  *)
+    echo "JOB_ID=${JOB_ID}" >"$STATUS"
+    echo "CHANNEL=${CHANNEL}" >>"$STATUS"
+    echo "STATE=failed" >>"$STATUS"
+    echo "EXIT=2" >>"$STATUS"
+    echo "[fail] invalid CHANNEL=${CHANNEL}" >>"$LOG"
+    exit 2
+    ;;
+esac
+
+if [[ ! -x "$CLI" ]]; then
+  {
+    echo "JOB_ID=${JOB_ID}"
+    echo "CHANNEL=${CHANNEL}"
+    echo "STATE=failed"
+    echo "EXIT=127"
+  } >"$STATUS"
+  echo "[fail] jheffmedia binary missing" >>"$LOG"
+  exit 127
+fi
+
+{
+  echo "JOB_ID=${JOB_ID}"
+  echo "CHANNEL=${CHANNEL}"
+  echo "STATE=running"
+  echo "EXIT="
+} >"$STATUS"
+echo "${CHANNEL}" >"${CTL}/channel-hint"
+echo "[..] gui-update job=${JOB_ID} channel=${CHANNEL}" >>"$LOG"
+
+set +e
+if [[ "$CHANNEL" == "testing" ]]; then
+  "$CLI" --update -d >>"$LOG" 2>&1
+else
+  "$CLI" --update >>"$LOG" 2>&1
+fi
+rc=$?
+set -e
+
+{
+  echo "JOB_ID=${JOB_ID}"
+  echo "CHANNEL=${CHANNEL}"
+  if [[ "$rc" -eq 0 ]]; then
+    echo "STATE=ok"
+  else
+    echo "STATE=failed"
+  fi
+  echo "EXIT=${rc}"
+} >"$STATUS"
+echo "[done] gui-update job=${JOB_ID} exit=${rc}" >>"$LOG"
+# Keep last ~200KB of log.
+if [[ -f "$LOG" ]] && [[ "$(wc -c <"$LOG")" -gt 200000 ]]; then
+  tail -c 180000 "$LOG" >"${LOG}.trim" && mv "${LOG}.trim" "$LOG"
+fi
+exit "$rc"

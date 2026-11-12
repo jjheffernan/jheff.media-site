@@ -33,6 +33,8 @@ services:
       YEW_FULLSTACK_DB_NAME: ${DB_NAME}
       YEW_FULLSTACK_JWT_SECRET_FILE: /run/secrets/jwt_secret
       YEW_FULLSTACK_BUILD_ID: ${YEW_FULLSTACK_BUILD_ID:-}
+      # Host deploy control (Admin → Dev → Deploy). Bind-mounted; no docker.sock in app.
+      YEW_FULLSTACK_DEPLOY_CTL: /data/deploy-ctl
       # Comma-separated browser origins (e.g. https://jheff.media or http://IP:PORT).
       YEW_FULLSTACK_CORS_ORIGINS: ${YEW_FULLSTACK_CORS_ORIGINS:-}
       YEW_FULLSTACK_FEED_PROVIDER: ${FEED_PROVIDER:-none}
@@ -47,6 +49,8 @@ services:
     volumes:
       - ../../backend/src/secret.key:/run/secrets/jwt_secret:ro
       - jheffmedia-content-uploads:/data/content-uploads
+      # Drop-file bridge for Admin GUI update (host systemd path → jheffmedia --update).
+      - ../../var/deploy:/data/deploy-ctl
     ports:
       # Override HTTP_BIND=127.0.0.1 when a reverse proxy on the same LXC terminates TLS.
       - "${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-8080}:8080"
