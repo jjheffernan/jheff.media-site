@@ -7,7 +7,7 @@ ARG RUST_IMAGE=docker.io/library/rust:1.89-bookworm
 FROM ${RUST_IMAGE} AS frontend-build
 ARG TARGETARCH
 ARG TRUNK_VERSION=0.21.14
-ARG TAILWIND_VERSION=4.3.3
+ARG TAILWIND_VERSION=4.3.5
 # Pin Trunk: 0.22+ needs rustc 1.96; keep in sync with image rustc.
 RUN case "${TARGETARCH}" in \
       amd64) trunk_arch=x86_64; tw_arch=x64 ;; \

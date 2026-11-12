@@ -27,8 +27,8 @@ Shared workspace deps (`Cargo.toml` `[workspace.dependencies]`): `serde`, `serde
 
 | Dependency | Pin | Notes |
 |------------|-----|-------|
-| actix-web | 4.13 | Async HTTP server |
-| actix-cors | 0.7.1 | `Cors::default()` — no `.finish()` |
+| actix-web | 4.19 | Async HTTP server |
+| actix-cors | 0.7.2 | `Cors::default()` — no `.finish()` |
 | mongodb | 3.7 | Driver 3.x is async-only |
 | bson | 2.15 | Matches mongodb 3.7 |
 | awc | 3.8 | Replaces removed `actix_web::client` |
