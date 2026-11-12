@@ -83,16 +83,13 @@ Credentials and env paths are printed at the end of install and stored in the cr
 
 ## Updates
 
+Inside the install host/LXC as root (pulls `main`, rebuilds the image, restarts):
+
 ```bash
-cd /opt/jheffmedia-site
-git checkout main && git pull
-# Keep backend/src/secret.key — rotating it logs everyone out
-cd install/common
-docker compose --env-file .env.production up -d --build
-systemctl restart site
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"
 ```
 
-On Proxmox you can also re-run the CT script and choose update.
+Or after install: `site-update` (`/usr/local/bin/site-update`). Keep `backend/src/secret.key` — rotating it logs everyone out. Staging: `BRANCH=dev` before the command.
 
 ## Checklist
 

@@ -97,6 +97,10 @@ WantedBy=multi-user.target
 EOF
   systemctl daemon-reload
   systemctl enable -q --now site
+
+  # One-line local update helper (same as curling install/update.sh).
+  ln -sfn "${INSTALL_DIR}/install/update.sh" /usr/local/bin/site-update
+  chmod +x "${INSTALL_DIR}/install/update.sh" 2>/dev/null || true
 }
 
 deploy_stack() {

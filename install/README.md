@@ -67,6 +67,16 @@ UNATTENDED=yes MONGO_PASSWORD='secret' BRANCH=main \
 
 Override defaults in `install/common/lib/defaults.sh` or export before running.
 
+## Update (existing install)
+
+Inside the host/LXC as root:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"
+```
+
+Or run `site-update` if the install created `/usr/local/bin/site-update`.
+
 ## Adding a new target
 
 1. Create `install/<platform>/install.sh` — bootstrap + call `install/common/run-install.sh`

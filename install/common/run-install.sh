@@ -56,4 +56,6 @@ print_install_done() {
   echo -e "${GATEWAY}${BGN}http://${ip}:${HTTP_PORT}${CL}"
   echo -e "${INFO}${YW}Credentials saved to:${CL} ~/site-install.creds"
   echo -e "${INFO}${YW}Edit env and restart:${CL} systemctl restart site"
+  echo -e "${INFO}${YW}Update later:${CL} site-update"
+  echo -e "${INFO}${YW}Or:${CL} bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)\""
 }
