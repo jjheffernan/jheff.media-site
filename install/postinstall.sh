@@ -61,9 +61,11 @@ if [[ -n "$ADMIN_EMAILS" ]]; then
   echo "  Admin email(s): ${ADMIN_EMAILS}"
   echo "  Sign up at http://127.0.0.1:${HTTP_PORT}/ with that email (any password ≥8 chars)."
   echo "  First signup matching ADMIN_EMAILS becomes admin — no seed password."
+  echo "  Then: Admin → Setup (Immich / Nextcloud / static; no redeploy)."
 else
   echo "  No ADMIN_EMAILS set. Add ADMIN_EMAILS=you@example.com to ${ENV_FILE},"
   echo "  then: systemctl restart site — and sign up with that email."
+  echo "  After admin signup: Admin → Setup to choose the photo feed."
 fi
 echo "  Creds file: ${CREDS_FILE:-"(missing — re-run install or check ~/site-install.creds)"}"
 echo "  Update later: jheffmedia --update"

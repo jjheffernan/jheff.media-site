@@ -10,6 +10,18 @@ _before_prompt() {
   fi
 }
 
+# After the last whiptail, leave a clean tty so community-scripts msg_info/spinner resume.
+_after_guided() {
+  if declare -f stop_spinner >/dev/null 2>&1; then
+    stop_spinner
+  fi
+  # newt/whiptail may leave alt-screen or a hidden cursor; avoid clear/reset.
+  if [[ -t 1 ]]; then
+    printf '\033[?1049l\033[?25h' 2>/dev/null || true
+  fi
+  stty sane 2>/dev/null || true
+}
+
 prompt_input() {
   _before_prompt
   local title=$1 prompt=$2 default=${3:-}
@@ -70,6 +82,7 @@ guided_config() {
     [[ -z "${MONGO_PASSWORD:-}" ]] && MONGO_PASSWORD="$(random_alnum 20)"
     ensure_admin_emails
     msg_ok "Defaults loaded"
+    _after_guided
     return 0
   fi
 
@@ -98,7 +111,7 @@ guided_config() {
   msg_ok "Database settings saved"
 
   msg_info "Guided setup — photo feed"
-  msg_custom "ℹ️" "${YW:-}" "Choose static/none to run without Immich. Add Immich later in .env.production."
+  msg_custom "ℹ️" "${YW:-}" "Choose static/none to run without Immich. Switch providers later in Admin → Setup (no redeploy)."
   FEED_PROVIDER="$(prompt_menu "Photo feed" "Homepage feed provider:" "$FEED_PROVIDER" \
     "none" "No homepage feed" \
     "static" "Demo stills (external URLs)" \
@@ -110,7 +123,7 @@ guided_config() {
       IMMICH_ALBUM_ID="$(prompt_input "Immich album" "Album UUID for homepage feed:" "${IMMICH_ALBUM_ID:-}")"
       ;;
     static)
-      msg_custom "ℹ️" "${YW:-}" "Using bundled demo JSON. Override FEED_STATIC_JSON in .env.production later."
+      msg_custom "ℹ️" "${YW:-}" "Using bundled demo JSON. Change provider later in Admin → Setup."
       ;;
   esac
   msg_ok "Photo feed settings saved"
@@ -120,4 +133,6 @@ guided_config() {
   ADMIN_EMAILS="$(prompt_input "Admin emails" "Comma-separated signup emails granted admin (Enter to generate):" "${ADMIN_EMAILS:-}")"
   ensure_admin_emails
   msg_ok "Admin settings saved"
+  # Last prompt done — clear spinner/newt so docker install msg_info resumes cleanly.
+  _after_guided
 }

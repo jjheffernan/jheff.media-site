@@ -54,6 +54,7 @@ write_credentials() {
     else
       echo "Admin bootstrap: sign up on the site with a listed email; that account becomes admin."
     fi
+    echo "After admin signup: Admin → Setup to switch Immich/Nextcloud/static (no redeploy)."
     echo "Env file: ${COMMON_DIR}/.env.production"
     echo "JWT secret file: ${INSTALL_DIR}/backend/src/secret.key (mounted at container start)"
     echo "Compose: ${COMMON_DIR}/docker-compose.yml"

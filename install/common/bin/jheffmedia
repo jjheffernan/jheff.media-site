@@ -21,12 +21,15 @@ jheffmedia — manage a deployed jheff.media site
 Usage:
   jheffmedia --update [--branch BRANCH] [--no-cache]
       Pull, rebuild image, restart stack.
-      --no-cache also re-downloads the Tailwind binary build layer.
+      --branch BRANCH   Git branch to deploy (default: main / $BRANCH)
+      --no-cache        Rebuild without cache (also refreshes Tailwind layer)
   jheffmedia --status
   jheffmedia --restart
   jheffmedia --postinstall [--show-creds]
-      Remind admin signup path; --show-creds (root) reprints site-install.creds.
-  jheffmedia --help
+      Admin signup reminder (ADMIN_EMAILS → Admin → Setup).
+      --show-creds (root) reprints ~/site-install.creds
+  jheffmedia --help | -h
+      This usage (also printed for bare `jheffmedia`).
 
 Env:
   INSTALL_DIR   Install path (default /opt/jheffmedia-site)
