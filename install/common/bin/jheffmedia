@@ -17,9 +17,11 @@ usage() {
 jheffmedia — manage a deployed jheff.media site
 
 Usage:
-  jheffmedia --update [--branch BRANCH]   Pull, rebuild image, restart stack
-  jheffmedia --status                     Compose + systemd status
-  jheffmedia --restart                    Restart stack (no rebuild)
+  jheffmedia --update [--branch BRANCH] [--no-cache]
+      Pull, rebuild image, restart stack.
+      --no-cache also re-downloads the Tailwind binary build layer.
+  jheffmedia --status
+  jheffmedia --restart
   jheffmedia --help
 
 Env:
@@ -57,6 +59,16 @@ container_bin() {
 }
 
 cmd_update() {
+  local no_cache=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --branch) BRANCH="${2:?}"; shift 2 ;;
+      --branch=*) BRANCH="${1#*=}"; shift ;;
+      --no-cache) no_cache=1; shift ;;
+      *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    esac
+  done
+
   require_root
   require_install
   container_bin
@@ -76,7 +88,11 @@ cmd_update() {
 
   echo "[..] Rebuilding application image (may take several minutes)"
   cd "$COMPOSE_DIR"
-  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build
+  if [[ "$no_cache" -eq 1 ]]; then
+    "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build --no-cache
+  else
+    "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build
+  fi
   "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
   systemctl restart site 2>/dev/null || true
   echo "${BRANCH}" >"${COMPOSE_DIR}/.install-version"
@@ -112,14 +128,7 @@ main() {
   shift || true
   case "$cmd" in
     --update | update)
-      while [[ $# -gt 0 ]]; do
-        case "$1" in
-          --branch) BRANCH="${2:?}"; shift 2 ;;
-          --branch=*) BRANCH="${1#*=}"; shift ;;
-          *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
-        esac
-      done
-      cmd_update
+      cmd_update "$@"
       ;;
     --status | status) cmd_status ;;
     --restart | restart) cmd_restart ;;

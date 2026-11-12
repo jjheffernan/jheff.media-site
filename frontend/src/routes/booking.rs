@@ -3,7 +3,6 @@ use crate::{
         ui::{Heading, HeadingLevel, Spinner},
         ContactForm,
     },
-    model::ServerResponse,
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
@@ -17,6 +16,7 @@ struct ScheduleEvent {
     starts_at: String,
     #[serde(default)]
     location: Option<String>,
+    #[serde(default)]
     kind: String,
 }
 
@@ -25,13 +25,6 @@ struct ScheduleEvent {
 struct SchedulePayload {
     #[serde(default)]
     events: Vec<ScheduleEvent>,
-}
-
-#[derive(Clone, PartialEq)]
-enum LoadState {
-    Loading,
-    Ready(Vec<ScheduleEvent>),
-    Error(String),
 }
 
 fn event_list(events: &[ScheduleEvent]) -> Html {
@@ -63,54 +56,28 @@ fn event_list(events: &[ScheduleEvent]) -> Html {
 
 #[function_component(Booking)]
 pub fn booking() -> Html {
-    let state = use_state(|| LoadState::Loading);
+    // Don't block the booking form on /api/schedule — availability is optional chrome.
+    let events = use_state(Vec::<ScheduleEvent>::new);
+    let loading_avail = use_state(|| true);
 
     {
-        let state = state.clone();
+        let events = events.clone();
+        let loading_avail = loading_avail.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let result = Request::get("/api/schedule").send().await;
-                match result {
+                match Request::get("/api/schedule").send().await {
                     Ok(resp) if resp.ok() => {
                         if let Ok(payload) = resp.json::<SchedulePayload>().await {
-                            state.set(LoadState::Ready(payload.events));
-                            return;
-                        }
-                        state.set(LoadState::Error("Could not parse schedule.".into()));
-                    }
-                    Ok(resp) => {
-                        if let Ok(body) = resp.json::<ServerResponse<String>>().await {
-                            state.set(LoadState::Error(body.message));
-                        } else {
-                            state.set(LoadState::Error("Schedule request failed.".into()));
+                            events.set(payload.events);
                         }
                     }
-                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                    _ => {}
                 }
+                loading_avail.set(false);
             });
             || ()
         });
     }
-
-    let content = match &*state {
-        LoadState::Loading => html! { <Spinner label="Loading booking…" /> },
-        LoadState::Error(msg) => html! {
-            <>
-                <p class="muted">{ format!("Availability unavailable: {}", msg) }</p>
-                <div class="card">
-                    <ContactForm booking=true />
-                </div>
-            </>
-        },
-        LoadState::Ready(events) => html! {
-            <>
-                { event_list(events) }
-                <div class="card">
-                    <ContactForm booking=true />
-                </div>
-            </>
-        },
-    };
 
     html! {
         <div class="space-y-6">
@@ -120,7 +87,14 @@ pub fn booking() -> Html {
             >
                 { "Booking" }
             </Heading>
-            { content }
+            if *loading_avail {
+                <Spinner label="Loading availability…" />
+            } else {
+                { event_list(&events) }
+            }
+            <div class="card">
+                <ContactForm booking=true />
+            </div>
         </div>
     }
 }

@@ -142,7 +142,8 @@ pub(crate) fn parse_starts_at(value: &str) -> Option<DateTime<Utc>> {
 
 async fn list_records(db: &Database) -> mongodb::error::Result<Vec<ScheduleEventRecord>> {
     let coll = db.collection::<ScheduleEventRecord>(SCHEDULE_EVENTS);
-    let mut cursor = coll.find(doc! {}).await?;
+    // Public rows only — empty collection returns immediately.
+    let mut cursor = coll.find(doc! { "public": { "$ne": false } }).await?;
     let mut records = vec![];
     while cursor.advance().await? {
         if let Ok(record) = cursor.deserialize_current() {

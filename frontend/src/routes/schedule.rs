@@ -13,26 +13,33 @@ use yew_router::prelude::*;
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct ScheduleEvent {
+    #[serde(default)]
+    id: Option<String>,
     title: String,
     starts_at: String,
     #[serde(default)]
     location: Option<String>,
+    #[serde(default)]
     kind: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct ScheduleConfig {
+    #[serde(default)]
     embed_url: Option<String>,
+    #[serde(default)]
+    source: Option<String>,
     #[serde(default)]
     events: Vec<ScheduleEvent>,
 }
 
-#[derive(Clone, PartialEq)]
-enum LoadState {
-    Loading,
-    Ready(ScheduleConfig),
-    Error(String),
+fn empty_schedule() -> ScheduleConfig {
+    ScheduleConfig {
+        embed_url: None,
+        source: Some("none".into()),
+        events: Vec::new(),
+    }
 }
 
 const MONTHS: [&str; 12] = [
@@ -214,126 +221,74 @@ fn day_events(events: &[ScheduleEvent], day: &str) -> Vec<ScheduleEvent> {
 
 #[function_component(Schedule)]
 pub fn schedule() -> Html {
-    let state = use_state(|| LoadState::Loading);
+    // Show a blank calendar immediately; fill events when /api/schedule returns.
+    let config = use_state(empty_schedule);
+    let loading = use_state(|| true);
+    let notice = use_state(|| None::<String>);
     let (start_y, start_m, _) = today();
     let cursor = use_state(|| (start_y, start_m));
     let selected = use_state(|| None::<String>);
 
     {
-        let state = state.clone();
+        let config = config.clone();
+        let loading = loading.clone();
+        let notice = notice.clone();
         let cursor = cursor.clone();
         let selected = selected.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let result = Request::get("/api/schedule").send().await;
-                match result {
+                match Request::get("/api/schedule").send().await {
                     Ok(resp) if resp.ok() => {
-                        if let Ok(config) = resp.json::<ScheduleConfig>().await {
-                            if let Some(day) = config.events.iter().find_map(|event| event_day(&event.starts_at))
-                            {
-                                if let Some((year, month)) = month_of(day) {
-                                    cursor.set((year, month));
+                        match resp.json::<ScheduleConfig>().await {
+                            Ok(next) => {
+                                if let Some(day) =
+                                    next.events.iter().find_map(|event| event_day(&event.starts_at))
+                                {
+                                    if let Some((year, month)) = month_of(day) {
+                                        cursor.set((year, month));
+                                    }
+                                    selected.set(Some(day.to_string()));
                                 }
-                                selected.set(Some(day.to_string()));
+                                config.set(next);
                             }
-                            state.set(LoadState::Ready(config));
-                            return;
+                            Err(_) => {
+                                notice.set(Some("Could not parse schedule config.".into()));
+                            }
                         }
-                        state.set(LoadState::Error("Could not parse schedule config.".into()));
                     }
                     Ok(resp) => {
                         if let Ok(body) = resp.json::<ServerResponse<String>>().await {
-                            state.set(LoadState::Error(body.message));
+                            notice.set(Some(body.message));
                         } else {
-                            state.set(LoadState::Error("Schedule request failed.".into()));
+                            notice.set(Some("Schedule request failed.".into()));
                         }
                     }
-                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                    Err(err) => notice.set(Some(err.to_string())),
                 }
+                loading.set(false);
             });
             || ()
         });
     }
 
-    let content = match &*state {
-        LoadState::Loading => html! { <Spinner label="Loading schedule…" /> },
-        LoadState::Error(msg) => html! {
-            <p class="text-sm text-muted">{ format!("Schedule unavailable: {}", msg) }</p>
-        },
-        LoadState::Ready(config) => {
+    let (year, month) = *cursor;
+    let on_shift = {
+        let cursor = cursor.clone();
+        let selected = selected.clone();
+        Callback::from(move |delta: i32| {
             let (year, month) = *cursor;
-            let on_shift = {
-                let cursor = cursor.clone();
-                let selected = selected.clone();
-                Callback::from(move |delta: i32| {
-                    let (year, month) = *cursor;
-                    cursor.set(shift_month(year, month, delta));
-                    selected.set(None);
-                })
-            };
-            let on_select = {
-                let selected = selected.clone();
-                Callback::from(move |day: String| selected.set(Some(day)))
-            };
-            let chosen = selected
-                .as_ref()
-                .map(|day| day_events(&config.events, day))
-                .unwrap_or_default();
-            html! {
-                <>
-                    <MonthCalendar
-                        events={config.events.clone()}
-                        year={year}
-                        month={month}
-                        selected={(*selected).clone()}
-                        on_shift={on_shift}
-                        on_select={on_select}
-                    />
-                    if let Some(day) = &*selected {
-                        <section class="space-y-2">
-                            <h2 class="title-sm">{ format_day(day) }</h2>
-                            if chosen.is_empty() {
-                                <p class="muted">{ "Nothing scheduled." }</p>
-                            } else {
-                                <ul class="space-y-2">
-                                    { for chosen.iter().map(|event| {
-                                        let location = event.location.clone().filter(|value| !value.is_empty());
-                                        let time = event_time(&event.starts_at);
-                                        html! {
-                                            <li class="card">
-                                                <p>{ event.title.clone() }</p>
-                                                <p class="muted">{ format!("{} · {}", event.kind, if time.is_empty() { "All day" } else { time.as_str() }) }</p>
-                                                if let Some(location) = location {
-                                                    <p class="muted">{ location }</p>
-                                                }
-                                            </li>
-                                        }
-                                    }) }
-                                </ul>
-                            }
-                        </section>
-                    } else if config.events.is_empty() {
-                        <div class="space-y-3">
-                            <p class="muted">{ "No upcoming dates. Send a booking request and we'll add one." }</p>
-                            <Link<AppRoutes> to={AppRoutes::Booking} classes="btn btn-primary">
-                                { "Request a date" }
-                            </Link<AppRoutes>>
-                        </div>
-                    }
-                    if let Some(url) = &config.embed_url {
-                        <div class="card card-flat overflow-hidden">
-                            <iframe
-                                class="min-h-[min(70vh,720px)] w-full border-0 bg-surface"
-                                src={url.clone()}
-                                title="External calendar"
-                                loading="lazy"
-                            />
-                        </div>
-                    }
-                </>
-            }
-        }
+            cursor.set(shift_month(year, month, delta));
+            selected.set(None);
+        })
     };
+    let on_select = {
+        let selected = selected.clone();
+        Callback::from(move |day: String| selected.set(Some(day)))
+    };
+    let chosen = selected
+        .as_ref()
+        .map(|day| day_events(&config.events, day))
+        .unwrap_or_default();
 
     html! {
         <div class="space-y-4">
@@ -343,7 +298,61 @@ pub fn schedule() -> Html {
             >
                 { "Schedule" }
             </Heading>
-            { content }
+            if *loading {
+                <Spinner label="Loading dates…" />
+            }
+            if let Some(msg) = &*notice {
+                <p class="muted">{ format!("Schedule note: {}", msg) }</p>
+            }
+            <MonthCalendar
+                events={(*config).events.clone()}
+                year={year}
+                month={month}
+                selected={(*selected).clone()}
+                on_shift={on_shift}
+                on_select={on_select}
+            />
+            if let Some(day) = &*selected {
+                <section class="space-y-2">
+                    <h2 class="title-sm">{ format_day(day) }</h2>
+                    if chosen.is_empty() {
+                        <p class="muted">{ "Nothing scheduled." }</p>
+                    } else {
+                        <ul class="space-y-2">
+                            { for chosen.iter().map(|event| {
+                                let location = event.location.clone().filter(|value| !value.is_empty());
+                                let time = event_time(&event.starts_at);
+                                html! {
+                                    <li class="card">
+                                        <p>{ event.title.clone() }</p>
+                                        <p class="muted">{ format!("{} · {}", event.kind, if time.is_empty() { "All day" } else { time.as_str() }) }</p>
+                                        if let Some(location) = location {
+                                            <p class="muted">{ location }</p>
+                                        }
+                                    </li>
+                                }
+                            }) }
+                        </ul>
+                    }
+                </section>
+            } else if !(*loading) && config.events.is_empty() {
+                <div class="space-y-3">
+                    <p class="muted">{ "No upcoming dates. Send a booking request and we'll add one." }</p>
+                    <Link<AppRoutes> to={AppRoutes::Booking} classes="btn btn-primary">
+                        { "Request a date" }
+                    </Link<AppRoutes>>
+                </div>
+            }
+            if let Some(url) = &config.embed_url {
+                <div class="card card-flat overflow-hidden">
+                    <iframe
+                        class="min-h-[min(70vh,720px)] w-full border-0 bg-surface"
+                        src={url.clone()}
+                        title="External calendar"
+                        loading="lazy"
+                    />
+                </div>
+            }
         </div>
     }
 }

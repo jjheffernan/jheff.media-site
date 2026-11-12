@@ -239,6 +239,9 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
   }
+  .menu-choice-row.is-three {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
   .menu-choice,
   .menu-action {
     display: flex;
@@ -595,13 +598,19 @@
     color: var(--fg);
   }
   .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  /* Hover host: padding-top on .menu is an invisible bridge (no margin gap). */
+  .account-menu {
+    position: relative;
+  }
   .menu {
     position: absolute;
     right: 0;
     top: 100%;
     z-index: 50;
-    margin-top: 0.5rem;
     min-width: 9rem;
+    padding-top: 0.5rem;
+  }
+  .menu-panel {
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
     background: var(--surface-elevated);

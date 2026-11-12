@@ -37,6 +37,24 @@ pub fn profile_menu(props: &Props) -> Html {
         })
     };
 
+    let open_menu = {
+        let panel = panel.clone();
+        Callback::from(move |_| {
+            if *panel == OpenPanel::None {
+                panel.set(OpenPanel::Menu);
+            }
+        })
+    };
+
+    let close_menu = {
+        let panel = panel.clone();
+        Callback::from(move |_| {
+            if *panel == OpenPanel::Menu {
+                panel.set(OpenPanel::None);
+            }
+        })
+    };
+
     let open_sign_in = {
         let panel = panel.clone();
         Callback::from(move |_| panel.set(OpenPanel::SignIn))
@@ -77,15 +95,6 @@ pub fn profile_menu(props: &Props) -> Html {
             }
             auth_ctx.logout.emit(());
             panel.set(OpenPanel::None);
-        })
-    };
-
-    let close_menu = {
-        let panel = panel.clone();
-        Callback::from(move |_| {
-            if *panel == OpenPanel::Menu {
-                panel.set(OpenPanel::None);
-            }
         })
     };
 
@@ -214,16 +223,20 @@ pub fn profile_menu(props: &Props) -> Html {
         };
     }
 
+    // Desktop: open on hover; keep open while pointer is over trigger or menu
+    // (no gap — .menu uses padding-top bridge instead of margin-top).
     html! {
         <div
-            class="relative"
+            class="account-menu"
+            onmouseenter={open_menu}
             onmouseleave={close_menu}
         >
             <button
                 type="button"
                 class="icon-btn"
                 aria-label="Account menu"
-                aria-expanded={(*panel == OpenPanel::Menu).to_string()}
+                aria-expanded={menu_open.to_string()}
+                aria-haspopup="true"
                 onclick={toggle_menu}
             >
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
@@ -232,9 +245,11 @@ pub fn profile_menu(props: &Props) -> Html {
                 </svg>
             </button>
 
-            if *panel == OpenPanel::Menu {
-                <div class="menu">
-                    { actions }
+            if menu_open {
+                <div class="menu" role="menu">
+                    <div class="menu-panel">
+                        { actions }
+                    </div>
                 </div>
             }
             { modals }
