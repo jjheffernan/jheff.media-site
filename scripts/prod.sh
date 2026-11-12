@@ -36,7 +36,7 @@ cmd_build() {
 
 require_prod_env() {
   local env_file="$ROOT/scripts/.env.production"
-  [[ -f "$env_file" ]] || die "Missing $env_file — copy install/common/.env.production.example and set MONGO_PASSWORD"
+  [[ -f "$env_file" ]] || die "Missing $env_file — copy install/common/.env.production.example (canonical compose: install/common/docker-compose.yml)"
   echo "$env_file"
 }
 

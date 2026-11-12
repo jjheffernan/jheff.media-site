@@ -26,13 +26,23 @@ RUN cargo build --release -p jheffmedia-site-backend
 RUN cp target/release/jheffmedia-site-backend /usr/local/bin/jheffmedia-site-backend
 
 FROM docker.io/library/debian:bookworm-slim
+ARG YEW_FULLSTACK_BUILD_ID=
 ENV YEW_FULLSTACK_STATIC="/usr/local/share/yew-fullstack/www"
 ENV YEW_FULLSTACK_HOST="0.0.0.0"
 ENV YEW_FULLSTACK_PORT="8080"
 ENV RUST_LOG="info"
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 && rm -rf /var/lib/apt/lists/*
+ENV YEW_FULLSTACK_BUILD_ID=${YEW_FULLSTACK_BUILD_ID}
+# Fixed UID matches host SERVICE_UID (jheffmedia) and compose `user:` — no root at runtime.
+# curl: Compose healthcheck hits GET /healthz. JWT secret is never COPY'd — mount/env at runtime.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid app --system --home-dir /nonexistent --shell /usr/sbin/nologin app \
+    && mkdir -p /data/content-uploads \
+    && chown -R app:app /data/content-uploads
 COPY --from=backend-build /usr/local/bin/jheffmedia-site-backend /usr/local/bin/jheffmedia-site-backend
 WORKDIR ${YEW_FULLSTACK_STATIC}
-COPY --from=frontend-build /usr/src/workspace/frontend/dist/ ${YEW_FULLSTACK_STATIC}/
+COPY --from=frontend-build --chown=app:app /usr/src/workspace/frontend/dist/ ${YEW_FULLSTACK_STATIC}/
+USER app
 EXPOSE 8080
 CMD ["/usr/local/bin/jheffmedia-site-backend"]

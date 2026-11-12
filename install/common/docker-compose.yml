@@ -1,12 +1,26 @@
-# Production stack (Mongo bundled; Immich optional via env)
+# Production stack (Mongo bundled; Immich optional via env).
+# Multi-app LXC: unique container_name + volume keys (jheffmedia-*). Do not set
+# top-level `name:` here — it would orphan existing `common_jheffmedia-*` volumes.
+
 services:
   application:
     build:
       context: ../..
       dockerfile: Dockerfile
+      args:
+        YEW_FULLSTACK_BUILD_ID: ${YEW_FULLSTACK_BUILD_ID:-}
     image: jheffmedia/application:latest
     container_name: jheffmedia-application
     restart: unless-stopped
+    # Non-root (matches Dockerfile USER / host SERVICE_UID). Never mount docker.sock here.
+    user: "10001:10001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
     env_file:
       - .env.production
     environment:
@@ -15,6 +29,7 @@ services:
       YEW_FULLSTACK_DB_CONNSTR: ${DB_CONNSTR}
       YEW_FULLSTACK_DB_NAME: ${DB_NAME}
       YEW_FULLSTACK_JWT_SECRET_FILE: /run/secrets/jwt_secret
+      YEW_FULLSTACK_BUILD_ID: ${YEW_FULLSTACK_BUILD_ID:-}
       YEW_FULLSTACK_FEED_PROVIDER: ${FEED_PROVIDER:-none}
       YEW_FULLSTACK_CONTACT_EMAIL: ${CONTACT_EMAIL:-}
       YEW_FULLSTACK_FEED_STATIC_JSON: ${FEED_STATIC_JSON:-}
@@ -28,21 +43,37 @@ services:
       - ../../backend/src/secret.key:/run/secrets/jwt_secret:ro
       - jheffmedia-content-uploads:/data/content-uploads
     ports:
-      - "${HTTP_PORT:-8080}:8080"
+      # Override HTTP_BIND=127.0.0.1 when a reverse proxy on the same LXC terminates TLS.
+      - "${HTTP_BIND:-0.0.0.0}:${HTTP_PORT:-8080}:8080"
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
 
   db:
     image: docker.io/library/mongo:7.0
     container_name: jheffmedia-database
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # Mongo is NOT published to the host — only reachable on the Compose network.
     environment:
       MONGODB_INITDB_DATABASE: ${DB_NAME:-jheffmedia}
       MONGODB_INITDB_ROOT_USERNAME: root
       MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
     volumes:
       - jheffmedia-mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
 volumes:
   jheffmedia-mongo:

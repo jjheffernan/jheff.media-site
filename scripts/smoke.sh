@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Post-deploy smoke checks: homepage + auth endpoint reachability.
+# Post-deploy smoke checks: homepage, /healthz, auth endpoint reachability.
 set -euo pipefail
 
 BASE_URL="${BASE_URL:-http://localhost:8080}"
@@ -40,6 +40,7 @@ check_login_health() {
 echo "smoke: checking ${BASE_URL}"
 
 check_http "homepage" "${BASE_URL}/" "200"
+check_http "healthz" "${BASE_URL}/healthz" "200"
 check_login_health
 
 echo "smoke: all checks passed"

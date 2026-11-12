@@ -40,12 +40,14 @@ pub async fn diagnostics(req: HttpRequest, db: web::Data<Database>) -> Result<Ht
         .get()
         .map(|t| t.elapsed().as_secs())
         .unwrap_or(0);
+    let build_id = env::var("YEW_FULLSTACK_BUILD_ID").unwrap_or_default();
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "dbReachable": db_reachable,
         "feedProvider": cfg.feed_provider,
         "rustLog": rust_log,
         "uptimeSecs": uptime_secs,
         "version": env!("CARGO_PKG_VERSION"),
+        "buildId": build_id,
     })))
 }
 

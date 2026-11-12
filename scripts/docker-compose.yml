@@ -1,29 +1,6 @@
-services:
-  application:
-    image: "jheffmedia/application"
-    container_name: "jheffmedia-application"
-    environment:
-      - "YEW_FULLSTACK_HOST=0.0.0.0"
-      - "YEW_FULLSTACK_PORT=8080"
-      - "YEW_FULLSTACK_DB_CONNSTR=mongodb://root:${MONGO_PASSWORD}@db:27017/jheffmedia?authSource=admin"
-      - "YEW_FULLSTACK_DB_NAME=jheffmedia"
-      - "YEW_FULLSTACK_JWT_SECRET_FILE=/run/secrets/jwt_secret"
-      - "YEW_FULLSTACK_CONTENT_UPLOAD_DIR=/data/content-uploads"
-    volumes:
-      - "../backend/src/secret.key:/run/secrets/jwt_secret:ro"
-      - "jheffmedia-content-uploads:/data/content-uploads"
-    ports:
-      - "8080:8080"
-    depends_on:
-      - db
-
-  db:
-    image: "docker.io/library/mongo:7.0"
-    container_name: "jheffmedia-database"
-    environment:
-      - MONGODB_INITDB_DATABASE=jheffmedia
-      - MONGODB_INITDB_ROOT_USERNAME=root
-      - MONGODB_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:?set MONGO_PASSWORD}
-
-volumes:
-  jheffmedia-content-uploads:
+# Thin entry for scripts/prod.sh and older docs that still pass
+# `-f scripts/docker-compose.yml`. Canonical production compose is
+# install/common/docker-compose.yml (same volume keys: jheffmedia-*).
+# Prefer: docker compose -f install/common/docker-compose.yml --env-file …
+include:
+  - path: ../install/common/docker-compose.yml

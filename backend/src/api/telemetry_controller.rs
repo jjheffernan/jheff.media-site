@@ -3,12 +3,22 @@ use crate::{
     utils::auth::require_admin,
 };
 use actix_web::{web, HttpRequest, HttpResponse, Result};
+use bson::doc;
 use mongodb::Database;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct TelemetryBody {
     path: String,
+}
+
+/// Liveness/readiness for Compose/orchestrators. No auth. Cheap Mongo ping.
+pub async fn healthz(db: web::Data<Database>) -> HttpResponse {
+    match db.run_command(doc! { "ping": 1 }).await {
+        Ok(_) => HttpResponse::Ok().json(serde_json::json!({ "ok": true })),
+        Err(_) => HttpResponse::ServiceUnavailable()
+            .json(serde_json::json!({ "ok": false, "db": false })),
+    }
 }
 
 pub async fn metrics_text() -> HttpResponse {

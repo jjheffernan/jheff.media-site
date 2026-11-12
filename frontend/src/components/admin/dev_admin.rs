@@ -22,6 +22,8 @@ struct ServerDiag {
     uptime_secs: u64,
     #[serde(default)]
     version: String,
+    #[serde(default)]
+    build_id: String,
 }
 
 #[derive(Clone, PartialEq)]
@@ -135,7 +137,7 @@ pub fn dev_admin() -> Html {
                     }
                 }
 
-                for path in ["/api/feed", "/api/schedule", "/metrics"] {
+                for path in ["/healthz", "/api/feed", "/api/schedule", "/metrics"] {
                     match Request::get(path).send().await {
                         Ok(resp) => {
                             let status = resp.status();
@@ -225,6 +227,7 @@ pub fn dev_admin() -> Html {
             "rustLog": server.rust_log,
             "uptimeSecs": server.uptime_secs,
             "version": server.version,
+            "buildId": server.build_id,
         },
         "recentErrors": &*errors,
         // Never include jwt / Authorization / secrets.
@@ -261,6 +264,7 @@ pub fn dev_admin() -> Html {
                         <dt>{ "RUST_LOG" }</dt><dd>{ if server.rust_log.is_empty() { "—" } else { server.rust_log.as_str() } }</dd>
                         <dt>{ "Uptime" }</dt><dd>{ format!("{}s", server.uptime_secs) }</dd>
                         <dt>{ "Backend version" }</dt><dd>{ if server.version.is_empty() { "—" } else { server.version.as_str() } }</dd>
+                        <dt>{ "Build id" }</dt><dd>{ if server.build_id.is_empty() { "—" } else { server.build_id.as_str() } }</dd>
                     </dl>
                 </section>
 
@@ -280,6 +284,7 @@ pub fn dev_admin() -> Html {
                     </ul>
                     <p class="muted label-xs">{ "Quick links (same origin):" }</p>
                     <p class="row-actions">
+                        <a class="btn" href="/healthz" target="_blank" rel="noopener">{ "/healthz" }</a>
                         <a class="btn" href="/metrics" target="_blank" rel="noopener">{ "/metrics" }</a>
                         <a class="btn" href="/api/feed" target="_blank" rel="noopener">{ "/api/feed" }</a>
                         <a class="btn" href="/api/schedule" target="_blank" rel="noopener">{ "/api/schedule" }</a>
