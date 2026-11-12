@@ -86,6 +86,12 @@ pub fn analytics_admin() -> Html {
             let latest_day = latest.map(|row| row.day.clone()).unwrap_or_default();
             let top_path = top.map(|row| row.path.clone()).unwrap_or_else(|| "—".into());
             let top_n = top.map(|row| row.n.to_string()).unwrap_or_else(|| "0".into());
+            let link_rows: Vec<&PathCount> = report
+                .paths
+                .iter()
+                .filter(|row| row.path.starts_with("/links/out/"))
+                .collect();
+            let link_total: i64 = link_rows.iter().map(|row| row.n).sum();
             html! {
                 <div class="space-y-4">
                     <div>
@@ -106,6 +112,11 @@ pub fn analytics_admin() -> Html {
                             <p class="label-xs">{ "Top path" }</p>
                             <p class="stat-n">{ top_n }</p>
                             <p class="muted">{ top_path }</p>
+                        </section>
+                        <section class="card space-y-1">
+                            <p class="label-xs">{ "Link clicks" }</p>
+                            <p class="stat-n">{ link_total.to_string() }</p>
+                            <p class="muted">{ "/links" }</p>
                         </section>
                     </div>
                     <div class="dash-lower">
@@ -138,6 +149,26 @@ pub fn analytics_admin() -> Html {
                             }) }
                         </section>
                     </div>
+                    <section class="card space-y-3">
+                        <h3 class="title-sm">{ "Link clicks" }</h3>
+                        <p class="muted">{ "Clicks from /links (path /links/out/…)." }</p>
+                        if link_rows.is_empty() {
+                            <p class="muted">{ "No link clicks yet." }</p>
+                        } else {
+                            { for link_rows.iter().map(|row| {
+                                let slug = row.path.trim_start_matches("/links/out/");
+                                let pct = share(row.n, link_total.max(1));
+                                let bar = pct.max(4);
+                                html! {
+                                    <div class="bar-row" key={row.path.clone()}>
+                                        <span class="muted" title={row.path.clone()}>{ slug.to_string() }</span>
+                                        <span class="bar-track"><span class="bar" style={format!("width: {bar}%")}></span></span>
+                                        <span class="muted">{ format!("{} · {pct}%", row.n) }</span>
+                                    </div>
+                                }
+                            }) }
+                        }
+                    </section>
                 </div>
             }
         }
