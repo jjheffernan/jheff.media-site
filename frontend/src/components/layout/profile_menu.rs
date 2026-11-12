@@ -182,14 +182,14 @@ pub fn profile_menu(props: &Props) -> Html {
                 <AuthModal
                     kind={AuthModalKind::SignIn}
                     on_close={close_all.clone()}
-                    on_login={on_login}
+                    on_login={on_login.clone()}
                 />
             }
             if *panel == OpenPanel::SignUp {
                 <AuthModal
                     kind={AuthModalKind::SignUp}
                     on_close={close_all.clone()}
-                    on_login={Callback::noop()}
+                    on_login={on_login}
                 />
             }
         </>

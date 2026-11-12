@@ -25,22 +25,66 @@ fn document_body() -> Option<web_sys::Element> {
 
 #[function_component(AuthModal)]
 pub fn auth_modal(props: &Props) -> Html {
+    let kind = use_state(|| props.kind);
+
+    {
+        let kind = kind.clone();
+        let prop_kind = props.kind;
+        use_effect_with(prop_kind, move |prop_kind| {
+            kind.set(*prop_kind);
+            || ()
+        });
+    }
+
     let stop_propagation = Callback::from(|e: MouseEvent| {
         e.stop_propagation();
     });
 
-    let title = match props.kind {
+    let title = match *kind {
         AuthModalKind::SignIn => "Sign in",
         AuthModalKind::SignUp => "Sign up",
     };
 
-    let form = match props.kind {
+    let form = match *kind {
         AuthModalKind::SignIn => html! {
             <Login on_login={props.on_login.clone()} embedded=true />
         },
         AuthModalKind::SignUp => html! {
             <Signup embedded=true />
         },
+    };
+
+    let switch = match *kind {
+        AuthModalKind::SignIn => {
+            let kind = kind.clone();
+            html! {
+                <p class="mt-4 text-center text-sm text-muted">
+                    { "Need an account? " }
+                    <button
+                        type="button"
+                        class="font-medium text-accent underline-offset-2 hover:underline"
+                        onclick={Callback::from(move |_| kind.set(AuthModalKind::SignUp))}
+                    >
+                        { "Sign up" }
+                    </button>
+                </p>
+            }
+        }
+        AuthModalKind::SignUp => {
+            let kind = kind.clone();
+            html! {
+                <p class="mt-4 text-center text-sm text-muted">
+                    { "Already have an account? " }
+                    <button
+                        type="button"
+                        class="font-medium text-accent underline-offset-2 hover:underline"
+                        onclick={Callback::from(move |_| kind.set(AuthModalKind::SignIn))}
+                    >
+                        { "Sign in" }
+                    </button>
+                </p>
+            }
+        }
     };
 
     let overlay = html! {
@@ -67,6 +111,7 @@ pub fn auth_modal(props: &Props) -> Html {
                 </button>
                 <div class="max-h-[min(85vh,640px)] overflow-y-auto px-4 pb-4 pt-10">
                     { form }
+                    { switch }
                 </div>
             </div>
         </div>
