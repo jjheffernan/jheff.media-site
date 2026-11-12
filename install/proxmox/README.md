@@ -65,9 +65,10 @@ Shared compose, env, and guided setup: [`../common/`](../common/).
 Re-run the CT script on the Proxmox host and choose update, or inside the container:
 
 ```bash
-cd /opt/jheffmedia-site && git pull origin main
-cd install/common && docker compose --env-file .env.production up -d --build
-systemctl restart site
+jheffmedia --update
+# or: cd /opt/jheffmedia-site && git pull && cd install/common && docker compose --env-file .env.production up -d --build
 ```
+
+Default install: `/opt/jheffmedia-site` owned by `jheffmedia` (uid 10001). Secrets in `install/common/.env.production` (0600). App container is non-root; Mongo is not published. See [docs/deployment.md](../../docs/deployment.md) § secrets & privilege.
 
 See also [docs/deployment-proxmox.md](../../docs/deployment-proxmox.md).

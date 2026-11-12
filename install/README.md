@@ -43,15 +43,15 @@ Replace `...` with:
 - **Photo feed** defaults to `static` demo URLs — no Immich required
 - **Guided sections**: repository → site → database → feed → admin
 - **Admin**: `ADMIN_EMAILS` always set (prompt, env, or generated `admin@….local`); sign up with that email — no seed password
-- **Credentials**: `/root/site-install.creds` (or `~/site-install.creds`), printed once by postinstall
-- **Env file**: `{INSTALL_DIR}/install/common/.env.production`
-- **Service**: `systemctl restart site`
-- **Postinstall**: `jheffmedia --postinstall` · secrets again: `jheffmedia --postinstall --show-creds` (root)
+- **Install dir**: `/opt/jheffmedia-site` owned by service user `jheffmedia` (uid 10001)
+- **Secrets**: `{INSTALL_DIR}/install/common/.env.production` (0600) + `backend/src/secret.key` (0400) — no `/root/*.creds`
+- **Service**: `site.service` runs as `jheffmedia` + `docker` group; app container is non-root
+- **Postinstall**: `jheffmedia --postinstall` · paths again: `jheffmedia --postinstall --show-creds`
 
 Unattended:
 
 ```bash
-UNATTENDED=yes MONGO_PASSWORD='secret' BRANCH=main \
+UNATTENDED=yes MONGO_PASSWORD='change-me' BRANCH=main \
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/<target>/install.sh)"
 ```
 
@@ -62,7 +62,10 @@ UNATTENDED=yes MONGO_PASSWORD='secret' BRANCH=main \
 | `REPO` | GitHub clone URL | Repository to clone |
 | `BRANCH` | `main` | Branch to deploy (`dev` for staging) |
 | `INSTALL_DIR` | `/opt/jheffmedia-site` | Clone target on host |
+| `SERVICE_USER` | `jheffmedia` | Host owner + systemd user |
+| `SERVICE_UID` | `10001` | Matches app container UID |
 | `HTTP_PORT` | `8080` | Published port |
+| `HTTP_BIND` | `0.0.0.0` | Use `127.0.0.1` with a local reverse proxy |
 | `MONGO_PASSWORD` | generated | MongoDB root password |
 | `ADMIN_EMAILS` | generated if blank | Signup emails granted admin |
 | `UNATTENDED` | — | Skip whiptail when `yes` |
@@ -70,15 +73,20 @@ UNATTENDED=yes MONGO_PASSWORD='secret' BRANCH=main \
 
 Override defaults in `install/common/lib/defaults.sh` or export before running.
 
-## Update (existing install)
+## Update / repair (existing install)
 
 Inside the host/LXC as root:
 
 ```bash
-jheffmedia --update
+jheffmedia --update                   # routine pull on a working install
+jheffmedia --cleanup                  # fix cred leaks / ownership / site.service (keeps data)
+jheffmedia --reinstall                # cleanup + rebuild (keeps Mongo volumes)
+jheffmedia --reinstall --purge        # also drop project containers/images; confirms volumes
 jheffmedia --postinstall              # admin email reminder
-jheffmedia --postinstall --show-creds # root: reprint creds file
+jheffmedia --postinstall --show-creds # admin email + secret paths (not values)
 ```
+
+Use `--cleanup` for leftover `/root/site-install.creds` or root-owned trees; `--reinstall` for broken/partial installs; `--update` for day-2 deploys. See [docs/deployment.md](../docs/deployment.md).
 
 Curl fallback: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"`.
 

@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # Host CLI for a deployed jheff.media install.
-#   jheffmedia --update
-#   jheffmedia --status
-#   jheffmedia --restart
-#   jheffmedia --postinstall [--show-creds]
+#   jheffmedia --update | --status | --restart | --postinstall
+#   jheffmedia --cleanup | --reinstall
 #   jheffmedia --help
+#
+# Operator model: install (apt/docker/pct) needs root. Day-2 ops run as root or
+# the jheffmedia service user (docker group). App containers themselves are non-root.
 
 set -euo pipefail
 
 INSTALL_DIR="${INSTALL_DIR:-/opt/jheffmedia-site}"
 BRANCH="${BRANCH:-main}"
 COMPOSE_DIR="${INSTALL_DIR}/install/common"
+COMMON_DIR="${COMPOSE_DIR}"
 ENV_FILE="${COMPOSE_DIR}/.env.production"
 POSTINSTALL="${INSTALL_DIR}/install/postinstall.sh"
+SERVICE_USER="${SERVICE_USER:-jheffmedia}"
+SERVICE_UID="${SERVICE_UID:-10001}"
 
 usage() {
   cat <<'EOF'
@@ -20,33 +24,74 @@ jheffmedia — manage a deployed jheff.media site
 
 Usage:
   jheffmedia --update [--branch BRANCH] [--no-cache]
-      Pull, rebuild image, restart stack.
+      Pull, rebuild image, restart stack (healthy installs).
       --branch BRANCH   Git branch to deploy (default: main / $BRANCH)
       --no-cache        Rebuild without cache (also refreshes Tailwind layer)
+  jheffmedia --cleanup [--dry-run] [--yes|-y]
+      Safe repair: drop legacy cred dumps, ensure service user, fix ownership /
+      secret perms, refresh site.service User=, prune exited jheffmedia
+      containers. Does NOT delete Mongo volumes or .env.production.
+      --dry-run         Print actions only
+      --yes / -y        Skip confirm for project docker prune
+  jheffmedia --reinstall [--purge] [--branch BRANCH] [--no-cache] [--yes|-y]
+      Cleanup, then pull/rebuild/restart like --update (for broken/partial
+      installs). Keeps DB volumes by default.
+      --purge           Remove this project's containers + app image first;
+                        still confirms before deleting named volumes
+      --yes / -y        Skip non-volume confirms (volumes always confirm unless
+                        JM_PURGE_VOLUMES=yes)
   jheffmedia --status
   jheffmedia --restart
   jheffmedia --postinstall [--show-creds]
       Admin signup reminder (ADMIN_EMAILS → Admin → Setup).
-      --show-creds (root) reprints ~/site-install.creds
+      --show-creds prints admin email + secret *paths* (not Mongo/JWT values).
   jheffmedia --help | -h
       This usage (also printed for bare `jheffmedia`).
 
+When to use what:
+  --cleanup     leaks / wrong owner / leftover /root/*.creds / bad User=
+  --reinstall   partial or broken install; refresh stack, keep data
+  --update      routine pull on a working install
+
+Privilege:
+  --update / --restart / --cleanup / --reinstall need root or docker-group
+  (service user jheffmedia). User/perms/systemd fixes need root.
+  --status / --postinstall need read access to the install tree.
+  First-time install (Docker engine, LXC create) still requires root.
+
 Env:
-  INSTALL_DIR   Install path (default /opt/jheffmedia-site)
-  BRANCH        Git branch for --update (default main)
+  INSTALL_DIR    Install path (default /opt/jheffmedia-site)
+  BRANCH         Git branch for --update/--reinstall (default main)
+  SERVICE_USER   Host operator user (default jheffmedia)
+  SERVICE_UID    Host/container uid (default 10001)
+  JM_PURGE_VOLUMES  Set to yes with --reinstall --purge --yes to also
+                    delete jheffmedia-mongo / jheffmedia-content-uploads
 EOF
 }
 
-require_root() {
-  if [[ ${EUID:-0} -ne 0 ]]; then
-    echo "Run as root (host or LXC shell)." >&2
-    exit 1
+# docker group ≈ root on the host — still better than running the *app* as root.
+require_operator() {
+  if [[ ${EUID:-0} -eq 0 ]]; then
+    return 0
   fi
+  if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
+    return 0
+  fi
+  echo "Run as root or a user in the docker group (e.g. ${SERVICE_USER})." >&2
+  exit 1
 }
 
 require_install() {
   if [[ ! -d "${INSTALL_DIR}/.git" || ! -f "$ENV_FILE" ]]; then
     echo "No install at ${INSTALL_DIR} (missing .git or .env.production)." >&2
+    exit 1
+  fi
+}
+
+# Softer than require_install — tree may be partial.
+require_install_tree() {
+  if [[ ! -d "$INSTALL_DIR" ]]; then
+    echo "No install directory at ${INSTALL_DIR}." >&2
     exit 1
   fi
 }
@@ -57,12 +102,51 @@ load_env() {
   source "$ENV_FILE"
   set +a
   export HTTP_PORT="${HTTP_PORT:-8080}"
+  export HTTP_BIND="${HTTP_BIND:-0.0.0.0}"
 }
 
 container_bin() {
   # shellcheck disable=SC1091
   source "${INSTALL_DIR}/scripts/lib/container.sh"
   require_container
+}
+
+source_deploy() {
+  export INSTALL_DIR COMMON_DIR SERVICE_USER SERVICE_UID
+  # shellcheck disable=SC1091
+  source "${COMPOSE_DIR}/lib/deploy.sh"
+}
+
+confirm() {
+  local prompt=$1
+  local ans
+  if [[ "${ASSUME_YES:-0}" -eq 1 ]]; then
+    return 0
+  fi
+  read -r -p "${prompt} [y/N] " ans || true
+  [[ "${ans}" =~ ^[Yy]$ ]]
+}
+
+# Always ask for volume wipe unless JM_PURGE_VOLUMES=yes (even with --yes).
+confirm_volumes() {
+  local prompt=$1
+  local ans
+  if [[ "${JM_PURGE_VOLUMES:-}" == "yes" ]]; then
+    return 0
+  fi
+  read -r -p "${prompt} [y/N] " ans || true
+  [[ "${ans}" =~ ^[Yy]$ ]]
+}
+
+report() {
+  local kind=$1
+  shift
+  case "$kind" in
+    fixed) echo "[fixed] $*" ;;
+    skip) echo "[skip]  $*" ;;
+    would) echo "[would] $*" ;;
+    *) echo "[..] $*" ;;
+  esac
 }
 
 cmd_update() {
@@ -76,7 +160,7 @@ cmd_update() {
     esac
   done
 
-  require_root
+  require_operator
   require_install
   container_bin
   load_env
@@ -85,16 +169,15 @@ cmd_update() {
   git -C "$INSTALL_DIR" fetch origin "$BRANCH"
   git -C "$INSTALL_DIR" checkout "$BRANCH"
   git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
-  # Refresh this CLI if the symlink points into the install tree.
-  if [[ -x "${COMPOSE_DIR}/bin/jheffmedia" ]]; then
+  # Symlink refresh needs root; skip when running as service user.
+  if [[ ${EUID:-0} -eq 0 && -x "${COMPOSE_DIR}/bin/jheffmedia" ]]; then
     ln -sfn "${COMPOSE_DIR}/bin/jheffmedia" /usr/local/bin/jheffmedia
     printf '%s\n' '#!/bin/sh' 'exec /usr/local/bin/jheffmedia --update "$@"' >/usr/local/bin/site-update
     chmod +x /usr/local/bin/site-update "${COMPOSE_DIR}/bin/jheffmedia"
   fi
   echo "[OK] Repository updated"
 
-  # shellcheck disable=SC1091
-  source "${COMPOSE_DIR}/lib/deploy.sh"
+  source_deploy
   echo "[..] Rebuilding application image (may take several minutes)"
   cd "$COMPOSE_DIR"
   if [[ "$no_cache" -eq 1 ]]; then
@@ -104,10 +187,304 @@ cmd_update() {
   fi
   echo "[OK] Image built"
   echo "[..] Starting stack"
+  export_build_id
   "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
-  systemctl restart site 2>/dev/null || true
+  if [[ ${EUID:-0} -eq 0 ]]; then
+    # Refresh site.service (User=jheffmedia) and drop legacy /root/*.creds.
+    ensure_service_user
+    install_systemd
+    harden_install_perms
+    remove_legacy_creds_file
+  fi
   echo "${BRANCH}" >"${COMPOSE_DIR}/.install-version"
   echo "[OK] Stack updated — http://127.0.0.1:${HTTP_PORT}/"
+}
+
+# Shared repair path for --cleanup and --reinstall.
+run_cleanup() {
+  local dry=${1:-0}
+  local do_docker_prune=${2:-1}
+  local unit=/etc/systemd/system/site.service
+  local f
+
+  if [[ "$dry" -eq 1 ]]; then
+    echo "=== cleanup (dry-run) ==="
+  else
+    echo "=== cleanup ==="
+  fi
+
+  # 1) Legacy cred dumps
+  if [[ -f "${COMPOSE_DIR}/lib/deploy.sh" ]]; then
+    source_deploy
+  fi
+  if declare -F legacy_creds_paths >/dev/null 2>&1; then
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      if [[ -f "$f" ]]; then
+        if [[ "$dry" -eq 1 ]]; then
+          report would "remove ${f}"
+        else
+          rm -f "$f"
+          report fixed "removed ${f}"
+        fi
+      else
+        report skip "no ${f}"
+      fi
+    done < <(legacy_creds_paths)
+  else
+    for f in /root/site-install.creds "${HOME}/site-install.creds" \
+      "${INSTALL_DIR}/site-install.creds" "${INSTALL_DIR}/install/site-install.creds"; do
+      if [[ -f "$f" ]]; then
+        if [[ "$dry" -eq 1 ]]; then
+          report would "remove ${f}"
+        else
+          rm -f "$f"
+          report fixed "removed ${f}"
+        fi
+      else
+        report skip "no ${f}"
+      fi
+    done
+  fi
+
+  # 2) Service user (root)
+  if [[ ${EUID:-0} -ne 0 ]]; then
+    report skip "service user / perms / systemd (need root)"
+  else
+    if id -u "$SERVICE_USER" >/dev/null 2>&1; then
+      report skip "user ${SERVICE_USER} exists (uid $(id -u "$SERVICE_USER"))"
+      if getent group docker >/dev/null 2>&1; then
+        if id -nG "$SERVICE_USER" 2>/dev/null | tr ' ' '\n' | grep -qx docker; then
+          report skip "${SERVICE_USER} already in docker group"
+        elif [[ "$dry" -eq 1 ]]; then
+          report would "usermod -aG docker ${SERVICE_USER}"
+        else
+          usermod -aG docker "$SERVICE_USER"
+          report fixed "added ${SERVICE_USER} to docker group"
+        fi
+      fi
+    elif [[ "$dry" -eq 1 ]]; then
+      report would "create ${SERVICE_USER} (uid ${SERVICE_UID} if free)"
+    else
+      if declare -F ensure_service_user >/dev/null 2>&1; then
+        ensure_service_user
+      else
+        useradd --system --uid "$SERVICE_UID" --home-dir "$INSTALL_DIR" --no-create-home \
+          --shell /usr/sbin/nologin "$SERVICE_USER"
+        getent group docker >/dev/null 2>&1 && usermod -aG docker "$SERVICE_USER" || true
+      fi
+      report fixed "ensured service user ${SERVICE_USER}"
+    fi
+
+    # 3) Ownership / secret perms
+    if [[ -d "$INSTALL_DIR" ]]; then
+      if [[ "$dry" -eq 1 ]]; then
+        report would "chown -R ${SERVICE_USER}:${SERVICE_USER} ${INSTALL_DIR}"
+        [[ -f "$ENV_FILE" ]] && report would "chmod 600 ${ENV_FILE}"
+        [[ -f "${INSTALL_DIR}/backend/src/secret.key" ]] && \
+          report would "chmod 400 ${INSTALL_DIR}/backend/src/secret.key"
+      else
+        if declare -F harden_install_perms >/dev/null 2>&1; then
+          COMMON_DIR="$COMPOSE_DIR" harden_install_perms
+        else
+          chown -R "${SERVICE_USER}:${SERVICE_USER}" "$INSTALL_DIR" 2>/dev/null || true
+          [[ -f "$ENV_FILE" ]] && chmod 600 "$ENV_FILE" && chown "${SERVICE_USER}:${SERVICE_USER}" "$ENV_FILE"
+          local key="${INSTALL_DIR}/backend/src/secret.key"
+          [[ -f "$key" ]] && chmod 400 "$key" && chown "${SERVICE_USER}:${SERVICE_USER}" "$key"
+        fi
+        report fixed "ownership/perms on ${INSTALL_DIR}"
+      fi
+    else
+      report skip "install tree missing (${INSTALL_DIR})"
+    fi
+
+    # 4) site.service User=
+    if [[ -f "$unit" ]]; then
+      if grep -qE "^User=${SERVICE_USER}$" "$unit"; then
+        report skip "site.service already User=${SERVICE_USER}"
+      elif [[ "$dry" -eq 1 ]]; then
+        report would "rewrite site.service User=${SERVICE_USER}"
+      else
+        if [[ -f "$ENV_FILE" ]]; then
+          # shellcheck disable=SC1091
+          set -a
+          # shellcheck disable=SC1090
+          source "$ENV_FILE"
+          set +a
+        fi
+        export HTTP_PORT="${HTTP_PORT:-8080}" HTTP_BIND="${HTTP_BIND:-0.0.0.0}"
+        if [[ -d "${INSTALL_DIR}/scripts/lib" ]]; then
+          container_bin 2>/dev/null || CONTAINER_BIN=docker
+        else
+          CONTAINER_BIN=docker
+        fi
+        export CONTAINER_BIN
+        install_systemd
+        report fixed "site.service User=${SERVICE_USER}"
+      fi
+    else
+      report skip "no site.service"
+    fi
+  fi
+
+  # 5) Project docker prune (exited containers only)
+  if [[ "$do_docker_prune" -eq 1 ]]; then
+    if [[ "$dry" -eq 1 ]]; then
+      if declare -F cleanup_project_docker >/dev/null 2>&1; then
+        cleanup_project_docker 1
+      fi
+    else
+      if confirm "Prune exited jheffmedia containers (not volumes)?"; then
+        if declare -F cleanup_project_docker >/dev/null 2>&1; then
+          # Need CONTAINER_BIN if available
+          if [[ -z "${CONTAINER_BIN:-}" ]] && [[ -d "${INSTALL_DIR}/scripts/lib" ]]; then
+            container_bin 2>/dev/null || true
+          fi
+          cleanup_project_docker 0
+          report fixed "project docker prune attempted"
+        fi
+      else
+        report skip "project docker prune (declined)"
+      fi
+    fi
+  fi
+
+  echo "=== cleanup done (data / .env.production preserved) ==="
+}
+
+cmd_cleanup() {
+  local dry=0
+  ASSUME_YES=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dry-run) dry=1; shift ;;
+      --yes | -y) ASSUME_YES=1; shift ;;
+      *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    esac
+  done
+
+  require_operator
+  # Prefer on-disk libs when tree exists; else curl is not required for creds-only.
+  if [[ -f "${COMPOSE_DIR}/lib/deploy.sh" ]]; then
+    source_deploy
+  fi
+  run_cleanup "$dry" 1
+}
+
+purge_project_stack() {
+  local dry=${1:-0}
+  require_operator
+
+  if [[ ! -f "$ENV_FILE" ]]; then
+    echo "Missing ${ENV_FILE} — cannot compose down; remove containers by name if needed." >&2
+  else
+    container_bin
+    load_env
+    cd "$COMPOSE_DIR"
+    if [[ "$dry" -eq 1 ]]; then
+      report would "compose down (containers; keep volumes)"
+    else
+      "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production down --remove-orphans || true
+      report fixed "compose down"
+    fi
+  fi
+
+  local bin="${CONTAINER_BIN:-docker}"
+  if command -v "$bin" >/dev/null 2>&1; then
+    local imgs
+    imgs="$("$bin" images -q "jheffmedia/application" 2>/dev/null || true)"
+    if [[ -n "$imgs" ]]; then
+      if [[ "$dry" -eq 1 ]]; then
+        report would "rmi jheffmedia/application images"
+      else
+        # shellcheck disable=SC2086
+        "$bin" rmi $imgs 2>/dev/null || true
+        report fixed "removed jheffmedia/application images"
+      fi
+    else
+      report skip "no jheffmedia/application images"
+    fi
+
+    if confirm_volumes "DELETE named volumes jheffmedia-mongo + jheffmedia-content-uploads (DESTROYS DB/uploads)?"; then
+      if [[ "$dry" -eq 1 ]]; then
+        report would "docker volume rm jheffmedia-mongo jheffmedia-content-uploads (+ project prefixes)"
+      else
+        local v
+        for v in jheffmedia-mongo jheffmedia-content-uploads \
+          common_jheffmedia-mongo common_jheffmedia-content-uploads; do
+          if "$bin" volume inspect "$v" >/dev/null 2>&1; then
+            "$bin" volume rm "$v" && report fixed "removed volume ${v}" || \
+              report skip "could not remove volume ${v}"
+          fi
+        done
+      fi
+    else
+      report skip "named volumes preserved"
+    fi
+  fi
+}
+
+cmd_reinstall() {
+  local no_cache=0 purge=0 dry=0
+  ASSUME_YES=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --branch) BRANCH="${2:?}"; shift 2 ;;
+      --branch=*) BRANCH="${1#*=}"; shift ;;
+      --no-cache) no_cache=1; shift ;;
+      --purge) purge=1; shift ;;
+      --dry-run) dry=1; shift ;;
+      --yes | -y) ASSUME_YES=1; shift ;;
+      *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    esac
+  done
+
+  require_operator
+  require_install_tree
+
+  if [[ ! -d "${INSTALL_DIR}/.git" ]]; then
+    echo "No git checkout at ${INSTALL_DIR}. Re-run the platform installer." >&2
+    exit 1
+  fi
+  if [[ ! -f "$ENV_FILE" ]]; then
+    echo "Missing ${ENV_FILE}. Re-run the platform installer (cleanup alone cannot invent secrets)." >&2
+    exit 1
+  fi
+
+  if [[ "$dry" -eq 0 ]]; then
+    if ! confirm "Reinstall stack at ${INSTALL_DIR} (pull ${BRANCH}, rebuild)?"; then
+      echo "Aborted."
+      exit 0
+    fi
+  fi
+
+  if [[ -f "${COMPOSE_DIR}/lib/deploy.sh" ]]; then
+    source_deploy
+  fi
+
+  # Skip docker prune inside cleanup when --purge will tear the stack down.
+  run_cleanup "$dry" $((1 - purge))
+
+  if [[ "$purge" -eq 1 ]]; then
+    echo "=== purge (project only) ==="
+    purge_project_stack "$dry"
+  fi
+
+  if [[ "$dry" -eq 1 ]]; then
+    report would "git pull ${BRANCH}, compose build, up -d, postinstall"
+    echo "=== reinstall dry-run done ==="
+    return 0
+  fi
+
+  # Same rebuild path as --update
+  local update_args=(--branch "$BRANCH")
+  [[ "$no_cache" -eq 1 ]] && update_args+=(--no-cache)
+  cmd_update "${update_args[@]}"
+
+  if [[ -x "$POSTINSTALL" ]]; then
+    INSTALL_DIR="$INSTALL_DIR" "$POSTINSTALL" || true
+  fi
+  echo "[OK] Reinstall finished — http://127.0.0.1:${HTTP_PORT:-8080}/"
 }
 
 cmd_status() {
@@ -115,22 +492,25 @@ cmd_status() {
   container_bin
   load_env
   echo "Install: ${INSTALL_DIR}"
+  echo "User:    ${SERVICE_USER} (host); app container uid 10001"
   echo "Branch:  $(git -C "$INSTALL_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
   echo "Commit:  $(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
-  echo "Port:    ${HTTP_PORT}"
+  echo "Listen:  ${HTTP_BIND}:${HTTP_PORT}"
   systemctl is-active site 2>/dev/null || true
   cd "$COMPOSE_DIR"
   "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production ps
 }
 
 cmd_restart() {
-  require_root
+  require_operator
   require_install
   container_bin
   load_env
   cd "$COMPOSE_DIR"
   "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
-  systemctl restart site 2>/dev/null || true
+  if [[ ${EUID:-0} -eq 0 ]]; then
+    systemctl restart site 2>/dev/null || true
+  fi
   echo "[OK] Restarted — http://127.0.0.1:${HTTP_PORT}/"
 }
 
@@ -149,6 +529,12 @@ main() {
   case "$cmd" in
     --update | update)
       cmd_update "$@"
+      ;;
+    --cleanup | cleanup)
+      cmd_cleanup "$@"
+      ;;
+    --reinstall | reinstall)
+      cmd_reinstall "$@"
       ;;
     --status | status) cmd_status ;;
     --restart | restart) cmd_restart ;;

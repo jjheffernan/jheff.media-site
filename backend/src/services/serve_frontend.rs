@@ -10,6 +10,10 @@ pub async fn serve_static(
     config: web::Data<ServerConfig>,
 ) -> Result<HttpResponse, Error> {
     let mut req_path = req.uri().path();
+    // ponytail: block path escape into the container FS (static root only)
+    if req_path.contains("..") {
+        req_path = "/index.html";
+    }
     if req_path == "" || req_path.ends_with('/') {
         req_path = "/index.html";
     }

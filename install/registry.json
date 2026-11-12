@@ -64,14 +64,25 @@
           "notes": "Dockerfile-only. Local bare git mirror for self-hosted Coolify without GitHub. MongoDB is a separate Coolify service."
         }
       },
-      "credentials_path": "/root/site-install.creds",
+      "install_dir": "/opt/jheffmedia-site",
+      "service_user": "jheffmedia",
+      "service_uid": 10001,
       "env_file": "install/common/.env.production",
+      "jwt_secret": "backend/src/secret.key",
       "compose": "install/common/docker-compose.yml",
       "update": {
         "cli": "install/common/bin/jheffmedia",
         "command": "jheffmedia --update",
         "curl": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)\"",
         "local": "/usr/local/bin/jheffmedia"
+      },
+      "ops": {
+        "cleanup": "jheffmedia --cleanup",
+        "reinstall": "jheffmedia --reinstall",
+        "status": "jheffmedia --status",
+        "restart": "jheffmedia --restart",
+        "postinstall": "jheffmedia --postinstall",
+        "healthz": "GET /healthz"
       }
     }
   ],

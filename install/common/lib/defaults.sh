@@ -3,8 +3,14 @@
 
 REPO="${REPO:-https://github.com/jjheffernan/jheff.media-site.git}"
 BRANCH="${BRANCH:-main}"
+# Canonical install tree — do not put secrets under /root/.
 INSTALL_DIR="${INSTALL_DIR:-/opt/jheffmedia-site}"
+# Host operator + systemd user (docker group). UID matches container USER / compose user.
+SERVICE_USER="${SERVICE_USER:-jheffmedia}"
+SERVICE_UID="${SERVICE_UID:-10001}"
 HTTP_PORT="${HTTP_PORT:-8080}"
+# Host publish address. Use 127.0.0.1 when a reverse proxy on the same LXC owns TLS.
+HTTP_BIND="${HTTP_BIND:-0.0.0.0}"
 DB_NAME="${DB_NAME:-jheffmedia}"
 CONTACT_EMAIL="${CONTACT_EMAIL:-hello@jheff.media}"
 FEED_PROVIDER="${FEED_PROVIDER:-static}"
