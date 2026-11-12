@@ -5,7 +5,8 @@ use crate::{
         response::ResponseBody,
     },
     services::{
-        content_service, diagnostics_service, library_import_service, site_config_service,
+        content_service, deploy_service, diagnostics_service, library_import_service,
+        site_config_service,
     },
     utils::auth::require_admin,
 };
@@ -56,6 +57,85 @@ pub async fn diagnostics(req: HttpRequest, db: web::Data<Database>) -> Result<Ht
         compress_enabled,
         warnings,
     }))
+}
+
+/// Deploy control readiness + last channel / autoupdate hints (admin JWT).
+pub async fn deploy_status(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    Ok(HttpResponse::Ok().json(deploy_service::status_snapshot()))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DeployUpdateBody {
+    pub channel: String,
+}
+
+/// Start `jheffmedia --update` (main) or `--update -d` (testing). Async job id.
+pub async fn deploy_update(
+    req: HttpRequest,
+    db: web::Data<Database>,
+    body: web::Json<DeployUpdateBody>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    let Some(channel) = deploy_service::DeployChannel::parse(&body.channel) else {
+        return Ok(
+            ServiceError::new(
+                actix_web::http::StatusCode::BAD_REQUEST,
+                "channel must be main or testing",
+            )
+            .response(),
+        );
+    };
+    match deploy_service::start_update(channel) {
+        Ok(job_id) => Ok(HttpResponse::Accepted().json(serde_json::json!({
+            "jobId": job_id,
+            "channel": channel.as_str(),
+        }))),
+        Err(deploy_service::StartError::Unavailable(msg)) => Ok(ServiceError::new(
+            actix_web::http::StatusCode::SERVICE_UNAVAILABLE,
+            msg,
+        )
+        .response()),
+        Err(deploy_service::StartError::Busy(id)) => Ok(HttpResponse::Conflict().json(
+            serde_json::json!({ "error": "deploy job already running", "jobId": id }),
+        )),
+        Err(deploy_service::StartError::Io(msg)) => Ok(ServiceError::new(
+            actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
+            msg,
+        )
+        .response()),
+    }
+}
+
+/// Poll deploy job log / state.
+pub async fn deploy_job(
+    req: HttpRequest,
+    db: web::Data<Database>,
+    path: web::Path<String>,
+) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    let id = path.into_inner();
+    match deploy_service::job_view(&id) {
+        Some(job) => Ok(HttpResponse::Ok().json(job)),
+        None => {
+            // After container restart mid-update, status file may still have latest.
+            if let Some(latest) = deploy_service::latest_job() {
+                if latest.id == id {
+                    return Ok(HttpResponse::Ok().json(latest));
+                }
+            }
+            Ok(
+                ServiceError::new(actix_web::http::StatusCode::NOT_FOUND, "job not found")
+                    .response(),
+            )
+        }
+    }
 }
 
 pub async fn list_galleries(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {

@@ -4,6 +4,7 @@ pub mod contact_service;
 pub mod content_service;
 pub mod content_store_service;
 pub mod content_upload_service;
+pub mod deploy_service;
 pub mod diagnostics_service;
 pub mod feed_service;
 #[cfg(feature = "forward-frontend")]

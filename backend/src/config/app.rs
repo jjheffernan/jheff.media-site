@@ -147,6 +147,18 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                         "/diagnostics",
                         web::get().to(admin_controller::diagnostics),
                     )
+                    .route(
+                        "/deploy/status",
+                        web::get().to(admin_controller::deploy_status),
+                    )
+                    .route(
+                        "/deploy/update",
+                        web::post().to(admin_controller::deploy_update),
+                    )
+                    .route(
+                        "/deploy/jobs/{id}",
+                        web::get().to(admin_controller::deploy_job),
+                    )
                     .route("/analytics", web::get().to(telemetry_controller::analytics))
                     .route("/social", web::get().to(social_controller::channels))
                     .route("/social", web::put().to(social_controller::update_social))
