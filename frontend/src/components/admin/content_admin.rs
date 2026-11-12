@@ -1,7 +1,7 @@
 use crate::{
     components::admin::collection_browser::CollectionBrowser,
     components::admin::library_import::LibraryImport,
-    components::ui::{Heading, HeadingLevel, Text, TextTone},
+    components::ui::{DatePicker, Heading, HeadingLevel, Text, TextTone},
     context::AuthContext,
     model::AdminPrintOrder,
     services::auth_header,
@@ -155,6 +155,66 @@ fn bind_input(state: UseStateHandle<String>) -> Callback<InputEvent> {
     })
 }
 
+fn split_starts(value: &str) -> (String, String) {
+    let value = value.trim();
+    if value.len() >= 16 && value.as_bytes().get(10) == Some(&b'T') {
+        let day = value[..10].to_string();
+        let time = value[11..].chars().take(5).collect();
+        (day, time)
+    } else if value.len() == 10 {
+        (value.to_string(), "12:00".into())
+    } else {
+        (String::new(), "12:00".into())
+    }
+}
+
+fn combine_starts(day: &str, time: &str) -> String {
+    let day = day.trim();
+    let time = time.trim();
+    if day.len() != 10 {
+        return String::new();
+    }
+    let time = if time.len() >= 5 {
+        time.chars().take(5).collect::<String>()
+    } else {
+        "12:00".into()
+    };
+    format!("{day}T{time}")
+}
+
+/// Soft slug for Advanced preview; real Mongo id is filled after Add.
+fn schedule_slug(title: &str, starts: &str) -> String {
+    let mut out = String::new();
+    let mut dash = false;
+    for ch in title.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+            dash = false;
+        } else if !dash && !out.is_empty() {
+            out.push('-');
+            dash = true;
+        }
+    }
+    let day = starts.trim().chars().take(10).collect::<String>();
+    if day.len() == 10 {
+        if !out.is_empty() {
+            out.push('-');
+        }
+        out.push_str(&day);
+    }
+    let s = out.trim_matches('-').to_string();
+    if s.is_empty() {
+        "date".into()
+    } else {
+        s
+    }
+}
+
+fn looks_like_object_id(id: &str) -> bool {
+    let id = id.trim();
+    id.len() == 24 && id.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
 #[derive(Clone, Copy, PartialEq)]
 enum ContentTab {
     Galleries,
@@ -178,12 +238,60 @@ pub fn content_admin() -> Html {
     let date_location = use_state(String::new);
     let date_kind = use_state(|| String::from("shoot"));
     let date_id = use_state(String::new);
+    let date_id_touched = use_state(|| false);
     let content_tab = use_state(|| ContentTab::Galleries);
+
+    let (starts_day, starts_time) = split_starts(&date_starts);
 
     if auth_ctx.auth.as_ref().map(|a| a.user.role.as_str()) != Some("admin") {
         return html! {};
     }
 
+
+    let on_starts_day = {
+        let date_starts = date_starts.clone();
+        let date_id = date_id.clone();
+        let date_id_touched = date_id_touched.clone();
+        let date_title = date_title.clone();
+        Callback::from(move |day: String| {
+            let (_, time) = split_starts(&date_starts);
+            let combined = combine_starts(&day, &time);
+            date_starts.set(combined.clone());
+            if !*date_id_touched {
+                date_id.set(schedule_slug(&date_title, &combined));
+            }
+        })
+    };
+
+    let on_starts_time = {
+        let date_starts = date_starts.clone();
+        let date_id = date_id.clone();
+        let date_id_touched = date_id_touched.clone();
+        let date_title = date_title.clone();
+        Callback::from(move |e: InputEvent| {
+            let time = e.target_unchecked_into::<HtmlInputElement>().value();
+            let (day, _) = split_starts(&date_starts);
+            let combined = combine_starts(&day, &time);
+            date_starts.set(combined.clone());
+            if !*date_id_touched {
+                date_id.set(schedule_slug(&date_title, &combined));
+            }
+        })
+    };
+
+    let on_title_input = {
+        let date_title = date_title.clone();
+        let date_starts = date_starts.clone();
+        let date_id = date_id.clone();
+        let date_id_touched = date_id_touched.clone();
+        Callback::from(move |e: InputEvent| {
+            let title = e.target_unchecked_into::<HtmlInputElement>().value();
+            date_title.set(title.clone());
+            if !*date_id_touched {
+                date_id.set(schedule_slug(&title, &date_starts));
+            }
+        })
+    };
 
     let on_add_date = {
         let auth_ctx = auth_ctx.clone();
@@ -191,6 +299,8 @@ pub fn content_admin() -> Html {
         let date_starts = date_starts.clone();
         let date_location = date_location.clone();
         let date_kind = date_kind.clone();
+        let date_id = date_id.clone();
+        let date_id_touched = date_id_touched.clone();
         let message = message.clone();
         Callback::from(move |_| {
             let title = date_title.trim().to_string();
@@ -221,13 +331,17 @@ pub fn content_admin() -> Html {
             let date_title = date_title.clone();
             let date_starts = date_starts.clone();
             let date_location = date_location.clone();
+            let date_id = date_id.clone();
+            let date_id_touched = date_id_touched.clone();
             spawn_local(async move {
                 match create_schedule_event(&jwt, payload).await {
                     Ok(id) => {
                         date_title.set(String::new());
                         date_starts.set(String::new());
                         date_location.set(String::new());
-                        message.set(Some(format!("Date added: {id}")));
+                        date_id.set(id.clone());
+                        date_id_touched.set(true);
+                        message.set(Some(format!("Date added. ID ready for edit/delete: {id}")));
                     }
                     Err(err) => message.set(Some(err)),
                 }
@@ -331,23 +445,30 @@ pub fn content_admin() -> Html {
                 <LibraryImport />
             }
             if tab == ContentTab::Schedule {
-            <div class="space-y-3">
+            <div class="schedule-editor">
                 <Text tone={TextTone::Muted}>{ "Add date" }</Text>
                 <input
                     type="text"
                     placeholder="Title"
                     class="field"
                     value={(*date_title).clone()}
-                    oninput={bind_input(date_title.clone())}
+                    oninput={on_title_input}
                 />
                 <label class="block space-y-1">
                     <Text tone={TextTone::Muted}>{ "Starts" }</Text>
-                    <input
-                        type="datetime-local"
-                        class="field"
-                        value={(*date_starts).clone()}
-                        oninput={bind_input(date_starts.clone())}
-                    />
+                    <div class="starts-picker">
+                        <DatePicker
+                            value={starts_day}
+                            on_change={on_starts_day}
+                            placeholder="YYYY-MM-DD"
+                        />
+                        <input
+                            type="time"
+                            class="field starts-picker-time"
+                            value={starts_time}
+                            oninput={on_starts_time}
+                        />
+                    </div>
                 </label>
                 <input
                     type="text"
@@ -368,34 +489,49 @@ pub fn content_admin() -> Html {
                         <option value="other">{ "Other" }</option>
                     </select>
                 </label>
-                <button
-                    type="button"
-                    class="btn btn-primary"
-                    onclick={on_add_date}
-                >
-                    { "Add date" }
-                </button>
-                <input
-                    type="text"
-                    placeholder="Date ID"
-                    class="field"
-                    value={(*date_id).clone()}
-                    oninput={bind_input(date_id.clone())}
-                />
-                <button
-                    type="button"
-                    class="btn btn-primary"
-                    onclick={on_save_date}
-                >
-                    { "Save" }
-                </button>
-                <button
-                    type="button"
-                    class="btn btn-quiet"
-                    onclick={on_delete_date}
-                >
-                    { "Delete" }
-                </button>
+                <div class="schedule-editor-actions">
+                    <button type="button" class="btn btn-primary" onclick={on_add_date}>
+                        { "Add date" }
+                    </button>
+                </div>
+                if looks_like_object_id(&date_id) {
+                    <p class="muted label-xs">{ format!("Current date id: {}", date_id.trim()) }</p>
+                }
+                <details class="schedule-advanced">
+                    <summary>{ "Advanced" }</summary>
+                    <div class="schedule-advanced-body">
+                        <label class="block space-y-1">
+                            <Text tone={TextTone::Muted}>{ "Date ID" }</Text>
+                            <input
+                                type="text"
+                                placeholder="Auto from title · server id after Add"
+                                class="field"
+                                value={(*date_id).clone()}
+                                oninput={{
+                                    let date_id = date_id.clone();
+                                    let date_id_touched = date_id_touched.clone();
+                                    Callback::from(move |e: InputEvent| {
+                                        date_id_touched.set(true);
+                                        date_id.set(
+                                            e.target_unchecked_into::<HtmlInputElement>().value(),
+                                        );
+                                    })
+                                }}
+                            />
+                            <p class="muted label-xs">
+                                { "Leave alone for Add. Save/Delete need the server id (filled after Add, or paste)." }
+                            </p>
+                        </label>
+                        <div class="schedule-editor-actions">
+                            <button type="button" class="btn btn-primary" onclick={on_save_date}>
+                                { "Save" }
+                            </button>
+                            <button type="button" class="btn btn-quiet" onclick={on_delete_date}>
+                                { "Delete" }
+                            </button>
+                        </div>
+                    </div>
+                </details>
             </div>
             }
             if tab == ContentTab::Orders {
