@@ -584,6 +584,31 @@
   }
   .field-invalid { border-color: oklch(0.63 0.19 25); }
   .field-area { min-height: 8rem; }
+  /* Native picker chrome can't be resized; enlarge the control + indicator. */
+  .field[type="datetime-local"],
+  .field[type="date"],
+  .field[type="time"] {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+  .field[type="datetime-local"]::-webkit-calendar-picker-indicator,
+  .field[type="date"]::-webkit-calendar-picker-indicator,
+  .field[type="time"]::-webkit-calendar-picker-indicator {
+    width: 1.35rem;
+    height: 1.35rem;
+    cursor: pointer;
+    opacity: 0.9;
+  }
+  .preferred-time {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .preferred-time .calendar {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    padding: 0.75rem;
+  }
   .label {
     display: block;
     font-size: 0.875rem;

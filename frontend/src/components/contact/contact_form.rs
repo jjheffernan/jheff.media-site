@@ -1,5 +1,6 @@
 use crate::model::{ContactSubmission, ServerResponse};
 use gloo_net::http::Request;
+use js_sys::Date;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
@@ -15,6 +16,205 @@ enum SubmitState {
     Sending,
     Success(String),
     Error(String),
+}
+
+const MONTHS: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+const WEEKDAYS: [&str; 7] = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+fn today() -> (i32, i32, u32) {
+    let now = Date::new_0();
+    (
+        now.get_full_year() as i32,
+        now.get_month() as i32,
+        now.get_date(),
+    )
+}
+
+fn days_in_month(year: i32, month: i32) -> u32 {
+    Date::new_with_year_month_day(year as u32, month + 1, 0).get_date()
+}
+
+fn first_weekday(year: i32, month: i32) -> u32 {
+    Date::new_with_year_month_day(year as u32, month, 1).get_day()
+}
+
+fn shift_month(year: i32, month: i32, delta: i32) -> (i32, i32) {
+    let index = year * 12 + month + delta;
+    (index.div_euclid(12), index.rem_euclid(12))
+}
+
+fn day_key(year: i32, month: i32, day: u32) -> String {
+    format!("{year:04}-{:02}-{:02}", month + 1, day)
+}
+
+fn combine_preferred(date: &str, time: &str) -> String {
+    if date.is_empty() {
+        String::new()
+    } else if time.is_empty() {
+        format!("{date}T12:00")
+    } else {
+        format!("{date}T{time}")
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct PreferredTimeProps {
+    value: String,
+    disabled: bool,
+    on_change: Callback<String>,
+}
+
+#[function_component(PreferredTimePicker)]
+fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
+    let (start_y, start_m, _) = today();
+    let cursor = use_state(|| (start_y, start_m));
+    let selected_day = use_state(|| {
+        props
+            .value
+            .split('T')
+            .next()
+            .filter(|day| day.len() == 10)
+            .unwrap_or("")
+            .to_string()
+    });
+    let selected_time = use_state(|| {
+        props
+            .value
+            .split('T')
+            .nth(1)
+            .map(|time| time.chars().take(5).collect::<String>())
+            .unwrap_or_else(|| "12:30".into())
+    });
+
+    let on_prev = {
+        let cursor = cursor.clone();
+        Callback::from(move |_| {
+            let (y, m) = *cursor;
+            cursor.set(shift_month(y, m, -1));
+        })
+    };
+    let on_next = {
+        let cursor = cursor.clone();
+        Callback::from(move |_| {
+            let (y, m) = *cursor;
+            cursor.set(shift_month(y, m, 1));
+        })
+    };
+
+    let on_time = {
+        let selected_time = selected_time.clone();
+        let selected_day = selected_day.clone();
+        let on_change = props.on_change.clone();
+        Callback::from(move |e: InputEvent| {
+            let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
+            let time = input.value();
+            selected_time.set(time.clone());
+            on_change.emit(combine_preferred(&selected_day, &time));
+        })
+    };
+
+    let on_clear = {
+        let selected_day = selected_day.clone();
+        let selected_time = selected_time.clone();
+        let on_change = props.on_change.clone();
+        Callback::from(move |_| {
+            selected_day.set(String::new());
+            selected_time.set("12:30".into());
+            on_change.emit(String::new());
+        })
+    };
+
+    let (year, month) = *cursor;
+    let blanks = first_weekday(year, month);
+    let count = days_in_month(year, month);
+    let label = format!(
+        "{} {}",
+        MONTHS.get(month as usize).copied().unwrap_or(""),
+        year
+    );
+    let (today_y, today_m, today_d) = today();
+
+    let days = (1..=count).map(|day| {
+        let key = day_key(year, month, day);
+        let selected = (*selected_day).as_str() == key;
+        let is_today = year == today_y && month == today_m && day == today_d;
+        let mut class = String::from("calendar-day");
+        if is_today {
+            class.push_str(" is-today");
+        }
+        if selected {
+            class.push_str(" is-selected");
+        }
+        let selected_day = selected_day.clone();
+        let selected_time = selected_time.clone();
+        let on_change = props.on_change.clone();
+        let key_for_click = key.clone();
+        let disabled = props.disabled;
+        html! {
+            <button
+                type="button"
+                class={class}
+                disabled={disabled}
+                aria-pressed={selected.to_string()}
+                aria-label={format!("{} {day}", MONTHS.get(month as usize).copied().unwrap_or(""))}
+                onclick={Callback::from(move |_| {
+                    selected_day.set(key_for_click.clone());
+                    on_change.emit(combine_preferred(&key_for_click, &selected_time));
+                })}
+            >
+                <span>{ day.to_string() }</span>
+            </button>
+        }
+    });
+
+    html! {
+        <div class="preferred-time">
+            <span class="label">{ "Preferred time" }</span>
+            <section class="calendar" aria-label="Preferred date">
+                <div class="calendar-bar">
+                    <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_prev}>{ "Prev" }</button>
+                    <p class="calendar-label">{ label }</p>
+                    <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_next}>{ "Next" }</button>
+                </div>
+                <div class="calendar-week">
+                    { for WEEKDAYS.iter().map(|name| html! { <span class="calendar-dow">{ *name }</span> }) }
+                </div>
+                <div class="calendar-grid">
+                    { for (0..blanks).map(|_| html! { <span /> }) }
+                    { for days }
+                </div>
+            </section>
+            <label class="label">
+                { "Time" }
+                <input
+                    type="time"
+                    class="field"
+                    value={(*selected_time).clone()}
+                    oninput={on_time}
+                    disabled={props.disabled}
+                />
+            </label>
+            if !(*selected_day).is_empty() {
+                <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_clear}>
+                    { "Clear" }
+                </button>
+            }
+        </div>
+    }
 }
 
 #[function_component(ContactForm)]
@@ -59,9 +259,8 @@ pub fn contact_form(props: &Props) -> Html {
 
     let on_preferred = {
         let preferred = preferred.clone();
-        Callback::from(move |e: InputEvent| {
-            let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
-            preferred.set(input.value());
+        Callback::from(move |value: String| {
+            preferred.set(value);
         })
     };
 
@@ -237,16 +436,11 @@ pub fn contact_form(props: &Props) -> Html {
                         disabled={disabled}
                     />
                 </label>
-                <label class="label">
-                    { "Preferred time" }
-                    <input
-                        type="datetime-local"
-                        class="field"
-                        value={(*preferred).clone()}
-                        oninput={on_preferred}
-                        disabled={disabled}
-                    />
-                </label>
+                <PreferredTimePicker
+                    value={(*preferred).clone()}
+                    disabled={disabled}
+                    on_change={on_preferred}
+                />
                 <p class="muted">{ "Optional. Leave it blank if you do not have a time." }</p>
             }
             { feedback }
