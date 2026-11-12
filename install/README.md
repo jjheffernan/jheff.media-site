@@ -72,10 +72,10 @@ Override defaults in `install/common/lib/defaults.sh` or export before running.
 Inside the host/LXC as root:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"
+jheffmedia --update
 ```
 
-Or run `site-update` if the install created `/usr/local/bin/site-update`.
+Curl fallback: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"`.
 
 ## Adding a new target
 

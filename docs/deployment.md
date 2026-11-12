@@ -83,13 +83,19 @@ Credentials and env paths are printed at the end of install and stored in the cr
 
 ## Updates
 
-Inside the install host/LXC as root (pulls `main`, rebuilds the image, restarts):
+Inside the install host/LXC as root:
+
+```bash
+jheffmedia --update
+```
+
+Also: `jheffmedia --status`, `jheffmedia --restart`. Curl fallback (or older installs):
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"
 ```
 
-Or after install: `site-update` (`/usr/local/bin/site-update`). Keep `backend/src/secret.key` — rotating it logs everyone out. Staging: `BRANCH=dev` before the command.
+Keep `backend/src/secret.key` — rotating it logs everyone out. Staging: `jheffmedia --update --branch dev`.
 
 ## Checklist
 

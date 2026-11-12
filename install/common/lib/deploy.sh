@@ -98,9 +98,12 @@ EOF
   systemctl daemon-reload
   systemctl enable -q --now site
 
-  # One-line local update helper (same as curling install/update.sh).
-  ln -sfn "${INSTALL_DIR}/install/update.sh" /usr/local/bin/site-update
-  chmod +x "${INSTALL_DIR}/install/update.sh" 2>/dev/null || true
+  # Host CLI: jheffmedia --update | --status | --restart
+  local cli="${INSTALL_DIR}/install/common/bin/jheffmedia"
+  chmod +x "$cli" "${INSTALL_DIR}/install/update.sh" 2>/dev/null || true
+  ln -sfn "$cli" /usr/local/bin/jheffmedia
+  printf '%s\n' '#!/bin/sh' 'exec /usr/local/bin/jheffmedia --update "$@"' >/usr/local/bin/site-update
+  chmod +x /usr/local/bin/site-update
 }
 
 deploy_stack() {

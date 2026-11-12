@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# Host CLI for a deployed jheff.media install.
+#   jheffmedia --update
+#   jheffmedia --status
+#   jheffmedia --restart
+#   jheffmedia --help
+
+set -euo pipefail
+
+INSTALL_DIR="${INSTALL_DIR:-/opt/jheffmedia-site}"
+BRANCH="${BRANCH:-main}"
+COMPOSE_DIR="${INSTALL_DIR}/install/common"
+ENV_FILE="${COMPOSE_DIR}/.env.production"
+
+usage() {
+  cat <<'EOF'
+jheffmedia — manage a deployed jheff.media site
+
+Usage:
+  jheffmedia --update [--branch BRANCH]   Pull, rebuild image, restart stack
+  jheffmedia --status                     Compose + systemd status
+  jheffmedia --restart                    Restart stack (no rebuild)
+  jheffmedia --help
+
+Env:
+  INSTALL_DIR   Install path (default /opt/jheffmedia-site)
+  BRANCH        Git branch for --update (default main)
+EOF
+}
+
+require_root() {
+  if [[ ${EUID:-0} -ne 0 ]]; then
+    echo "Run as root (host or LXC shell)." >&2
+    exit 1
+  fi
+}
+
+require_install() {
+  if [[ ! -d "${INSTALL_DIR}/.git" || ! -f "$ENV_FILE" ]]; then
+    echo "No install at ${INSTALL_DIR} (missing .git or .env.production)." >&2
+    exit 1
+  fi
+}
+
+load_env() {
+  # shellcheck disable=SC1091
+  set -a
+  source "$ENV_FILE"
+  set +a
+  export HTTP_PORT="${HTTP_PORT:-8080}"
+}
+
+container_bin() {
+  # shellcheck disable=SC1091
+  source "${INSTALL_DIR}/scripts/lib/container.sh"
+  require_container
+}
+
+cmd_update() {
+  require_root
+  require_install
+  container_bin
+  load_env
+
+  echo "[..] Pulling ${BRANCH} in ${INSTALL_DIR}"
+  git -C "$INSTALL_DIR" fetch origin "$BRANCH"
+  git -C "$INSTALL_DIR" checkout "$BRANCH"
+  git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
+  # Refresh this CLI if the symlink points into the install tree.
+  if [[ -x "${COMPOSE_DIR}/bin/jheffmedia" ]]; then
+    ln -sfn "${COMPOSE_DIR}/bin/jheffmedia" /usr/local/bin/jheffmedia
+    printf '%s\n' '#!/bin/sh' 'exec /usr/local/bin/jheffmedia --update "$@"' >/usr/local/bin/site-update
+    chmod +x /usr/local/bin/site-update "${COMPOSE_DIR}/bin/jheffmedia"
+  fi
+  echo "[OK] Repository updated"
+
+  echo "[..] Rebuilding application image (may take several minutes)"
+  cd "$COMPOSE_DIR"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
+  systemctl restart site 2>/dev/null || true
+  echo "${BRANCH}" >"${COMPOSE_DIR}/.install-version"
+  echo "[OK] Stack updated — http://127.0.0.1:${HTTP_PORT}/"
+}
+
+cmd_status() {
+  require_install
+  container_bin
+  load_env
+  echo "Install: ${INSTALL_DIR}"
+  echo "Branch:  $(git -C "$INSTALL_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+  echo "Commit:  $(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
+  echo "Port:    ${HTTP_PORT}"
+  systemctl is-active site 2>/dev/null || true
+  cd "$COMPOSE_DIR"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production ps
+}
+
+cmd_restart() {
+  require_root
+  require_install
+  container_bin
+  load_env
+  cd "$COMPOSE_DIR"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
+  systemctl restart site 2>/dev/null || true
+  echo "[OK] Restarted — http://127.0.0.1:${HTTP_PORT}/"
+}
+
+main() {
+  local cmd="${1:-}"
+  shift || true
+  case "$cmd" in
+    --update | update)
+      while [[ $# -gt 0 ]]; do
+        case "$1" in
+          --branch) BRANCH="${2:?}"; shift 2 ;;
+          --branch=*) BRANCH="${1#*=}"; shift ;;
+          *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+        esac
+      done
+      cmd_update
+      ;;
+    --status | status) cmd_status ;;
+    --restart | restart) cmd_restart ;;
+    --help | -h | help | "") usage ;;
+    *)
+      echo "Unknown command: $cmd" >&2
+      usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

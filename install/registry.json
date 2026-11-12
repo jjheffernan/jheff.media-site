@@ -68,9 +68,10 @@
       "env_file": "install/common/.env.production",
       "compose": "install/common/docker-compose.yml",
       "update": {
-        "entry": "install/update.sh",
-        "command": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)\"",
-        "local": "site-update"
+        "cli": "install/common/bin/jheffmedia",
+        "command": "jheffmedia --update",
+        "curl": "bash -c \"$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)\"",
+        "local": "/usr/local/bin/jheffmedia"
       }
     }
   ],
