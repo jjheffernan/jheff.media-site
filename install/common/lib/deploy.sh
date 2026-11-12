@@ -113,6 +113,52 @@ EOF
   chmod +x /usr/local/bin/site-update
 }
 
+# Quiet compose build with heartbeats. VERBOSE=yes streams full output.
+# Extra args (e.g. --no-cache) are passed to `compose build`.
+# ponytail: poll+tail beats a TTY progress parser; raise BUILD_HEARTBEAT_SECS if noisy.
+compose_build() {
+  local -a build_cmd=(
+    "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build "$@"
+  )
+  local interval="${BUILD_HEARTBEAT_SECS:-20}"
+
+  if [[ "${VERBOSE:-no}" == "yes" ]]; then
+    "${build_cmd[@]}"
+    return
+  fi
+
+  local log pid rc=0 elapsed=0 line
+  log="$(mktemp "${TMPDIR:-/tmp}/compose-build.XXXXXX")"
+  "${build_cmd[@]}" >"$log" 2>&1 &
+  pid=$!
+
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1
+    elapsed=$((elapsed + 1))
+    ((elapsed % interval == 0)) || continue
+    kill -0 "$pid" 2>/dev/null || break
+    line="$(
+      tr '\r' '\n' <"$log" 2>/dev/null \
+        | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' \
+        | grep -E '[[:alnum:]]' \
+        | tail -1 \
+        | cut -c1-100 || true
+    )" || true
+    # Newline so community-scripts spinner keeps the current line; scrollback shows progress.
+    printf '\n[..] still building… %dm%02ds%s\n' \
+      "$((elapsed / 60))" "$((elapsed % 60))" \
+      "${line:+ — ${line}}" >&2
+  done
+
+  wait "$pid" || rc=$?
+  if [[ $rc -ne 0 ]]; then
+    echo "[!!] compose build failed — last log lines:" >&2
+    tail -n 50 "$log" >&2 || true
+  fi
+  rm -f "$log"
+  return "$rc"
+}
+
 deploy_stack() {
   local compose_dir="${COMMON_DIR}"
   local env_file="${compose_dir}/.env.production"
@@ -127,7 +173,7 @@ deploy_stack() {
   # shellcheck disable=SC1091
   source "${INSTALL_DIR}/scripts/lib/container.sh"
   require_container
-  $STD "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build
+  compose_build
   msg_ok "Built application image"
 
   msg_info "Starting stack"
@@ -158,7 +204,10 @@ update_stack() {
   # shellcheck disable=SC1091
   source "${INSTALL_DIR}/scripts/lib/container.sh"
   require_container
-  $STD "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build
+  msg_info "Building application image (Rust + Trunk — may take several minutes)"
+  compose_build
+  msg_ok "Built application image"
+  msg_info "Starting stack"
   $STD "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
   systemctl restart site 2>/dev/null || true
   echo "${BRANCH}" >"${compose_dir}/.install-version"
