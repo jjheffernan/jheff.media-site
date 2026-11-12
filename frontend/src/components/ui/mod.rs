@@ -1,5 +1,6 @@
 mod button;
 mod card;
+mod date_picker;
 mod grid;
 mod heading;
 mod image;
@@ -13,6 +14,7 @@ mod text;
 pub use button::Button;
 pub use button::ButtonVariant;
 pub use card::Card;
+pub use date_picker::DatePicker;
 pub use grid::Grid;
 pub use heading::Heading;
 pub use heading::HeadingLevel;

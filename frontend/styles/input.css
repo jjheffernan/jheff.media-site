@@ -871,3 +871,24 @@
     .site-nav-panel { padding-inline: 2rem; }
   }
 }
+
+  .date-picker {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .date-picker-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .date-picker-toggle {
+    min-width: 2.75rem;
+    padding-inline: 0.65rem;
+  }
+  .date-picker .calendar {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    padding: 0.75rem;
+  }
