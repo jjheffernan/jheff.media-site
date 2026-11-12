@@ -16,5 +16,5 @@ backend = "http://127.0.0.1:8080/api/"
 
 [[hooks]]
 stage = "pre_build"
-command = "npm"
-command_arguments = ["run", "css:build"]
+command = "bash"
+command_arguments = ["build-css.sh"]

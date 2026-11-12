@@ -1,8 +1,10 @@
 # Coolify Dockerfile-only: install/coolify/README.md (local git mirror + env.example)
+# CSS uses the standalone Tailwind binary — no Node/npm in this image.
 FROM docker.io/library/rust:1.89-bookworm AS frontend-build
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends nodejs npm \
-    && rm -rf /var/lib/apt/lists/*
+ARG TAILWIND_VERSION=4.3.3
+RUN curl -fsSL -o /usr/local/bin/tailwindcss \
+      "https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_VERSION}/tailwindcss-linux-x64" \
+    && chmod +x /usr/local/bin/tailwindcss
 WORKDIR /usr/src/workspace
 COPY Cargo.toml Cargo.lock ./
 COPY frontend ./frontend
@@ -12,7 +14,7 @@ RUN rustup target add wasm32-unknown-unknown
 # Pin: trunk 0.22+ needs rustc 1.96; keep in sync with image rustc.
 RUN cargo install --locked trunk --version 0.21.14
 WORKDIR /usr/src/workspace/frontend
-RUN npm install && trunk build --release
+RUN trunk build --release
 
 FROM docker.io/library/rust:1.89-bookworm AS backend-build
 WORKDIR /usr/src/workspace
