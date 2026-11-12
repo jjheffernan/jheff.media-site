@@ -28,7 +28,7 @@ That loads [community-scripts Core](https://github.com/community-scripts/core) (
 Production tracks **`main`**. For staging:
 
 ```bash
-BRANCH=dev bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
+BRANCH=testing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/testing/install/proxmox/install.sh)"
 ```
 
 ### Or: community-scripts template, then install
@@ -125,7 +125,18 @@ jheffmedia --reinstall --purge    # tear project containers/images; confirm volu
 Inside the install host/LXC as root or `jheffmedia`:
 
 ```bash
-jheffmedia --update
+jheffmedia --update              # always tracks production main
+jheffmedia --update --dev        # tracks testing (alias: --testing)
+```
+
+Optional autoupdate (systemd timer, **off by default**):
+
+```bash
+jheffmedia --autoupdate enable                 # daily → main
+jheffmedia --autoupdate enable --dev --interval weekly
+jheffmedia --autoupdate status
+jheffmedia --autoupdate disable
+# journalctl -u jheffmedia-autoupdate.service -n 50
 ```
 
 Also: `jheffmedia --status`, `jheffmedia --diagnostics`, `jheffmedia --reset-db`, `jheffmedia --restart`, `jheffmedia --cleanup`, `jheffmedia --reinstall`.
@@ -184,7 +195,7 @@ Curl fallback (or older installs):
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"
 ```
 
-Keep `backend/src/secret.key` — rotating it logs everyone out. Staging: `jheffmedia --update --branch dev`.
+Keep `backend/src/secret.key` — rotating it logs everyone out. Non-prod channel: `jheffmedia --update --dev` (git branch `testing`).
 
 ## Process model (single replica)
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Bare-metal / generic Linux installer (Debian/Ubuntu, root)
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/baremetal/install.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/baremetal/install.sh)"
 
 set -euo pipefail
 

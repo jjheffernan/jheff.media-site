@@ -5,7 +5,7 @@
   "notes": [
     "Catalog entry in the spirit of community-scripts.org — one app, several host targets.",
     "Not a Cloudflare Workers project. Deploy with Docker via the install targets below.",
-    "Production branch is main. Install scripts still accept BRANCH=dev for staging."
+    "Production branch is main. Non-prod channel is testing (BRANCH=testing or jheffmedia --update --dev)."
   ],
   "apps": [
     {

@@ -42,11 +42,13 @@ MODE=existing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjhefferna
 MODE=existing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 ```
 
-Staging / `dev` branch:
+Non-prod / `testing` branch:
 
 ```bash
-BRANCH=dev bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/proxmox/install.sh)"
+BRANCH=testing bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/testing/install/proxmox/install.sh)"
 ```
+
+Day-2 on an existing LXC: `jheffmedia --update --dev` (after CLI on `main` includes `--dev`).
 
 ## Proxmox-only files
 
@@ -65,8 +67,9 @@ Shared compose, env, and guided setup: [`../common/`](../common/).
 Re-run the CT script on the Proxmox host and choose update, or inside the container:
 
 ```bash
-jheffmedia --update
-# or: cd /opt/jheffmedia-site && git pull && cd install/common && docker compose --env-file .env.production up -d --build
+jheffmedia --update              # production (main)
+jheffmedia --update --dev        # testing channel
+# optional: jheffmedia --autoupdate enable
 ```
 
 Default install: `/opt/jheffmedia-site` owned by `jheffmedia` (uid 10001). Secrets in `install/common/.env.production` (0600). App container is non-root; Mongo is not published. See [docs/deployment.md](../../docs/deployment.md) § secrets & privilege.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # TrueNAS SCALE installer (Debian-based app host or jail shell, root)
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/dev/install/truenas/install.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/truenas/install.sh)"
 #
 # Alternative: deploy install/common/docker-compose.yml via TrueNAS Custom App
 # and mount .env.production from a dataset — see README.md.

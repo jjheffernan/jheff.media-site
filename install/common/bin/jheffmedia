@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Host CLI for a deployed jheff.media install.
-#   jheffmedia --update | --status | --restart | --postinstall
-#   jheffmedia --cleanup | --reinstall
+#   jheffmedia --update [--dev] | --status | --restart | --postinstall
+#   jheffmedia --cleanup | --reinstall | --autoupdate …
 #   jheffmedia --help
 #
 # Operator model: install (apt/docker/pct) needs root. Day-2 ops run as root or
@@ -14,26 +14,36 @@ BRANCH="${BRANCH:-main}"
 COMPOSE_DIR="${INSTALL_DIR}/install/common"
 COMMON_DIR="${COMPOSE_DIR}"
 ENV_FILE="${COMPOSE_DIR}/.env.production"
+AUTOUPDATE_ENV="${COMPOSE_DIR}/autoupdate.env"
 POSTINSTALL="${INSTALL_DIR}/install/postinstall.sh"
 SERVICE_USER="${SERVICE_USER:-jheffmedia}"
 SERVICE_UID="${SERVICE_UID:-10001}"
+# Channels: main = production; testing = non-prod (--dev / --testing).
+CHANNEL_PROD=main
+CHANNEL_DEV=testing
 
 usage() {
   cat <<'EOF'
 jheffmedia — manage a deployed jheff.media site
 
 Usage:
-  jheffmedia --update [--branch BRANCH] [--no-cache]
+  jheffmedia --update [--dev|--testing] [--channel main|testing] [--branch BRANCH] [--no-cache]
       Pull, rebuild image, restart stack (healthy installs).
-      --branch BRANCH   Git branch to deploy (default: main / $BRANCH)
-      --no-cache        Rebuild without Docker layer cache (BuildKit cargo caches still help; avoid unless needed)
+      Plain --update always tracks production (main).
+      --dev / --testing   Deploy from testing branch
+      --channel NAME      main (prod) or testing (same as --dev)
+      --branch BRANCH     Explicit git branch (escape hatch)
+      --no-cache          Rebuild without Docker layer cache (avoid unless needed)
+  jheffmedia --autoupdate enable|disable|status [--dev|--testing] [--channel main|testing] [--interval daily|weekly]
+      Optional systemd timer (off by default). enable is idempotent; needs root.
+      Channel is stored in install/common/autoupdate.env (AUTOUPDATE_CHANNEL).
   jheffmedia --cleanup [--dry-run] [--yes|-y]
       Safe repair: drop legacy cred dumps, ensure service user, fix ownership /
       secret perms, refresh site.service User=, prune exited jheffmedia
       containers. Does NOT delete Mongo volumes or .env.production.
       --dry-run         Print actions only
       --yes / -y        Skip confirm for project docker prune
-  jheffmedia --reinstall [--purge] [--branch BRANCH] [--no-cache] [--yes|-y]
+  jheffmedia --reinstall [--purge] [--dev|--testing] [--branch BRANCH] [--no-cache] [--yes|-y]
       Cleanup, then pull/rebuild/restart like --update (for broken/partial
       installs). Keeps DB volumes by default.
       --purge           Remove this project's containers + app image first;
@@ -58,25 +68,40 @@ When to use what:
   --cleanup     leaks / wrong owner / leftover /root/*.creds / bad User=
   --reinstall   partial or broken install; refresh stack, keep data
   --reset-db    Mongo password mismatch or wipe users; keep media uploads
-  --update      routine pull on a working install
+  --update      routine pull on production (main)
+  --update --dev  pull from testing channel
+  --autoupdate  optional periodic --update (off by default)
   --diagnostics site/container health before opening a ticket
 
 Privilege:
   --update / --restart / --cleanup / --reinstall / --reset-db / --diagnostics
-  need root or docker-group (service user jheffmedia). User/perms/systemd
-  fixes need root.
+  / --autoupdate enable|disable need root or docker-group (service user
+  jheffmedia). Unit install needs root. --autoupdate status is read-only.
   --status / --postinstall need read access to the install tree.
   First-time install (Docker engine, LXC create) still requires root.
 
 Env:
   INSTALL_DIR    Install path (default /opt/jheffmedia-site)
-  BRANCH         Git branch for --update/--reinstall (default main)
+  BRANCH         Default branch for install scripts (CLI --update ignores this;
+                 plain --update always uses main unless --dev/--branch)
   SERVICE_USER   Host operator user (default jheffmedia)
   SERVICE_UID    Host/container uid (default 10001)
   JM_PURGE_VOLUMES  Set to yes with --reinstall --purge --yes to also
                     delete jheffmedia-mongo / jheffmedia-content-uploads
   JM_RESET_DB       Set to yes to allow --reset-db --yes without typing RESET
 EOF
+}
+
+# Map channel name → git branch. Unknown names fail closed.
+resolve_channel() {
+  case "$1" in
+    main | prod | production) echo "$CHANNEL_PROD" ;;
+    testing | dev) echo "$CHANNEL_DEV" ;;
+    *)
+      echo "Unknown channel: $1 (main|testing)" >&2
+      return 1
+      ;;
+  esac
 }
 
 # docker group ≈ root on the host — still better than running the *app* as root.
@@ -161,10 +186,21 @@ report() {
 
 cmd_update() {
   local no_cache=0
+  # Safer UX: plain --update always tracks production main (ignore $BRANCH env).
+  BRANCH="$CHANNEL_PROD"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --branch) BRANCH="${2:?}"; shift 2 ;;
       --branch=*) BRANCH="${1#*=}"; shift ;;
+      --dev | --testing) BRANCH="$CHANNEL_DEV"; shift ;;
+      --channel)
+        BRANCH="$(resolve_channel "${2:?}")" || exit 1
+        shift 2
+        ;;
+      --channel=*)
+        BRANCH="$(resolve_channel "${1#*=}")" || exit 1
+        shift
+        ;;
       --no-cache) no_cache=1; shift ;;
       *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
     esac
@@ -174,11 +210,12 @@ cmd_update() {
   require_install
   container_bin
   load_env
+  source_deploy
 
   echo "[..] Pulling ${BRANCH} in ${INSTALL_DIR}"
-  git -C "$INSTALL_DIR" fetch origin "$BRANCH"
-  git -C "$INSTALL_DIR" checkout "$BRANCH"
-  git -C "$INSTALL_DIR" pull --ff-only origin "$BRANCH"
+  install_git fetch origin "$BRANCH"
+  install_git checkout "$BRANCH"
+  install_git pull --ff-only origin "$BRANCH"
   # Symlink refresh needs root; skip when running as service user.
   if [[ ${EUID:-0} -eq 0 && -x "${COMPOSE_DIR}/bin/jheffmedia" ]]; then
     ln -sfn "${COMPOSE_DIR}/bin/jheffmedia" /usr/local/bin/jheffmedia
@@ -187,7 +224,6 @@ cmd_update() {
   fi
   echo "[OK] Repository updated"
 
-  source_deploy
   echo "[..] Rebuilding application image (may take several minutes)"
   cd "$COMPOSE_DIR"
   if [[ "$no_cache" -eq 1 ]]; then
@@ -207,7 +243,125 @@ cmd_update() {
     remove_legacy_creds_file
   fi
   echo "${BRANCH}" >"${COMPOSE_DIR}/.install-version"
-  echo "[OK] Stack updated — http://127.0.0.1:${HTTP_PORT}/"
+  echo "[OK] Stack updated (${BRANCH}) — http://127.0.0.1:${HTTP_PORT}/"
+}
+
+# ponytail: one timer + EnvironmentFile; no fleet manager.
+cmd_autoupdate() {
+  local action="${1:-status}"
+  shift || true
+  local channel="$CHANNEL_PROD" interval=daily
+  local unit_svc=/etc/systemd/system/jheffmedia-autoupdate.service
+  local unit_tmr=/etc/systemd/system/jheffmedia-autoupdate.timer
+  local calendar cli
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --dev | --testing) channel="$CHANNEL_DEV"; shift ;;
+      --channel)
+        channel="$(resolve_channel "${2:?}")" || exit 1
+        shift 2
+        ;;
+      --channel=*)
+        channel="$(resolve_channel "${1#*=}")" || exit 1
+        shift
+        ;;
+      --interval)
+        interval="${2:?}"
+        shift 2
+        ;;
+      --interval=*)
+        interval="${1#*=}"
+        shift
+        ;;
+      *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
+    esac
+  done
+
+  case "$interval" in
+    daily) calendar="*-*-* 04:00:00" ;;
+    weekly) calendar="Mon *-*-* 04:00:00" ;;
+    *)
+      echo "Unknown interval: ${interval} (daily|weekly)" >&2
+      exit 1
+      ;;
+  esac
+
+  case "$action" in
+    enable)
+      if [[ ${EUID:-0} -ne 0 ]]; then
+        echo "jheffmedia --autoupdate enable needs root." >&2
+        exit 1
+      fi
+      require_install
+      cli="$(command -v jheffmedia || true)"
+      [[ -x "$cli" ]] || cli=/usr/local/bin/jheffmedia
+      if [[ ! -x "$cli" ]]; then
+        echo "jheffmedia not on PATH; run --update once as root first." >&2
+        exit 1
+      fi
+      mkdir -p "$COMPOSE_DIR"
+      cat >"$AUTOUPDATE_ENV" <<EOF
+# Written by jheffmedia --autoupdate enable. Channel: main | testing
+AUTOUPDATE_CHANNEL=${channel}
+EOF
+      chmod 644 "$AUTOUPDATE_ENV"
+      cat >"$unit_svc" <<EOF
+[Unit]
+Description=jheff.media autoupdate
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-${AUTOUPDATE_ENV}
+# Map channel → CLI flags; plain --update = main.
+ExecStart=/bin/bash -c 'ch="\${AUTOUPDATE_CHANNEL:-main}"; if [ "\$ch" = "testing" ] || [ "\$ch" = "dev" ]; then exec ${cli} --update --dev; else exec ${cli} --update; fi'
+Nice=10
+EOF
+      cat >"$unit_tmr" <<EOF
+[Unit]
+Description=jheff.media autoupdate timer
+
+[Timer]
+OnCalendar=${calendar}
+Persistent=true
+RandomizedDelaySec=30m
+
+[Install]
+WantedBy=timers.target
+EOF
+      systemctl daemon-reload
+      systemctl enable --now jheffmedia-autoupdate.timer
+      echo "[OK] Autoupdate enabled (channel=${channel}, interval=${interval})"
+      echo "     Logs: journalctl -u jheffmedia-autoupdate.service -n 50"
+      ;;
+    disable)
+      if [[ ${EUID:-0} -ne 0 ]]; then
+        echo "jheffmedia --autoupdate disable needs root." >&2
+        exit 1
+      fi
+      systemctl disable --now jheffmedia-autoupdate.timer 2>/dev/null || true
+      echo "[OK] Autoupdate disabled (units left on disk; re-enable anytime)"
+      ;;
+    status | "")
+      local ch='(none)'
+      if [[ -f "$AUTOUPDATE_ENV" ]]; then
+        ch="$(grep -E '^AUTOUPDATE_CHANNEL=' "$AUTOUPDATE_ENV" 2>/dev/null | head -1 | cut -d= -f2- || echo '(none)')"
+      fi
+      echo "Config:  ${AUTOUPDATE_ENV}"
+      echo "Channel: ${ch}"
+      if command -v systemctl >/dev/null 2>&1; then
+        systemctl is-enabled jheffmedia-autoupdate.timer 2>/dev/null || echo "timer: disabled/missing"
+        systemctl list-timers jheffmedia-autoupdate.timer --no-pager 2>/dev/null || true
+      fi
+      ;;
+    *)
+      echo "Unknown autoupdate action: ${action} (enable|disable|status)" >&2
+      usage
+      exit 1
+      ;;
+  esac
 }
 
 # Shared repair path for --cleanup and --reinstall.
@@ -437,10 +591,21 @@ purge_project_stack() {
 cmd_reinstall() {
   local no_cache=0 purge=0 dry=0
   ASSUME_YES=0
+  # Match --update: default prod main unless --dev/--branch.
+  BRANCH="$CHANNEL_PROD"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --branch) BRANCH="${2:?}"; shift 2 ;;
       --branch=*) BRANCH="${1#*=}"; shift ;;
+      --dev | --testing) BRANCH="$CHANNEL_DEV"; shift ;;
+      --channel)
+        BRANCH="$(resolve_channel "${2:?}")" || exit 1
+        shift 2
+        ;;
+      --channel=*)
+        BRANCH="$(resolve_channel "${1#*=}")" || exit 1
+        shift
+        ;;
       --no-cache) no_cache=1; shift ;;
       --purge) purge=1; shift ;;
       --dry-run) dry=1; shift ;;
@@ -486,7 +651,7 @@ cmd_reinstall() {
     return 0
   fi
 
-  # Same rebuild path as --update
+  # Same rebuild path as --update (--branch keeps explicit channel)
   local update_args=(--branch "$BRANCH")
   [[ "$no_cache" -eq 1 ]] && update_args+=(--no-cache)
   cmd_update "${update_args[@]}"
@@ -734,6 +899,9 @@ main() {
   case "$cmd" in
     --update | update)
       cmd_update "$@"
+      ;;
+    --autoupdate | autoupdate)
+      cmd_autoupdate "$@"
       ;;
     --cleanup | cleanup)
       cmd_cleanup "$@"

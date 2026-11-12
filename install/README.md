@@ -4,7 +4,7 @@ Platform-specific one-line installers in the style of [community-scripts.org](ht
 
 **Start here:** [docs/deployment.md](../docs/deployment.md) · catalog metadata: [`registry.json`](./registry.json)
 
-Production installs default to **`main`**. Use `BRANCH=dev` for staging.
+Production installs default to **`main`**. Non-prod channel: **`testing`** (`BRANCH=testing` or day-2 `jheffmedia --update --dev`).
 
 ## Layout
 
@@ -60,7 +60,7 @@ UNATTENDED=yes MONGO_PASSWORD='change-me' BRANCH=main \
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `REPO` | GitHub clone URL | Repository to clone |
-| `BRANCH` | `main` | Branch to deploy (`dev` for staging) |
+| `BRANCH` | `main` | Branch to deploy (`testing` for non-prod) |
 | `INSTALL_DIR` | `/opt/jheffmedia-site` | Clone target on host |
 | `SERVICE_USER` | `jheffmedia` | Host owner + systemd user |
 | `SERVICE_UID` | `10001` | Matches app container UID |
@@ -81,7 +81,12 @@ Override defaults in `install/common/lib/defaults.sh` or export before running.
 Inside the host/LXC as root:
 
 ```bash
-jheffmedia --update                   # routine pull on a working install
+jheffmedia --update                   # production: pull main
+jheffmedia --update --dev             # non-prod: pull testing (alias: --testing)
+jheffmedia --autoupdate enable        # optional daily timer → --update (main); off by default
+jheffmedia --autoupdate enable --dev --interval weekly
+jheffmedia --autoupdate status
+jheffmedia --autoupdate disable
 jheffmedia --cleanup                  # fix cred leaks / ownership / site.service (keeps data)
 jheffmedia --reinstall                # cleanup + rebuild (keeps Mongo volumes)
 jheffmedia --reinstall --purge        # also drop project containers/images; confirms volumes
@@ -89,7 +94,7 @@ jheffmedia --postinstall              # admin email reminder
 jheffmedia --postinstall --show-creds # admin email + secret paths (not values)
 ```
 
-Use `--cleanup` for leftover `/root/site-install.creds` or root-owned trees; `--reinstall` for broken/partial installs; `--update` for day-2 deploys. See [docs/deployment.md](../docs/deployment.md).
+Use `--cleanup` for leftover `/root/site-install.creds` or root-owned trees; `--reinstall` for broken/partial installs; `--update` for day-2 deploys. Autoupdate writes `install/common/autoupdate.env` (`AUTOUPDATE_CHANNEL=main|testing`) and a systemd timer; logs via `journalctl -u jheffmedia-autoupdate.service`. See [docs/deployment.md](../docs/deployment.md).
 
 Curl fallback: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"`.
 
