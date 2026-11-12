@@ -10,9 +10,44 @@ use crate::{
 use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse, Result};
 use awc::Client;
+use bson::doc;
 use futures_util::StreamExt;
 use mongodb::Database;
 use serde::Deserialize;
+use std::{
+    env,
+    sync::OnceLock,
+    time::Instant,
+};
+
+static BOOT: OnceLock<Instant> = OnceLock::new();
+
+/// Call once at process start so uptime is meaningful.
+pub fn mark_boot() {
+    let _ = BOOT.get_or_init(Instant::now);
+}
+
+/// Non-secret runtime snapshot for admin live troubleshooting.
+pub async fn diagnostics(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
+    if let Err(resp) = require_admin(&req, &db).await {
+        return Ok(resp);
+    }
+    mark_boot();
+    let db_reachable = db.run_command(doc! { "ping": 1 }).await.is_ok();
+    let cfg = site_config_service::resolved(&db).await;
+    let rust_log = env::var("RUST_LOG").unwrap_or_default();
+    let uptime_secs = BOOT
+        .get()
+        .map(|t| t.elapsed().as_secs())
+        .unwrap_or(0);
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "dbReachable": db_reachable,
+        "feedProvider": cfg.feed_provider,
+        "rustLog": rust_log,
+        "uptimeSecs": uptime_secs,
+        "version": env!("CARGO_PKG_VERSION"),
+    })))
+}
 
 pub async fn list_galleries(req: HttpRequest, db: web::Data<Database>) -> Result<HttpResponse> {
     list_collections(req, db, "gallery").await

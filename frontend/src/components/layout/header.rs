@@ -1,7 +1,7 @@
 use super::content_nav::ContentNav;
 use super::{profile_menu::ProfileMenu, theme_toggle::ThemeToggle};
 use crate::components::ui::{NavLink, Text, TextTone};
-use crate::context::AuthContext;
+use crate::context::{AuthContext, DevModeContext};
 use crate::routes::{AppRoutes, SearchQuery};
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -78,10 +78,12 @@ pub struct Props {
 pub fn header(props: &Props) -> Html {
     let menu_open = use_state(|| false);
     let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
+    let dev_ctx = use_context::<DevModeContext>().expect("DevModeProvider required");
     let is_admin = auth_ctx
         .auth
         .as_ref()
         .is_some_and(|auth| auth.user.role == "admin");
+    let show_dev_badge = is_admin && dev_ctx.enabled;
     let current = use_route::<AppRoutes>().unwrap_or(AppRoutes::NotFound);
 
     {
@@ -129,6 +131,11 @@ pub fn header(props: &Props) -> Html {
 
                 <div class="site-header-actions">
                     <div class="site-header-tools">
+                        if show_dev_badge {
+                            <Link<AppRoutes> to={AppRoutes::Admin} classes="dev-mode-pill">
+                                { "DEV" }
+                            </Link<AppRoutes>>
+                        }
                         <SearchBox />
                         <ThemeToggle />
                         <ProfileMenu />

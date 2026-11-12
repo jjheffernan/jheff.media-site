@@ -1,5 +1,5 @@
 use crate::components::Layout;
-use crate::context::{AuthProvider, ThemeProvider};
+use crate::context::{AuthProvider, DevModeProvider, ThemeProvider};
 use crate::router::Router;
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -25,9 +25,11 @@ impl Component for App {
             <BrowserRouter>
                 <ThemeProvider>
                     <AuthProvider>
-                        <Layout>
-                            <Router />
-                        </Layout>
+                        <DevModeProvider>
+                            <Layout>
+                                <Router />
+                            </Layout>
+                        </DevModeProvider>
                     </AuthProvider>
                 </ThemeProvider>
             </BrowserRouter>

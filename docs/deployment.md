@@ -83,6 +83,7 @@ Then:
 3. **Admin** — open the site, sign up with the printed `ADMIN_EMAILS` address (any password ≥8 chars). That account becomes `admin`. Change the email in `.env.production` later if you generated a bootstrap address.
 4. **Feed** — Admin → Setup: pick `none` / `static` / `immich` / `nextcloud` and save. Feed reads Mongo per request. If images look stale after a provider change, run `jheffmedia --restart`.
 5. **SMTP (optional)** — contact/booking mail needs `YEW_FULLSTACK_SMTP_*`; contact recipient can also be set in Admin → Setup.
+6. **Admin Dev mode (optional)** — on the live site, signed-in admins can open **Admin → Dev** and toggle a browser-local troubleshooting UI (build/version, API base, feed provider name, probe links to `/metrics` + feed/schedule, recent failed-fetch statuses, copyable masked diagnostics JSON). This is not the install/community-scripts `DEV_MODE` flag, does not change server log verbosity, and never includes JWT/passwords/API keys. Non-admins never see the controls.
 
 Credentials stay only on the host (`site-install.creds`, chmod 600). Nothing secret is committed to git.
 

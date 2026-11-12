@@ -1,10 +1,10 @@
 use crate::components::{
-    admin::{AnalyticsAdmin, ContactAdmin, ContentAdmin, LinksAdmin, SetupAdmin},
+    admin::{AnalyticsAdmin, ContactAdmin, ContentAdmin, DevAdmin, LinksAdmin, SetupAdmin},
     auth::{AuthModal, AuthModalKind},
 };
-use crate::context::AuthContext;
+use crate::context::{AuthContext, DevModeContext};
 use crate::routes::AppRoutes;
-use crate::services::auth_header;
+use crate::services::{api_errors, auth_header};
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
@@ -18,6 +18,7 @@ enum Panel {
     Links,
     Inbox,
     Content,
+    Dev,
 }
 
 #[derive(Deserialize)]
@@ -29,6 +30,7 @@ struct SetupProbe {
 #[function_component(Admin)]
 pub fn admin() -> Html {
     let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
+    let dev_ctx = use_context::<DevModeContext>().expect("DevModeProvider required");
     let navigator = use_navigator().expect("Router required");
     let panel = use_state(|| Panel::Analytics);
     let setup_hint = use_state(|| false);
@@ -47,19 +49,25 @@ pub fn admin() -> Html {
                 let setup_hint = setup_hint.clone();
                 spawn_local(async move {
                     let auth_val = auth_header(&jwt);
-                    if let Ok(resp) = Request::get("/api/admin/setup")
+                    match Request::get("/api/admin/setup")
                         .header("Authorization", auth_val.as_str())
                         .send()
                         .await
                     {
-                        if resp.ok() {
-                            if let Ok(body) = resp.json::<SetupProbe>().await {
-                                if body.needs_setup {
-                                    setup_hint.set(true);
-                                    panel.set(Panel::Setup);
+                        Ok(resp) => {
+                            let status = resp.status();
+                            if resp.ok() {
+                                if let Ok(body) = resp.json::<SetupProbe>().await {
+                                    if body.needs_setup {
+                                        setup_hint.set(true);
+                                        panel.set(Panel::Setup);
+                                    }
                                 }
+                            } else {
+                                api_errors::push("/api/admin/setup", status);
                             }
                         }
+                        Err(_) => api_errors::push("/api/admin/setup", 0),
                     }
                 });
             }
@@ -104,6 +112,12 @@ pub fn admin() -> Html {
                             <button type="button" class="admin-link" aria-current={(current == Panel::Links).then_some("page")} onclick={pick(Panel::Links)}>{ "Links" }</button>
                             <button type="button" class="admin-link" aria-current={(current == Panel::Inbox).then_some("page")} onclick={pick(Panel::Inbox)}>{ "Inbox" }</button>
                             <button type="button" class="admin-link" aria-current={(current == Panel::Content).then_some("page")} onclick={pick(Panel::Content)}>{ "Content" }</button>
+                            <button type="button" class="admin-link" aria-current={(current == Panel::Dev).then_some("page")} onclick={pick(Panel::Dev)}>
+                                { "Dev" }
+                                if dev_ctx.enabled {
+                                    <span class="dev-badge" title="Dev mode on">{ "·" }</span>
+                                }
+                            </button>
                         </nav>
                         <p class="muted admin-who">{ who }</p>
                     </aside>
@@ -119,6 +133,7 @@ pub fn admin() -> Html {
                             Panel::Links => html! { <LinksAdmin /> },
                             Panel::Inbox => html! { <ContactAdmin /> },
                             Panel::Content => html! { <ContentAdmin /> },
+                            Panel::Dev => html! { <DevAdmin /> },
                         } }
                     </div>
                 </div>

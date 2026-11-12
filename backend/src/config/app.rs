@@ -11,6 +11,7 @@ use actix_web::web;
 
 pub fn config_services(cfg: &mut web::ServiceConfig) {
     info!("Configurating routes...");
+    admin_controller::mark_boot();
     cfg.route("/metrics", web::get().to(telemetry_controller::metrics_text));
     cfg.service(
         web::scope("/api")
@@ -145,6 +146,10 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                     )
                     .route("/setup", web::get().to(admin_controller::get_setup))
                     .route("/setup", web::put().to(admin_controller::update_setup))
+                    .route(
+                        "/diagnostics",
+                        web::get().to(admin_controller::diagnostics),
+                    )
                     .route("/analytics", web::get().to(telemetry_controller::analytics))
                     .route("/social", web::get().to(social_controller::channels))
                     .route("/contacts", web::get().to(contact_controller::list))

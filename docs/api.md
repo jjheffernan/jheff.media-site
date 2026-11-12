@@ -416,6 +416,10 @@ Upload one or more images to an existing MongoDB shoot. Same contract as gallery
 
 Admin JWT. Site setup wizard: feed provider (`none` | `static` | `immich` | `nextcloud`), Immich/Nextcloud fields, optional static JSON, contact email, public URL. Persisted in Mongo `site_config` (`_id: main`). GET masks secrets (last 4 only). PUT: empty secret fields keep the stored value. Response includes `needsSetup`, `fromDb`, and `restartRequired` (true when the provider changed — images may need `jheffmedia --restart`).
 
+### `GET /api/admin/diagnostics`
+
+Admin JWT. Non-secret runtime snapshot for live troubleshooting: `dbReachable`, `feedProvider`, `rustLog` (env value only), `uptimeSecs`, `version`. No connection strings, keys, or JWTs.
+
 ### `GET /api/admin/library`
 
 Admin JWT. Lists which library sources the server has configured. The response is only `immich` and/or `nextcloud`. API keys and passwords are not returned.
