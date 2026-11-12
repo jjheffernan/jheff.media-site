@@ -69,28 +69,22 @@ services:
       MONGODB_INITDB_DATABASE: ${DB_NAME:-jheffmedia}
       MONGODB_INITDB_ROOT_USERNAME: root
       MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
+      # Same secret for healthcheck (container env). INITDB_* only applies on empty volume.
+      MONGO_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
     volumes:
       - jheffmedia-mongo:/data/db
     healthcheck:
-      # Auth required — unauthenticated ping can pass while the app cannot write users.
+      # Auth ping via container env ($$ → $). Fails when .env password ≠ volume → use
+      # `jheffmedia --reset-db` (or restore the original MONGO_PASSWORD).
       test:
         [
-          "CMD",
-          "mongosh",
-          "-u",
-          "root",
-          "-p",
-          "${MONGO_PASSWORD}",
-          "--authenticationDatabase",
-          "admin",
-          "--quiet",
-          "--eval",
-          "db.adminCommand('ping').ok",
+          "CMD-SHELL",
+          "mongosh -u root -p \"$$MONGO_PASSWORD\" --authenticationDatabase admin --quiet --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)'",
         ]
       interval: 5s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
+      timeout: 8s
+      retries: 18
+      start_period: 40s
 
 volumes:
   jheffmedia-mongo:

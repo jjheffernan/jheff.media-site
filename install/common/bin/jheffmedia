@@ -599,14 +599,18 @@ cmd_diagnostics() {
     YEW_FULLSTACK_HOST YEW_FULLSTACK_PORT YEW_FULLSTACK_DB_NAME YEW_FULLSTACK_BUILD_ID \
     YEW_FULLSTACK_FEED_PROVIDER RUST_LOG 2>/dev/null || echo "(app container not running)"
   echo
+  echo "--- db health / logs ---"
+  "$CONTAINER_BIN" inspect jheffmedia-database --format 'health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} status={{.State.Status}}' 2>/dev/null || echo "(no db container)"
+  "$CONTAINER_BIN" logs --tail 40 jheffmedia-database 2>/dev/null || true
+  echo
   echo "--- mongo auth ping (inside db container) ---"
   if [[ -n "${MONGO_PASSWORD:-}" ]]; then
     if "$CONTAINER_BIN" exec jheffmedia-database mongosh -u root -p "$MONGO_PASSWORD" \
-      --authenticationDatabase admin --quiet --eval 'db.adminCommand({ping:1}).ok' 2>/dev/null \
-      | grep -q 1; then
+      --authenticationDatabase admin --quiet --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)' 2>/dev/null; then
       echo "mongo: auth ping ok"
     else
-      echo "[!!] mongo: auth ping FAILED — password/volume mismatch. Try: jheffmedia --reset-db"
+      echo "[!!] mongo: auth ping FAILED — password/volume mismatch (INITDB password is fixed at first volume create)."
+      echo "      Fix: jheffmedia --reset-db   # wipes Mongo only, keeps uploads"
     fi
   else
     echo "[!!] MONGO_PASSWORD not loaded from .env.production"
@@ -614,7 +618,7 @@ cmd_diagnostics() {
   echo
   echo "--- recent app log (signup / auth) ---"
   "$CONTAINER_BIN" logs --tail 30 jheffmedia-application 2>/dev/null \
-    | grep -iE 'signup|auth|mongo|error|DATABASE' || echo "(no matching lines)"
+    | grep -iE 'signup|auth|mongo|error|DATABASE' || echo "(no matching lines / app not up)"
   echo
   echo "Admin → Dev on the site shows dbTests + production warnings after signup."
 }
