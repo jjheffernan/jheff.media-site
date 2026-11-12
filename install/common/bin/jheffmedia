@@ -495,10 +495,16 @@ cmd_status() {
   echo "User:    ${SERVICE_USER} (host); app container uid 10001"
   echo "Branch:  $(git -C "$INSTALL_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
   echo "Commit:  $(git -C "$INSTALL_DIR" rev-parse --short HEAD 2>/dev/null || echo '?')"
-  echo "Listen:  ${HTTP_BIND}:${HTTP_PORT}"
+  echo "Listen:  ${HTTP_BIND}:${HTTP_PORT} (host publish; app binds 0.0.0.0 in-container)"
+  if [[ "${HTTP_BIND}" == "127.0.0.1" || "${HTTP_BIND}" == "localhost" ]]; then
+    echo "[!!] HTTP_BIND=${HTTP_BIND} — only reachable on this LXC. Set HTTP_BIND=0.0.0.0 in .env.production for LAN access."
+  fi
   systemctl is-active site 2>/dev/null || true
   cd "$COMPOSE_DIR"
   "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production ps
+  "$CONTAINER_BIN" port jheffmedia-application 8080 2>/dev/null || true
+  "$CONTAINER_BIN" exec jheffmedia-application printenv YEW_FULLSTACK_HOST 2>/dev/null \
+    | sed 's/^/YEW_FULLSTACK_HOST=/' || true
 }
 
 cmd_restart() {

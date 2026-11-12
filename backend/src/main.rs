@@ -70,7 +70,8 @@ async fn main() -> io::Result<()> {
 
     let serve_static = env::var("YEW_FULLSTACK_STATIC")
         .unwrap_or(env::var("PWD").unwrap_or(String::from("/usr/local/share/yew-fullstack/www")));
-    let default_http_host = String::from("127.0.0.1");
+    // 0.0.0.0 so Docker port-publish works; local scripts set YEW_FULLSTACK_HOST explicitly.
+    let default_http_host = String::from("0.0.0.0");
     let default_http_port = String::from("3000");
     let http_host = env::var("YEW_FULLSTACK_HOST").unwrap_or(default_http_host);
     let http_port = env::var("YEW_FULLSTACK_PORT").unwrap_or(default_http_port);

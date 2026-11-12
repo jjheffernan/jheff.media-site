@@ -78,7 +78,7 @@ jheffmedia --postinstall          # admin email reminder
 
 Then:
 
-1. **TLS** — put Caddy/Nginx (or Cloudflare Tunnel) in front of `:8080`. See [deployment-proxmox.md](./deployment-proxmox.md) § reverse proxy. For a proxy on the same LXC, set `HTTP_BIND=127.0.0.1` in `.env.production`.
+1. **TLS** — put Caddy/Nginx (or Cloudflare Tunnel) in front of `:8080`. See [deployment-proxmox.md](./deployment-proxmox.md) § reverse proxy. For a proxy on the same LXC, set `HTTP_BIND=127.0.0.1` in `.env.production` (host publish only). The app always binds `0.0.0.0` inside the container — do not set Compose `HOST` for that (shell `HOST` is often the hostname and breaks LAN access).
 2. **CORS** — once the public hostname is known, set `YEW_FULLSTACK_CORS_ORIGINS=https://jheff.media` (or your domain) on the app service and restart.
 3. **Admin** — open the site, sign up with the printed `ADMIN_EMAILS` address (any password ≥8 chars). That account becomes `admin`. Change the email in `.env.production` later if you generated a bootstrap address.
 4. **Feed** — Admin → Setup: pick `none` / `static` / `immich` / `nextcloud` and save. Feed reads Mongo per request. If images look stale after a provider change, run `jheffmedia --restart`.

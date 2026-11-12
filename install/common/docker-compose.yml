@@ -24,8 +24,11 @@ services:
     env_file:
       - .env.production
     environment:
-      YEW_FULLSTACK_HOST: ${HOST:-0.0.0.0}
-      YEW_FULLSTACK_PORT: ${PORT:-8080}
+      # Always listen on all interfaces *inside* the container. Do not use ${HOST} —
+      # shells/systemd often set HOST to the hostname, which binds loopback-only and
+      # breaks Docker port publishing from outside the LXC.
+      YEW_FULLSTACK_HOST: "0.0.0.0"
+      YEW_FULLSTACK_PORT: ${HTTP_PORT:-8080}
       YEW_FULLSTACK_DB_CONNSTR: ${DB_CONNSTR}
       YEW_FULLSTACK_DB_NAME: ${DB_NAME}
       YEW_FULLSTACK_JWT_SECRET_FILE: /run/secrets/jwt_secret
