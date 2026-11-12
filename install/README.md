@@ -66,6 +66,9 @@ UNATTENDED=yes MONGO_PASSWORD='change-me' BRANCH=main \
 | `SERVICE_UID` | `10001` | Matches app container UID |
 | `HTTP_PORT` | `8080` | Published port |
 | `HTTP_BIND` | `0.0.0.0` | Use `127.0.0.1` with a local reverse proxy |
+| `PUBLIC_URL` | — | Public site URL → seeds `YEW_FULLSTACK_CORS_ORIGINS` |
+| `YEW_FULLSTACK_BUILD_ID` | git SHA on deploy | Release id for Admin → Dev (auto on install/update) |
+| `YEW_FULLSTACK_CORS_ORIGINS` | from `PUBLIC_URL` or `http://IP:PORT` | Comma-separated browser origins |
 | `MONGO_PASSWORD` | generated | MongoDB root password |
 | `ADMIN_EMAILS` | generated if blank | Signup emails granted admin |
 | `UNATTENDED` | — | Skip whiptail when `yes` |

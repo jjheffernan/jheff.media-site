@@ -33,6 +33,8 @@ services:
       YEW_FULLSTACK_DB_NAME: ${DB_NAME}
       YEW_FULLSTACK_JWT_SECRET_FILE: /run/secrets/jwt_secret
       YEW_FULLSTACK_BUILD_ID: ${YEW_FULLSTACK_BUILD_ID:-}
+      # Comma-separated browser origins (e.g. https://jheff.media or http://IP:PORT).
+      YEW_FULLSTACK_CORS_ORIGINS: ${YEW_FULLSTACK_CORS_ORIGINS:-}
       YEW_FULLSTACK_FEED_PROVIDER: ${FEED_PROVIDER:-none}
       YEW_FULLSTACK_CONTACT_EMAIL: ${CONTACT_EMAIL:-}
       YEW_FULLSTACK_FEED_STATIC_JSON: ${FEED_STATIC_JSON:-}

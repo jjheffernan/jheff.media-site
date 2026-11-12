@@ -97,7 +97,7 @@ guided_config() {
 
   msg_info "Guided setup — site"
   HTTP_PORT="$(prompt_input "HTTP port" "Port published on this host (reverse-proxy target):" "$HTTP_PORT")"
-  PUBLIC_URL="$(prompt_input "Public URL" "Optional https URL for docs (Enter to skip):" "$PUBLIC_URL")"
+  PUBLIC_URL="$(prompt_input "Public URL" "Public site URL for CORS (https://…; Enter = http://IP:port):" "$PUBLIC_URL")"
   CONTACT_EMAIL="$(prompt_input "Contact email" "Contact email shown on site:" "$CONTACT_EMAIL")"
   msg_ok "Site settings saved"
 
