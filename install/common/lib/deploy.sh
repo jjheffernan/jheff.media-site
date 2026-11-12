@@ -47,6 +47,12 @@ write_credentials() {
     echo "MongoDB password: ${MONGO_PASSWORD}"
     echo "MongoDB database: ${DB_NAME}"
     echo "Feed provider: ${FEED_PROVIDER}"
+    echo "Admin emails (ADMIN_EMAILS): ${ADMIN_EMAILS:-}"
+    if [[ "${ADMIN_EMAILS_GENERATED:-}" == "yes" ]]; then
+      echo "Admin bootstrap: GENERATED — sign up on the site with that email and any password (≥8 chars)."
+    else
+      echo "Admin bootstrap: sign up on the site with a listed email; that account becomes admin."
+    fi
     echo "Env file: ${COMMON_DIR}/.env.production"
     echo "JWT secret file: ${INSTALL_DIR}/backend/src/secret.key (mounted at container start)"
     echo "Compose: ${COMMON_DIR}/docker-compose.yml"
@@ -98,9 +104,9 @@ EOF
   systemctl daemon-reload
   systemctl enable -q --now site
 
-  # Host CLI: jheffmedia --update | --status | --restart
+  # Host CLI: jheffmedia --update | --status | --restart | --postinstall
   local cli="${INSTALL_DIR}/install/common/bin/jheffmedia"
-  chmod +x "$cli" "${INSTALL_DIR}/install/update.sh" 2>/dev/null || true
+  chmod +x "$cli" "${INSTALL_DIR}/install/update.sh" "${INSTALL_DIR}/install/postinstall.sh" 2>/dev/null || true
   ln -sfn "$cli" /usr/local/bin/jheffmedia
   printf '%s\n' '#!/bin/sh' 'exec /usr/local/bin/jheffmedia --update "$@"' >/usr/local/bin/site-update
   chmod +x /usr/local/bin/site-update
@@ -129,6 +135,11 @@ deploy_stack() {
 
   install_systemd
   echo "${BRANCH}" >"${compose_dir}/.install-version"
+
+  # Fresh install: surface admin login path once (creds already chmod 600).
+  if [[ -x "${INSTALL_DIR}/install/postinstall.sh" ]]; then
+    INSTALL_DIR="$INSTALL_DIR" "${INSTALL_DIR}/install/postinstall.sh" --fresh
+  fi
 }
 
 update_stack() {

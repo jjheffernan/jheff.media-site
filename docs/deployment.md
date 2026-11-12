@@ -60,8 +60,11 @@ Bare metal and TrueNAS use the same pattern with `install/baremetal/install.sh` 
 4. Builds and starts the Docker stack: Actix app + MongoDB
 5. Installs a `site` systemd unit
 6. Writes credentials to `/root/site-install.creds` (or `~/site-install.creds`)
+7. Runs postinstall once — prints admin signup email (generated if you left admin blank / unattended) and the creds file
 
 Default feed is **`static`** demo images so the homepage works without Immich. Switch to Immich later in `.env.production`.
+
+There is no seeded admin password. Admin is whoever signs up with an address in `ADMIN_EMAILS` (mapped to `YEW_FULLSTACK_ADMIN_EMAILS` in compose).
 
 ## After install
 
@@ -69,17 +72,19 @@ Default feed is **`static`** demo images so the homepage works without Immich. S
 systemctl status site
 curl -sS "http://127.0.0.1:8080/" | head
 BASE_URL="http://127.0.0.1:8080" scripts/smoke.sh
+jheffmedia --postinstall          # admin email reminder
+# jheffmedia --postinstall --show-creds   # root: reprint ~/site-install.creds
 ```
 
 Then:
 
 1. **TLS** — put Caddy/Nginx (or Cloudflare Tunnel) in front of `:8080`. See [deployment-proxmox.md](./deployment-proxmox.md) § reverse proxy.
 2. **CORS** — once the public hostname is known, set `YEW_FULLSTACK_CORS_ORIGINS=https://jheff.media` (or your domain) on the app service and restart.
-3. **Admin** — set `ADMIN_EMAILS` to your email in `.env.production`, restart, sign up once with that email. That account becomes `admin`.
+3. **Admin** — open the site, sign up with the printed `ADMIN_EMAILS` address (any password ≥8 chars). That account becomes `admin`. Change the email in `.env.production` later if you generated a bootstrap address.
 4. **Feed (optional)** — set `FEED_PROVIDER=immich` plus Immich URL, API key, and album id when ready.
 5. **SMTP (optional)** — contact/booking mail needs `YEW_FULLSTACK_SMTP_*` and `CONTACT_EMAIL`.
 
-Credentials and env paths are printed at the end of install and stored in the creds file.
+Credentials stay only on the host (`site-install.creds`, chmod 600). Nothing secret is committed to git.
 
 ## Updates
 

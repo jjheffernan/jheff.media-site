@@ -42,9 +42,11 @@ Replace `...` with:
 - **MongoDB** bundled in Docker — no external DB required
 - **Photo feed** defaults to `static` demo URLs — no Immich required
 - **Guided sections**: repository → site → database → feed → admin
-- **Credentials**: `/root/site-install.creds` (or `~/site-install.creds`)
+- **Admin**: `ADMIN_EMAILS` always set (prompt, env, or generated `admin@….local`); sign up with that email — no seed password
+- **Credentials**: `/root/site-install.creds` (or `~/site-install.creds`), printed once by postinstall
 - **Env file**: `{INSTALL_DIR}/install/common/.env.production`
 - **Service**: `systemctl restart site`
+- **Postinstall**: `jheffmedia --postinstall` · secrets again: `jheffmedia --postinstall --show-creds` (root)
 
 Unattended:
 
@@ -62,6 +64,7 @@ UNATTENDED=yes MONGO_PASSWORD='secret' BRANCH=main \
 | `INSTALL_DIR` | `/opt/jheffmedia-site` | Clone target on host |
 | `HTTP_PORT` | `8080` | Published port |
 | `MONGO_PASSWORD` | generated | MongoDB root password |
+| `ADMIN_EMAILS` | generated if blank | Signup emails granted admin |
 | `UNATTENDED` | — | Skip whiptail when `yes` |
 | `MODE` | `auto` | Proxmox only: `existing` skips LXC create |
 
@@ -73,6 +76,8 @@ Inside the host/LXC as root:
 
 ```bash
 jheffmedia --update
+jheffmedia --postinstall              # admin email reminder
+jheffmedia --postinstall --show-creds # root: reprint creds file
 ```
 
 Curl fallback: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)"`.

@@ -53,10 +53,22 @@ prompt_menu() {
   fi
 }
 
+# App has no seed-user API — admin = first signup whose email is in ADMIN_EMAILS.
+ensure_admin_emails() {
+  if [[ -n "${ADMIN_EMAILS:-}" ]]; then
+    ADMIN_EMAILS_GENERATED="${ADMIN_EMAILS_GENERATED:-no}"
+    return 0
+  fi
+  # ponytail: local-only bootstrap address; operator signs up with it once
+  ADMIN_EMAILS="admin@$(random_alnum 8).local"
+  ADMIN_EMAILS_GENERATED=yes
+}
+
 guided_config() {
   if [[ "${UNATTENDED:-}" == "yes" ]]; then
     msg_info "Using unattended defaults (UNATTENDED=yes)"
     [[ -z "${MONGO_PASSWORD:-}" ]] && MONGO_PASSWORD="$(random_alnum 20)"
+    ensure_admin_emails
     msg_ok "Defaults loaded"
     return 0
   fi
@@ -103,7 +115,9 @@ guided_config() {
   esac
   msg_ok "Photo feed settings saved"
 
-  msg_info "Guided setup — admin (optional)"
-  ADMIN_EMAILS="$(prompt_input "Admin emails" "Comma-separated signup emails granted admin (Enter to skip):" "${ADMIN_EMAILS:-}")"
+  msg_info "Guided setup — admin"
+  msg_custom "ℹ️" "${YW:-}" "Sign up with a listed email to become admin. Blank = generate a one-time bootstrap email."
+  ADMIN_EMAILS="$(prompt_input "Admin emails" "Comma-separated signup emails granted admin (Enter to generate):" "${ADMIN_EMAILS:-}")"
+  ensure_admin_emails
   msg_ok "Admin settings saved"
 }

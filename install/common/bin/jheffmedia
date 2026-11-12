@@ -3,6 +3,7 @@
 #   jheffmedia --update
 #   jheffmedia --status
 #   jheffmedia --restart
+#   jheffmedia --postinstall [--show-creds]
 #   jheffmedia --help
 
 set -euo pipefail
@@ -11,6 +12,7 @@ INSTALL_DIR="${INSTALL_DIR:-/opt/jheffmedia-site}"
 BRANCH="${BRANCH:-main}"
 COMPOSE_DIR="${INSTALL_DIR}/install/common"
 ENV_FILE="${COMPOSE_DIR}/.env.production"
+POSTINSTALL="${INSTALL_DIR}/install/postinstall.sh"
 
 usage() {
   cat <<'EOF'
@@ -22,6 +24,8 @@ Usage:
       --no-cache also re-downloads the Tailwind binary build layer.
   jheffmedia --status
   jheffmedia --restart
+  jheffmedia --postinstall [--show-creds]
+      Remind admin signup path; --show-creds (root) reprints site-install.creds.
   jheffmedia --help
 
 Env:
@@ -123,6 +127,15 @@ cmd_restart() {
   echo "[OK] Restarted — http://127.0.0.1:${HTTP_PORT}/"
 }
 
+cmd_postinstall() {
+  require_install
+  if [[ ! -x "$POSTINSTALL" ]]; then
+    echo "Missing ${POSTINSTALL}" >&2
+    exit 1
+  fi
+  INSTALL_DIR="$INSTALL_DIR" "$POSTINSTALL" "$@"
+}
+
 main() {
   local cmd="${1:-}"
   shift || true
@@ -132,6 +145,7 @@ main() {
       ;;
     --status | status) cmd_status ;;
     --restart | restart) cmd_restart ;;
+    --postinstall | postinstall) cmd_postinstall "$@" ;;
     --help | -h | help | "") usage ;;
     *)
       echo "Unknown command: $cmd" >&2
