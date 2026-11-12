@@ -617,6 +617,114 @@
   .link-stack { display: grid; gap: 0.75rem; width: 100%; }
   .link-stack .btn { width: 100%; }
   .link-row { display: grid; gap: 0.5rem; }
+
+  /* Admin collection editor */
+  .collection-editor {
+    display: grid;
+    gap: 1.25rem;
+  }
+  .collection-editor-fields {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .collection-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .collection-editor-options {
+    display: grid;
+    gap: 0.65rem;
+  }
+  .collection-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    font-size: 0.875rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .collection-check input {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+  }
+  .collection-editor-upload {
+    display: grid;
+    gap: 0.4rem;
+    justify-items: start;
+  }
+  .collection-file-btn {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .collection-file-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    font-size: 0;
+  }
+  .collection-editor-media {
+    margin-top: 0.25rem;
+  }
+
+  .date-picker {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .date-picker-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .date-picker-toggle {
+    min-width: 2.75rem;
+    padding-inline: 0.65rem;
+  }
+  .date-picker .calendar {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    padding: 0.75rem;
+  }
+
+  .schedule-editor {
+    display: grid;
+    gap: 1rem;
+  }
+  .schedule-editor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .schedule-advanced {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    padding: 0.65rem 0.75rem;
+  }
+  .schedule-advanced summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    list-style: none;
+  }
+  .schedule-advanced summary::-webkit-details-marker { display: none; }
+  .schedule-advanced[open] summary { margin-bottom: 0.65rem; }
+  .schedule-advanced-body {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .starts-picker {
+    display: grid;
+    gap: 0.5rem;
+  }
+  .starts-picker-time {
+    max-width: 10rem;
+  }
   .admin-shell { display: grid; gap: 1rem; }
   .admin-rail {
     display: flex;
@@ -871,60 +979,3 @@
     .site-nav-panel { padding-inline: 2rem; }
   }
 }
-
-  .date-picker {
-    display: grid;
-    gap: 0.5rem;
-  }
-  .date-picker-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.5rem;
-    align-items: center;
-  }
-  .date-picker-toggle {
-    min-width: 2.75rem;
-    padding-inline: 0.65rem;
-  }
-  .date-picker .calendar {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    padding: 0.75rem;
-  }
-
-  .schedule-editor {
-    display: grid;
-    gap: 1rem;
-  }
-  .schedule-editor-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .schedule-advanced {
-    border: 1px solid var(--border);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    padding: 0.65rem 0.75rem;
-  }
-  .schedule-advanced summary {
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--muted);
-    list-style: none;
-  }
-  .schedule-advanced summary::-webkit-details-marker { display: none; }
-  .schedule-advanced[open] summary { margin-bottom: 0.65rem; }
-  .schedule-advanced-body {
-    display: grid;
-    gap: 0.5rem;
-  }
-  .starts-picker {
-    display: grid;
-    gap: 0.5rem;
-  }
-  .starts-picker-time {
-    max-width: 10rem;
-  }

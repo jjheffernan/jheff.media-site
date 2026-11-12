@@ -1,4 +1,9 @@
-use crate::{context::AuthContext, model::MediaItem, services::auth_header};
+use crate::{
+    components::ui::DatePicker,
+    context::AuthContext,
+    model::MediaItem,
+    services::auth_header,
+};
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen::JsValue;
@@ -561,16 +566,21 @@ pub fn collection_browser(props: &Props) -> Html {
         })
     };
 
+    let on_date = {
+        let date = date.clone();
+        Callback::from(move |value: String| date.set(value))
+    };
+
     let fields = html! {
-        <div class="space-y-3">
+        <div class="collection-editor-fields">
             <input type="text" class="field" placeholder="Title" value={(*title).clone()} oninput={on_title} />
             if *creating {
                 <input type="text" class="field" placeholder="ID" value={(*id_field).clone()} oninput={on_id} />
             }
             <input type="text" class="field" placeholder="Summary" value={(*summary).clone()} oninput={bind(summary.clone())} />
-            <input type="text" class="field" placeholder="Date" value={(*date).clone()} oninput={bind(date.clone())} />
+            <DatePicker value={(*date).clone()} on_change={on_date} placeholder="Date" />
             <input type="text" class="field" placeholder="Location" value={(*location).clone()} oninput={bind(location.clone())} />
-            <select class="field" value={(*status).clone()} onchange={on_status}>
+            <select class="field" value={(*status).clone()} onchange={on_status} aria-label="Status">
                 <option value="draft" selected={*status == "draft"}>{ "Draft" }</option>
                 <option value="published" selected={*status == "published"}>{ "Published" }</option>
                 <option value="scheduled" selected={*status == "scheduled"}>{ "Scheduled" }</option>
@@ -589,28 +599,38 @@ pub fn collection_browser(props: &Props) -> Html {
                 if item.locked {
                     <p class="muted">{ "This collection is in the server config. Edit it there, not here." }</p>
                 } else {
-                    { fields.clone() }
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-primary" onclick={on_save}>{ "Save" }</button>
-                        <button type="button" class="btn btn-quiet" onclick={on_delete}>{ "Delete" }</button>
+                    <div class="collection-editor">
+                        { fields.clone() }
+                        <div class="collection-editor-actions">
+                            <button type="button" class="btn btn-primary" onclick={on_save}>{ "Save" }</button>
+                            <button type="button" class="btn btn-quiet" onclick={on_delete}>{ "Delete" }</button>
+                        </div>
+                        <div class="collection-editor-options">
+                            <label class="collection-check">
+                                <input type="checkbox" checked={*set_cover} onchange={bind_check(set_cover.clone())} />
+                                <span>{ "Set first upload as cover" }</span>
+                            </label>
+                            <label class="collection-check">
+                                <input type="checkbox" checked={*featured} onchange={bind_check(featured.clone())} />
+                                <span>{ "Featured" }</span>
+                            </label>
+                        </div>
+                        <div class="collection-editor-upload">
+                            <label class="btn btn-quiet collection-file-btn">
+                                { "Choose files" }
+                                <input
+                                    type="file"
+                                    multiple=true
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    class="collection-file-input"
+                                    onchange={on_files}
+                                />
+                            </label>
+                            <p class="muted label-xs">{ "JPEG, PNG, WebP, or GIF. Multiple files OK." }</p>
+                        </div>
                     </div>
-                    <label class="muted">
-                        <input type="checkbox" checked={*set_cover} onchange={bind_check(set_cover.clone())} />
-                        { " Set first upload as cover" }
-                    </label>
-                    <label class="muted">
-                        <input type="checkbox" checked={*featured} onchange={bind_check(featured.clone())} />
-                        { " Featured" }
-                    </label>
-                    <input
-                        type="file"
-                        multiple=true
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        class="block w-full text-sm"
-                        onchange={on_files}
-                    />
                 }
-                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div class="collection-editor-media grid grid-cols-2 gap-3 sm:grid-cols-3">
                     { for item.media.iter().enumerate().map(|(index, media)| {
                         let earlier = move_media.clone();
                         let later = move_media.clone();
@@ -641,8 +661,12 @@ pub fn collection_browser(props: &Props) -> Html {
             } else if *creating {
                 <button type="button" class="btn btn-quiet" onclick={on_back}>{ format!("All {plural}") }</button>
                 <h3 class="font-semibold">{ format!("New {noun}") }</h3>
-                { fields }
-                <button type="button" class="btn btn-primary" onclick={on_create}>{ "Create" }</button>
+                <div class="collection-editor">
+                    { fields }
+                    <div class="collection-editor-actions">
+                        <button type="button" class="btn btn-primary" onclick={on_create}>{ "Create" }</button>
+                    </div>
+                </div>
             } else {
                 <div class="flex items-center justify-between gap-2">
                     <p class="muted">{ format!("{} {}", items.len(), if items.len() == 1 { noun } else { plural }) }</p>
