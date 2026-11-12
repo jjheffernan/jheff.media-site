@@ -202,6 +202,9 @@ export_build_id() {
 # ponytail: poll+tail beats a TTY progress parser; raise BUILD_HEARTBEAT_SECS if noisy.
 compose_build() {
   export_build_id
+  # BuildKit + cache mounts in Dockerfile (cargo registry/git/target). Do not default --no-cache.
+  export DOCKER_BUILDKIT=1
+  export COMPOSE_DOCKER_CLI_BUILD=1
   local -a build_cmd=(
     "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production build "$@"
   )

@@ -163,6 +163,10 @@ Canonical compose file: [`install/common/docker-compose.yml`](../install/common/
 
 JWT: the image never bakes `secret.key`. Runtime loads `YEW_FULLSTACK_JWT_SECRET_FILE` (compose mounts the host file at `/run/secrets/jwt_secret`) or hex `YEW_FULLSTACK_JWT_SECRET`. Optional release id: set `YEW_FULLSTACK_BUILD_ID` (git SHA) as a compose build-arg/env; Admin → Dev / `GET /api/admin/diagnostics` shows `buildId`.
 
+### Image build time
+
+The production `Dockerfile` uses **BuildKit cache mounts** for Cargo registry/git/`target`, and installs **Trunk from GitHub release binaries** (not `cargo install`). `jheffmedia --update` enables BuildKit automatically. Prefer normal rebuilds over `--no-cache` unless a layer is corrupt — cold WASM+release compiles are still expensive; warm caches are not.
+
 `GET /metrics` is unauthenticated Prometheus text on the app port. On a shared LXC, prefer `HTTP_BIND=127.0.0.1` (or scrape only via a reverse-proxy allowlist) so metrics are not world-reachable.
 
 ## Checklist

@@ -26,7 +26,7 @@ Usage:
   jheffmedia --update [--branch BRANCH] [--no-cache]
       Pull, rebuild image, restart stack (healthy installs).
       --branch BRANCH   Git branch to deploy (default: main / $BRANCH)
-      --no-cache        Rebuild without cache (also refreshes Tailwind layer)
+      --no-cache        Rebuild without Docker layer cache (BuildKit cargo caches still help; avoid unless needed)
   jheffmedia --cleanup [--dry-run] [--yes|-y]
       Safe repair: drop legacy cred dumps, ensure service user, fix ownership /
       secret perms, refresh site.service User=, prune exited jheffmedia
