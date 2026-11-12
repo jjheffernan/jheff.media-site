@@ -33,7 +33,7 @@ struct ImmichConfig {
 fn provider_from_resolved(cfg: &ResolvedConfig) -> FeedProvider {
     match cfg.feed_provider.as_str() {
         "immich" => {
-            if cfg.immich_url.trim().is_empty() {
+            if !site_config_service::immich_ready(cfg) {
                 return FeedProvider::Disabled;
             }
             FeedProvider::Immich(ImmichConfig {
@@ -177,6 +177,11 @@ struct ImmichSearchAssets {
     items: Vec<ImmichAsset>,
 }
 
+fn upstream_err(context: &str, detail: impl std::fmt::Display) -> ServiceError {
+    error!("{context}: {detail}");
+    ServiceError::new(StatusCode::BAD_GATEWAY, "UPSTREAM")
+}
+
 async fn fetch_album_assets(
     client: &Client,
     config: &ImmichConfig,
@@ -191,19 +196,19 @@ async fn fetch_album_assets(
     let mut response = request
         .send()
         .await
-        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+        .map_err(|err| upstream_err("Immich album request", err))?;
 
     if !response.status().is_success() {
-        return Err(ServiceError::new(
-            StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
-            format!("Immich album request failed: {}", response.status()),
+        return Err(upstream_err(
+            "Immich album request failed",
+            response.status(),
         ));
     }
 
     let album: ImmichAlbum = response
         .json()
         .await
-        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+        .map_err(|err| upstream_err("Immich album decode", err))?;
 
     Ok(album.assets)
 }
@@ -227,19 +232,19 @@ async fn fetch_recent_assets(
     let mut response = request
         .send_json(&body)
         .await
-        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+        .map_err(|err| upstream_err("Immich search request", err))?;
 
     if !response.status().is_success() {
-        return Err(ServiceError::new(
-            StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
-            format!("Immich search request failed: {}", response.status()),
+        return Err(upstream_err(
+            "Immich search request failed",
+            response.status(),
         ));
     }
 
     let result: ImmichSearchResult = response
         .json()
         .await
-        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+        .map_err(|err| upstream_err("Immich search decode", err))?;
 
     Ok(result.assets.items)
 }
@@ -253,6 +258,9 @@ pub async fn proxy_thumbnail(
     match provider {
         FeedProvider::Immich(config) => proxy_immich_thumbnail(client, &config, asset_id).await,
         FeedProvider::Nextcloud => {
+            if !library_import_service::valid_asset_id("nextcloud", asset_id) {
+                return Err(ServiceError::new(StatusCode::BAD_REQUEST, "BAD_ID"));
+            }
             library_import_service::fetch_nextcloud_bytes(client, db, asset_id)
                 .await
                 .map_err(|code| {
@@ -277,6 +285,9 @@ async fn proxy_immich_thumbnail(
     config: &ImmichConfig,
     asset_id: &str,
 ) -> ServiceResult<(Vec<u8>, String)> {
+    if !library_import_service::valid_asset_id("immich", asset_id) {
+        return Err(ServiceError::new(StatusCode::BAD_REQUEST, "BAD_ID"));
+    }
     let mut url = format!(
         "{}/api/assets/{}/thumbnail?size=preview",
         config.base_url, asset_id
@@ -293,12 +304,12 @@ async fn proxy_immich_thumbnail(
     let mut response = request
         .send()
         .await
-        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+        .map_err(|err| upstream_err("Immich thumbnail request", err))?;
 
     if !response.status().is_success() {
-        return Err(ServiceError::new(
-            StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
-            format!("Immich thumbnail request failed: {}", response.status()),
+        return Err(upstream_err(
+            "Immich thumbnail request failed",
+            response.status(),
         ));
     }
 
@@ -312,7 +323,7 @@ async fn proxy_immich_thumbnail(
     let bytes = response
         .body()
         .await
-        .map_err(|err| ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?
+        .map_err(|err| upstream_err("Immich thumbnail body", err))?
         .to_vec();
 
     Ok((bytes, content_type))

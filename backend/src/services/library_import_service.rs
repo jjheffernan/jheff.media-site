@@ -170,6 +170,9 @@ async fn download(
     source: &str,
     id: &str,
 ) -> Result<(Vec<u8>, String, String), &'static str> {
+    if !valid_asset_id(source, id) {
+        return Err("BAD_ID");
+    }
     match source {
         "immich" => {
             let config = immich_config(db).await.ok_or("NOT_CONFIGURED")?;

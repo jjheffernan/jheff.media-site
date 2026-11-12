@@ -142,8 +142,14 @@ pub(crate) fn parse_starts_at(value: &str) -> Option<DateTime<Utc>> {
 
 async fn list_records(db: &Database) -> mongodb::error::Result<Vec<ScheduleEventRecord>> {
     let coll = db.collection::<ScheduleEventRecord>(SCHEDULE_EVENTS);
-    // Public rows only — empty collection returns immediately.
-    let mut cursor = coll.find(doc! { "public": { "$ne": false } }).await?;
+    // ISO-like startsAt strings compare lexicographically; still re-check in upcoming_events.
+    let now_floor = Utc::now().format("%Y-%m-%dT%H:%M").to_string();
+    let mut cursor = coll
+        .find(doc! {
+            "public": { "$ne": false },
+            "startsAt": { "$gt": now_floor },
+        })
+        .await?;
     let mut records = vec![];
     while cursor.advance().await? {
         if let Ok(record) = cursor.deserialize_current() {

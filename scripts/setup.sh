@@ -15,6 +15,7 @@ if [[ ! -f "$SECRET" ]]; then
 else
   log "JWT secret already exists: backend/src/secret.key"
 fi
+chmod 600 "$SECRET" 2>/dev/null || true
 
 if command -v rustup >/dev/null 2>&1; then
   log "Adding wasm32-unknown-unknown target"

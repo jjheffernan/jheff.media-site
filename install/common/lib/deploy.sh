@@ -16,7 +16,8 @@ CONTACT_EMAIL=${CONTACT_EMAIL}
 EOF
 
   if [[ "$FEED_PROVIDER" == "static" ]]; then
-    printf 'FEED_STATIC_JSON=%q\n' "$FEED_STATIC_JSON" >>"$env_file"
+    # Compose env-files are not shell-parsed — do not use %q (it breaks JSON).
+    printf 'FEED_STATIC_JSON=%s\n' "$FEED_STATIC_JSON" >>"$env_file"
   fi
 
   if [[ "$FEED_PROVIDER" == "immich" ]]; then

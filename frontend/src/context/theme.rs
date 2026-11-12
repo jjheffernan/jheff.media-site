@@ -118,15 +118,17 @@ impl Component for ThemeProvider {
         let preference = restore_preference();
         apply_theme(preference);
 
-        if preference == ThemePreference::Auto {
-            let link = ctx.link().clone();
-            if let Some(mq) = window().and_then(|w| w.match_media("(prefers-color-scheme: dark)").ok()).flatten() {
-                let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
-                    link.send_message(Msg::SystemChanged);
-                }) as Box<dyn FnMut(web_sys::Event)>);
-                mq.set_onchange(Some(closure.as_ref().unchecked_ref()));
-                closure.forget();
-            }
+        // Always listen — preference may switch to Auto later without remounting.
+        let link = ctx.link().clone();
+        if let Some(mq) = window()
+            .and_then(|w| w.match_media("(prefers-color-scheme: dark)").ok())
+            .flatten()
+        {
+            let closure = Closure::wrap(Box::new(move |_event: web_sys::Event| {
+                link.send_message(Msg::SystemChanged);
+            }) as Box<dyn FnMut(web_sys::Event)>);
+            mq.set_onchange(Some(closure.as_ref().unchecked_ref()));
+            closure.forget();
         }
 
         Self { preference }

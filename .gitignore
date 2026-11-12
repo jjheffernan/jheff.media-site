@@ -7,6 +7,8 @@ backend/src/secret.key
 !.env.*.example
 credentials.json
 *credentials*.json
+site-install.creds
+**/site-install.creds
 .secrets/
 *.pem
 *.p12
