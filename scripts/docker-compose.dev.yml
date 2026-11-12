@@ -41,9 +41,9 @@ services:
     image: "docker.io/library/mongo:7.0"
     container_name: "jheffmedia-database"
     environment:
-      - MONGODB_INITDB_DATABASE=jheffmedia_dev
-      - MONGODB_INITDB_ROOT_USERNAME=root
-      - MONGODB_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=jheffmedia_dev
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=password
     ports:
       - "127.0.0.1:27017-27019:27017-27019"
 

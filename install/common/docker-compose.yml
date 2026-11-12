@@ -66,10 +66,12 @@ services:
       - no-new-privileges:true
     # Mongo is NOT published to the host — only reachable on the Compose network.
     environment:
-      MONGODB_INITDB_DATABASE: ${DB_NAME:-jheffmedia}
-      MONGODB_INITDB_ROOT_USERNAME: root
-      MONGODB_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
-      # Same secret for healthcheck (container env). INITDB_* only applies on empty volume.
+      # Official mongo image vars are MONGO_INITDB_* (not MONGODB_INITDB_*).
+      # Wrong prefix → no root user → healthcheck UserNotFound → db unhealthy forever.
+      MONGO_INITDB_DATABASE: ${DB_NAME:-jheffmedia}
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
+      # Healthcheck auth (same secret). INITDB only runs on an *empty* data volume.
       MONGO_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
     volumes:
       - jheffmedia-mongo:/data/db

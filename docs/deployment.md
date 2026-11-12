@@ -152,7 +152,9 @@ docker compose -f docker-compose.yml --env-file .env.production logs --tail=80 d
 
 Typical ops causes: `db` not healthy yet, wrong `MONGO_PASSWORD` / `DB_CONNSTR` vs an existing mongo volume, or app started before mongod finished init. Fix: wait for healthy db, or `jheffmedia --restart`. Backend logs include the real Mongo driver error; the UI shows a short human message only (`Database unavailable…` = auth/connectivity).
 
-**Password ≠ volume (most common after reinstall):** Mongo only applies `MONGO_PASSWORD` on first init of `jheffmedia-mongo`. If `.env.production` was regenerated with a new password, signup and `/healthz` fail while the UI still loads.
+**Wrong init env / empty root user:** Official `mongo` image reads `MONGO_INITDB_ROOT_USERNAME` / `MONGO_INITDB_ROOT_PASSWORD` (not `MONGODB_INITDB_*`). Logs like `UserNotFound: Could not find user "root"` mean the volume never got a root user — pull a fixed compose, then `jheffmedia --reset-db`.
+
+**Password ≠ volume:** Mongo only applies init password on first create of `jheffmedia-mongo`. If `.env.production` was regenerated later, auth fails until you reset the volume or restore the old password.
 
 ```bash
 curl -sS http://127.0.0.1:8080/healthz

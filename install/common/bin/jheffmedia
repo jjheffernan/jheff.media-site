@@ -552,13 +552,7 @@ cmd_restart() {
 
 mongo_volume_names() {
   local bin="${CONTAINER_BIN:-docker}"
-  local v
-  for v in jheffmedia-mongo common_jheffmedia-mongo; do
-    if "$bin" volume inspect "$v" >/dev/null 2>&1; then
-      echo "$v"
-    fi
-  done
-  # Project-prefixed leftovers
+  # Any compose project prefix: common_jheffmedia-mongo, install_jheffmedia-mongo, …
   "$bin" volume ls -q 2>/dev/null | grep -E 'jheffmedia-mongo$' || true
 }
 
@@ -609,12 +603,19 @@ cmd_diagnostics() {
       --authenticationDatabase admin --quiet --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)' 2>/dev/null; then
       echo "mongo: auth ping ok"
     else
-      echo "[!!] mongo: auth ping FAILED — password/volume mismatch (INITDB password is fixed at first volume create)."
-      echo "      Fix: jheffmedia --reset-db   # wipes Mongo only, keeps uploads"
+      echo "[!!] mongo: auth ping FAILED."
+      if "$CONTAINER_BIN" logs jheffmedia-database 2>/dev/null | grep -q 'Could not find user \"root\"'; then
+        echo "      Logs show UserNotFound root — volume was inited without MONGO_INITDB_* (or wrong env prefix)."
+      fi
+      echo "      Fix: jheffmedia --update && jheffmedia --reset-db   # need compose with MONGO_INITDB_* then wipe"
     fi
   else
     echo "[!!] MONGO_PASSWORD not loaded from .env.production"
   fi
+  echo
+  echo "--- compose db env (names only) ---"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production config 2>/dev/null \
+    | grep -E 'MONGO_INITDB_|MONGODB_INITDB_|MONGO_PASSWORD:' || true
   echo
   echo "--- recent app log (signup / auth) ---"
   "$CONTAINER_BIN" logs --tail 30 jheffmedia-application 2>/dev/null \
@@ -638,9 +639,26 @@ cmd_reset_db() {
   load_env
   cd "$COMPOSE_DIR"
 
+  if [[ -z "${MONGO_PASSWORD:-}" ]]; then
+    echo "[!!] MONGO_PASSWORD empty in .env.production — refuse wipe (init would skip root user)." >&2
+    exit 1
+  fi
+  echo "MONGO_PASSWORD length: ${#MONGO_PASSWORD} (value not printed)"
+
+  # Warn if on-disk compose still has the wrong prefix (pre-fix tree).
+  if grep -q 'MONGODB_INITDB_ROOT' docker-compose.yml 2>/dev/null; then
+    echo "[!!] docker-compose.yml still uses MONGODB_INITDB_* (ignored by official mongo image)."
+    echo "     Run: jheffmedia --update   then re-run --reset-db"
+    exit 1
+  fi
+  if ! grep -q 'MONGO_INITDB_ROOT_PASSWORD' docker-compose.yml 2>/dev/null; then
+    echo "[!!] docker-compose.yml missing MONGO_INITDB_ROOT_PASSWORD — update the install tree first." >&2
+    exit 1
+  fi
+
   echo "This DELETES Mongo data (users, schedule, site_config)."
   echo "Keeps: content uploads volume, .env.production, JWT secret."
-  echo "New empty DB will use MONGO_PASSWORD from .env.production."
+  echo "New empty DB will create user root via MONGO_INITDB_* + MONGO_PASSWORD."
   local ans=
   if [[ "${JM_RESET_DB:-}" == "yes" ]]; then
     ans=RESET
@@ -654,23 +672,49 @@ cmd_reset_db() {
     exit 1
   fi
 
-  echo "[..] stopping stack"
+  echo "[..] force-removing containers"
+  "$CONTAINER_BIN" rm -f jheffmedia-application jheffmedia-database 2>/dev/null || true
+  echo "[..] compose down"
   "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production down --remove-orphans || true
 
-  local v seen=""
+  echo "[..] mongo volumes before wipe:"
+  mongo_volume_names | sed 's/^/  /' || echo "  (none)"
+  local v removed=0
   while IFS= read -r v; do
-    [[ -z "$v" || "$seen" == *"|$v|"* ]] && continue
-    seen+="|$v|"
-    if "$CONTAINER_BIN" volume rm "$v"; then
+    [[ -z "$v" ]] && continue
+    if "$CONTAINER_BIN" volume rm -f "$v"; then
       echo "[fixed] removed volume ${v}"
+      removed=$((removed + 1))
     else
-      echo "[skip]  could not remove ${v}"
+      echo "[!!] could not remove volume ${v}" >&2
     fi
   done < <(mongo_volume_names | awk 'NF && !seen[$0]++')
+  echo "[..] mongo volumes after wipe:"
+  mongo_volume_names | sed 's/^/  /' || echo "  (none)"
+  if [[ "$removed" -eq 0 ]]; then
+    echo "[..] no named mongo volumes removed (ok if first boot); compose will create a fresh one"
+  fi
 
-  echo "[..] starting stack (Mongo re-inits with current MONGO_PASSWORD)"
+  echo "[..] starting db only (watch for init)"
+  "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d db
+  local i health='starting'
+  for i in $(seq 1 60); do
+    health="$("$CONTAINER_BIN" inspect jheffmedia-database --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' 2>/dev/null || echo missing)"
+    echo "  … db health=${health} (${i}s)"
+    [[ "$health" == "healthy" ]] && break
+    [[ "$health" == "unhealthy" && "$i" -gt 25 ]] && break
+    sleep 2
+  done
+  if [[ "$health" != "healthy" ]]; then
+    echo "[!!] db not healthy after wipe — last logs:" >&2
+    "$CONTAINER_BIN" logs --tail 60 jheffmedia-database >&2 || true
+    echo "Inspect: docker compose … config | grep MONGO_INITDB" >&2
+    exit 1
+  fi
+
+  echo "[..] starting full stack"
   "$CONTAINER_BIN" compose -f docker-compose.yml --env-file .env.production up -d --remove-orphans
-  echo "[OK] Mongo reset. Sign up again with:"
+  echo "[OK] Mongo reset + healthy. Sign up again with:"
   grep -E '^ADMIN_EMAILS=' "$ENV_FILE" 2>/dev/null || true
   echo "Then: jheffmedia --diagnostics"
 }
