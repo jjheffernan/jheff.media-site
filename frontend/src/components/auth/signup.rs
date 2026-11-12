@@ -1,9 +1,25 @@
-use crate::model::Signup as Model;
+use crate::model::{ServerResponse, Signup as Model};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
+
+fn signup_error_message(raw: &str) -> String {
+    if let Ok(body) = serde_json::from_str::<ServerResponse<String>>(raw) {
+        return body.message;
+    }
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(raw) {
+        if let Some(msg) = val.get("message").and_then(|m| m.as_str()) {
+            return msg.to_string();
+        }
+    }
+    if raw.trim().is_empty() {
+        "Registration failed.".into()
+    } else {
+        raw.to_string()
+    }
+}
 
 #[derive(Serialize, Deserialize, Default, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -105,7 +121,7 @@ impl Component for Signup {
                                     .text()
                                     .await
                                     .unwrap_or_else(|_| "Registration failed.".into());
-                                Err(msg)
+                                Err(signup_error_message(&msg))
                             }
                             Err(_) => Err("Network error. Try again.".into()),
                         },

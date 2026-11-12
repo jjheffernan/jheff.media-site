@@ -67,8 +67,19 @@ pub async fn signup(
     match User::signup(user, db).await {
         Ok(id) => Ok(id.to_hex()),
         Err(err) => match err.as_str() {
-            "USER_ALREADY_EXISTS" => Err(ServiceError::new(StatusCode::BAD_REQUEST, err)),
-            _ => Err(ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, err)),
+            "USER_ALREADY_EXISTS" => Err(ServiceError::new(
+                StatusCode::BAD_REQUEST,
+                "Email or username already registered.",
+            )),
+            "DATABASE_UNAVAILABLE" => Err(ServiceError::new(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Database unavailable. Try again shortly.",
+            )),
+            "MONGO_ERROR" => Err(ServiceError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Could not create account. Try again later.",
+            )),
+            other => Err(ServiceError::new(StatusCode::INTERNAL_SERVER_ERROR, other)),
         },
     }
 }

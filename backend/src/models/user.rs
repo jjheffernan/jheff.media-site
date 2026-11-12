@@ -3,11 +3,38 @@ use crate::models::user_token::UserToken;
 use actix_web::http::StatusCode;
 use bcrypt::{hash, verify, DEFAULT_COST};
 use bson::{doc, oid::ObjectId};
+use mongodb::error::{ErrorKind, WriteFailure};
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use std::env;
+
+/// Map insert failures to stable signup codes. Real driver detail goes to logs only.
+fn classify_signup_insert_err(err: &mongodb::error::Error) -> &'static str {
+    error!("user signup insert failed: {err}");
+    match err.kind.as_ref() {
+        ErrorKind::Write(WriteFailure::WriteError(we)) if we.code == 11000 => "USER_ALREADY_EXISTS",
+        ErrorKind::ServerSelection { .. }
+        | ErrorKind::Authentication { .. }
+        | ErrorKind::Io(_)
+        | ErrorKind::ConnectionPoolCleared { .. } => "DATABASE_UNAVAILABLE",
+        _ => classify_signup_err_message(&err.to_string()),
+    }
+}
+
+fn classify_signup_err_message(s: &str) -> &'static str {
+    if s.contains("E11000") || s.contains("duplicate key") {
+        "USER_ALREADY_EXISTS"
+    } else if s.contains("server selection")
+        || s.contains("timed out")
+        || s.contains("connection refused")
+    {
+        "DATABASE_UNAVAILABLE"
+    } else {
+        "MONGO_ERROR"
+    }
+}
 
 fn admin_emails() -> Vec<String> {
     env::var("YEW_FULLSTACK_ADMIN_EMAILS")
@@ -156,7 +183,7 @@ impl User {
         };
         match coll.insert_one(user).await {
             Ok(res) => Ok(res.inserted_id.as_object_id().unwrap().clone()),
-            Err(_err) => Err("MONGO_ERROR".to_string()),
+            Err(err) => Err(classify_signup_insert_err(&err).to_string()),
         }
     }
 
@@ -399,5 +426,22 @@ mod tests {
         let session = User::generate_login_session();
         assert!(!session.is_empty());
         assert!(session.contains('-'));
+    }
+
+    #[test]
+    fn classify_signup_err_message_maps_known_patterns() {
+        assert_eq!(
+            classify_signup_err_message("E11000 duplicate key error"),
+            "USER_ALREADY_EXISTS"
+        );
+        assert_eq!(
+            classify_signup_err_message("server selection timeout"),
+            "DATABASE_UNAVAILABLE"
+        );
+        assert_eq!(
+            classify_signup_err_message("connection refused"),
+            "DATABASE_UNAVAILABLE"
+        );
+        assert_eq!(classify_signup_err_message("something else"), "MONGO_ERROR");
     }
 }
