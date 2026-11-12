@@ -299,7 +299,18 @@ pub fn schedule() -> Html {
                 { "Schedule" }
             </Heading>
             if *loading {
-                <Spinner label="Loading dates…" />
+                // Same overlay language as AuthModal; blocks interaction until /api/schedule returns.
+                <div
+                    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-busy="true"
+                    aria-label="Loading schedule"
+                >
+                    <div class="card">
+                        <Spinner label="Loading schedule…" />
+                    </div>
+                </div>
             }
             if let Some(msg) = &*notice {
                 <p class="muted">{ format!("Schedule note: {}", msg) }</p>
