@@ -1,4 +1,5 @@
 use crate::{
+    components::ui::{Alert, AlertVariant, Field},
     model::{ContactSubmission, ServerResponse},
     utils::{timezone_caption, with_local_offset},
 };
@@ -364,10 +365,10 @@ pub fn contact_form(props: &Props) -> Html {
 
     let feedback = match &*submit_state {
         SubmitState::Success(msg) => html! {
-            <p class="muted">{ msg.clone() }</p>
+            <Alert variant={AlertVariant::Success} title={"Sent"}>{ html! { { msg.clone() } } }</Alert>
         },
         SubmitState::Error(msg) => html! {
-            <p class="muted">{ msg.clone() }</p>
+            <Alert variant={AlertVariant::Destructive} title={"Could not send"}>{ html! { { msg.clone() } } }</Alert>
         },
         _ => html! {},
     };
@@ -389,8 +390,7 @@ pub fn contact_form(props: &Props) -> Html {
                 </label>
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
-                <label class="label">
-                    { "Name" }
+                <Field label={"Name"}>
                     <input
                         type="text"
                         class="field"
@@ -398,9 +398,8 @@ pub fn contact_form(props: &Props) -> Html {
                         oninput={on_name}
                         disabled={disabled}
                     />
-                </label>
-                <label class="label">
-                    { "Email" }
+                </Field>
+                <Field label={"Email"}>
                     <input
                         type="email"
                         class="field"
@@ -408,11 +407,10 @@ pub fn contact_form(props: &Props) -> Html {
                         oninput={on_email}
                         disabled={disabled}
                     />
-                </label>
+                </Field>
             </div>
             if !booking {
-                <label class="label">
-                    { subject_label }
+                <Field label={subject_label}>
                     <input
                         type="text"
                         class="field"
@@ -421,20 +419,18 @@ pub fn contact_form(props: &Props) -> Html {
                         disabled={disabled}
                         placeholder="General question"
                     />
-                </label>
+                </Field>
             }
-            <label class="label">
-                { "Message" }
+            <Field label={"Message"}>
                 <textarea
                     class="field field-area"
                     value={(*message).clone()}
                     oninput={on_message}
                     disabled={disabled}
                 />
-            </label>
+            </Field>
             if booking {
-                <label class="label">
-                    { subject_label }
+                <Field label={subject_label}>
                     <input
                         type="text"
                         class="field"
@@ -442,13 +438,13 @@ pub fn contact_form(props: &Props) -> Html {
                         oninput={on_subject}
                         disabled={disabled}
                     />
-                </label>
+                </Field>
                 <PreferredTimePicker
                     value={(*preferred).clone()}
                     disabled={disabled}
                     on_change={on_preferred}
                 />
-                <p class="muted">{ "Optional. Leave it blank if you do not have a time." }</p>
+                <p class="form-hint">{ "Optional. Leave it blank if you do not have a time." }</p>
             }
             { feedback }
             <button type="button" class="btn btn-primary" disabled={disabled} onclick={on_submit}>
