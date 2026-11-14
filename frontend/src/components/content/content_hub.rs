@@ -2,7 +2,7 @@ use super::content_summary_card::ContentSummaryCard;
 use crate::{
     components::{
         social::PostCard,
-        ui::{Grid, Heading, HeadingLevel, Spinner, Text, TextTone},
+        ui::{Empty, Grid, Heading, HeadingLevel, Separator, Spinner},
     },
     model::{ContentHubResponse, ContentListResponse, SocialHubResponse},
     routes::AppRoutes,
@@ -73,7 +73,7 @@ pub fn content_hub() -> Html {
             <p class="text-sm text-muted">{ format!("{}", msg) }</p>
         },
         SliceState::Ready(hub) if hub.posts.is_empty() => html! {
-            <Text tone={TextTone::Muted}>{ "No social posts configured yet." }</Text>
+            <Empty description={"No social posts configured yet."} />
         },
         SliceState::Ready(hub) => html! {
             <Grid cols_sm={1} cols_lg={3}>
@@ -90,7 +90,7 @@ pub fn content_hub() -> Html {
             <p class="text-sm text-muted">{ format!("{}", msg) }</p>
         },
         SliceState::Ready(data) if data.items.is_empty() => html! {
-            <Text tone={TextTone::Muted}>{ "No shoots configured yet." }</Text>
+            <Empty description={"No shoots configured yet."} />
         },
         SliceState::Ready(data) => html! {
             <div class="grid gap-4 sm:grid-cols-2">
@@ -111,7 +111,7 @@ pub fn content_hub() -> Html {
             <p class="text-sm text-muted">{ format!("{}", msg) }</p>
         },
         SliceState::Ready(data) if data.items.is_empty() => html! {
-            <Text tone={TextTone::Muted}>{ "No galleries configured yet." }</Text>
+            <Empty description={"No galleries configured yet."} />
         },
         SliceState::Ready(data) => html! {
             <div class="grid gap-4 sm:grid-cols-2">
@@ -150,6 +150,8 @@ pub fn content_hub() -> Html {
                 { social_section }
             </section>
 
+            <Separator />
+
             <section class="space-y-4">
                 <div class="flex items-end justify-between gap-4">
                     <Heading level={HeadingLevel::H2} subtitle="Track days, inventory shoots, and action-camera sessions.">
@@ -164,6 +166,8 @@ pub fn content_hub() -> Html {
                 </div>
                 { shoots_section }
             </section>
+
+            <Separator />
 
             <section class="space-y-4">
                 <div class="flex items-end justify-between gap-4">

@@ -1,5 +1,5 @@
 use crate::{
-    components::ui::LazyImage,
+    components::ui::{AspectKind, AspectRatio, Badge, LazyImage},
     model::ContentCollectionSummary,
     routes::AppRoutes,
 };
@@ -52,13 +52,13 @@ pub fn content_summary_card(props: &Props) -> Html {
             classes="card card-flat overflow-hidden group"
         >
             if let Some(cover) = cover {
-                <div class="aspect-[16/9] overflow-hidden bg-surface">
+                <AspectRatio kind={AspectKind::Video} class="media-thumb rounded-none border-0">
                     <LazyImage
                         src={cover}
                         alt={props.summary.title.clone()}
                         class="h-full w-full object-cover transition group-hover:scale-[1.02]"
                     />
-                </div>
+                </AspectRatio>
             }
             <div class="space-y-1 p-4">
                 <div class="flex items-start justify-between gap-2">
@@ -66,9 +66,7 @@ pub fn content_summary_card(props: &Props) -> Html {
                         { props.summary.title.clone() }
                     </h2>
                     if props.summary.has_video {
-                        <span class="shrink-0 rounded bg-accent/15 px-2 py-0.5 text-xs font-medium text-accent">
-                            { "Video" }
-                        </span>
+                        <Badge>{ html! { "Video" } }</Badge>
                     }
                 </div>
                 if let Some(summary) = &props.summary.summary {

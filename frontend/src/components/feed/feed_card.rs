@@ -1,5 +1,5 @@
 use crate::{
-    components::ui::LazyImage,
+    components::ui::{Badge, BadgeVariant, LazyImage},
     model::MediaFeedItem,
     routes::AppRoutes,
 };
@@ -87,11 +87,7 @@ pub fn feed_card(props: &Props) -> Html {
         html! {
             <button
                 type="button"
-                class={if selected {
-                    "rounded-md bg-accent px-2 py-1 text-xs font-medium text-zinc-950"
-                } else {
-                    "rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground transition hover:border-accent hover:text-accent"
-                }}
+                class={if selected { "btn btn-primary btn-sm" } else { "btn btn-outline btn-sm" }}
                 onclick={Callback::from(move |_| on_select.emit(item_for_click.clone()))}
             >
                 { if selected { "Selected for print" } else { "Select for print" } }
@@ -114,18 +110,12 @@ pub fn feed_card(props: &Props) -> Html {
             </div>
             <div class="space-y-2 px-4 py-3">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="rounded bg-accent/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent">
-                        { source_label(&item.source) }
-                    </span>
+                    <Badge>{ html! { { source_label(&item.source) } } }</Badge>
                     if video {
-                        <span class="rounded bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted">
-                            { "Video" }
-                        </span>
+                        <Badge variant={BadgeVariant::Outline}>{ html! { "Video" } }</Badge>
                     }
                     if item.featured {
-                        <span class="rounded bg-accent px-1.5 py-0.5 text-[10px] font-semibold text-zinc-950">
-                            { "Featured" }
-                        </span>
+                        <Badge variant={BadgeVariant::Secondary}>{ html! { "Featured" } }</Badge>
                     }
                 </div>
                 <p class="text-sm font-medium text-foreground">{ title }</p>

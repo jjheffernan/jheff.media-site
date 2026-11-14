@@ -93,11 +93,7 @@ pub fn photo_grid(props: &Props) -> Html {
                         <button
                             type="button"
                             disabled={is_selected}
-                            class={if is_selected {
-                                "rounded-md bg-accent px-2 py-1 text-xs font-medium text-zinc-950"
-                            } else {
-                                "rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground transition hover:border-accent hover:text-accent"
-                            }}
+                            class={if is_selected { "btn btn-primary btn-sm" } else { "btn btn-outline btn-sm" }}
                             onclick={Callback::from(move |_| on_select.emit(item_for_click.clone()))}
                         >
                             { if is_selected { "Selected for print" } else { "Select for print" } }

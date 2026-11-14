@@ -1,4 +1,4 @@
-use crate::components::ui::{Heading, HeadingLevel, Spinner, Text, TextTone};
+use crate::components::ui::{Badge, Empty, Heading, HeadingLevel, Spinner};
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
@@ -108,7 +108,12 @@ pub fn links() -> Html {
         LoadState::Ready(page)
             if page.integrations.is_empty() && page.links.is_empty() =>
         {
-            html! { <Text tone={TextTone::Muted}>{ "No social links yet." }</Text> }
+            html! {
+                <Empty
+                    title={"No social links yet"}
+                    description={"Add links or connect integrations in Admin → Links."}
+                />
+            }
         }
         LoadState::Ready(page) => {
             let integration_urls: Vec<_> = page.integrations.iter().map(|i| i.url.clone()).collect();
@@ -131,15 +136,15 @@ pub fn links() -> Html {
                         html! {
                             <a
                                 key={format!("int-{}", item.platform)}
-                                class="btn btn-quiet"
+                                class="btn btn-outline"
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onclick={Callback::from(move |_| track_link_click(&label))}
                             >
-                                { item.label.clone() }
+                                <span>{ item.label.clone() }</span>
                                 if live {
-                                    <span class="muted">{ " · live" }</span>
+                                    <Badge>{ html! { "Live" } }</Badge>
                                 }
                             </a>
                         }
@@ -150,7 +155,7 @@ pub fn links() -> Html {
                         html! {
                             <a
                                 key={format!("{i}-{}", link.url)}
-                                class="btn btn-quiet"
+                                class="btn btn-outline"
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
