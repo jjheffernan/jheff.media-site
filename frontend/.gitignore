@@ -4,5 +4,4 @@ Cargo.lock
 bin/
 pkg/
 dist/
-node_modules
 *.log

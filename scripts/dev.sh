@@ -22,7 +22,7 @@ usage() {
 Usage: scripts/dev.sh <command> [options]
 
 Commands:
-  setup              One-time setup (secret, trunk, npm, wasm target)
+  setup              One-time setup (secret, trunk, tailwind, wasm target)
   build              Local compile check + Tailwind CSS build
   build --docker     Build dev Docker images (verbose)
   build --docker --no-cache
@@ -60,11 +60,11 @@ cmd_build() {
 
   if [[ "$mode" == "local" ]]; then
     log_section "Local dev build"
-    require_cmd npm
     require_cmd cargo
+    require_cmd tailwind
 
-    log "npm install + css:build"
-    (cd "$ROOT/frontend" && npm install && npm run css:build) | tee "$LOG_DIR/build-npm.log"
+    log "css:build (cargo tailwind)"
+    (cd "$ROOT/frontend" && bash build-css.sh) | tee "$LOG_DIR/build-css.log"
 
     log_section "cargo check (backend + frontend)"
     cd "$ROOT"
@@ -157,8 +157,10 @@ cmd_start_local() {
 
   require_container
   require_cmd trunk
-  require_cmd npm
   require_cmd cargo
+  if ! command -v tailwind >/dev/null 2>&1 && ! command -v tailwindcss >/dev/null 2>&1; then
+    die "tailwind CLI missing — run: scripts/dev.sh setup (cargo install tailwind)"
+  fi
 
   log_section "MongoDB ($CONTAINER_BIN)"
   cd "$ROOT/scripts"
@@ -170,7 +172,7 @@ cmd_start_local() {
   unset NO_COLOR
 
   log_section "Tailwind watch"
-  start_background tailwind bash -lc "cd '$ROOT/frontend' && npm run css:watch"
+  start_background tailwind bash -lc "cd '$ROOT/frontend' && bash build-css.sh --watch"
 
   log_section "Trunk dev server :8000"
   start_background trunk bash -lc "cd '$ROOT/frontend' && unset NO_COLOR && trunk serve --port 8000 --address 0.0.0.0"

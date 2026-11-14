@@ -17,25 +17,13 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Set up Node.js 24 LTS
-      uses: actions/setup-node@v7
-      with:
-        node-version: "24"
-        cache: npm
-        cache-dependency-path: frontend/package-lock.json
-
-    - name: Install Tailwind CSS CLI (frontend)
-      working-directory: frontend
-      run: |
-        npm ci --prefer-offline --no-audit
-        npm ls tailwindcss @tailwindcss/cli --depth=0
-        test -x node_modules/.bin/tailwindcss
-        node_modules/.bin/tailwindcss --help >/dev/null
-
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: wasm32-unknown-unknown
+
+    - name: Install Tailwind CSS CLI (crates.io)
+      run: cargo install --locked tailwind --version 0.3.0
 
     - name: Generate JWT secret for build
       run: openssl rand -out backend/src/secret.key 32

@@ -32,16 +32,19 @@ if command -v rustup >/dev/null 2>&1; then
   else
     log "cargo-watch already installed"
   fi
+  if ! command -v tailwind >/dev/null 2>&1; then
+    log_section "Installing Tailwind CSS CLI (crates.io: tailwind)"
+    # Pure Rust Tailwind 4.3.x compiler — no Node/npm.
+    cargo install --locked tailwind --version 0.3.0
+  else
+    log "tailwind already installed: $(command -v tailwind)"
+  fi
 else
   log "WARN: rustup not found — install Rust from https://rustup.rs"
 fi
 
-if command -v npm >/dev/null 2>&1; then
-  log_section "Frontend npm dependencies"
-  (cd "$ROOT/frontend" && npm install && npm run css:build)
-else
-  log "WARN: npm not found — install Node.js for Tailwind CSS"
-fi
+log_section "Frontend CSS"
+(cd "$ROOT/frontend" && bash build-css.sh)
 
 ensure_dev_dirs
 log_section "Setup complete"

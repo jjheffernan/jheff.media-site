@@ -4,7 +4,7 @@ dist = "dist"
 public_url = "/"
 
 [watch]
-watch = ["src", "static", "styles", "index.html", "Trunk.toml", "package.json"]
+watch = ["src", "static", "styles", "index.html", "Trunk.toml"]
 
 [serve]
 addresses = ["0.0.0.0"]

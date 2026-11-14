@@ -1,6 +1,6 @@
 FROM docker.io/library/rust:1.89-bookworm
 ENV RUST_LOG=info
-ARG TAILWIND_VERSION=4.3.3
+ARG TAILWIND_VERSION=4.3.5
 RUN curl -fsSL -o /usr/local/bin/tailwindcss \
       "https://github.com/tailwindlabs/tailwindcss/releases/download/v${TAILWIND_VERSION}/tailwindcss-linux-x64" \
     && chmod +x /usr/local/bin/tailwindcss

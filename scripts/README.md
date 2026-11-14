@@ -6,7 +6,7 @@ Two entry points — everything else is a thin wrapper for backwards compatibili
 
 | Command | What it does |
 |---------|----------------|
-| `setup` | One-time: `secret.key`, wasm target, Trunk, cargo-watch, npm |
+| `setup` | One-time: `secret.key`, wasm target, Trunk, cargo-watch, tailwind (Cargo) |
 | `build` | **Local** `cargo check` + Tailwind (fast, verbose logs in `.dev/logs/`) |
 | `build --docker` | Build dev Docker images (`BUILDKIT_PROGRESS=plain`) |
 | `build --docker --no-cache` | Force rebuild dev images |

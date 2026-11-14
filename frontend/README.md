@@ -1,39 +1,35 @@
-# Frontend
+# Frontend (Yew + Trunk)
 
-Yew 0.23 WASM + **Tailwind CSS v4**, bundled with [Trunk](https://trunk-rs.github.io/trunk/).
+WASM UI for jheff.media. Styles via **Tailwind CSS 4** using a **Rust** CLI — no Node/npm.
 
-## Quick commands
+## Setup
 
 ```bash
-rustup target add wasm32-unknown-unknown
-cargo install --locked trunk   # first time
+# from repo root (preferred)
+scripts/dev.sh setup
 
-cd frontend
-npm install                    # Tailwind CLI
-npm run css:build              # or runs via Trunk hook
-trunk serve --open             # dev :8000
+# or manually
+cargo install --locked trunk --version 0.21.14
+cargo install --locked tailwind --version 0.3.0   # crates.io: pure Rust Tailwind 4.3.x
+rustup target add wasm32-unknown-unknown
+bash build-css.sh
 ```
 
-Use http://localhost:8080 in dev (Actix proxies Trunk).
+`build-css.sh` prefers `tailwind` (Cargo), then a standalone `tailwindcss` binary on `PATH` (Docker).
 
-## CSS
+## Dev
 
-- Source: `styles/input.css` (`@import "tailwindcss"`, `@source` scans `src/**/*.rs`)
-- Output: `static/app.css` (gitignored — built by Trunk hook / `npm run css:build`)
-- UI: Tailwind utility classes in Yew `html!` macros (Rust underneath)
+```bash
+scripts/dev.sh start              # Trunk + Actix + Tailwind watch
+# or
+bash build-css.sh --watch &
+trunk serve --port 8000
+```
 
-## Component toolbox
+Trunk’s `pre_build` hook runs `build-css.sh` automatically.
 
-Reusable building blocks in `src/components/ui/` (patterns from [yewstack examples](https://github.com/yewstack/yew/tree/master/examples)):
+## Notes
 
-| Component | Use |
-|-----------|-----|
-| `Button`, `Card`, `Grid`, `Stack` | Layout and actions |
-| `Heading`, `Text`, `Section` | Typography |
-| `NavLink` | Router-aware nav (`function_router`) |
-| `Spinner`, `LazyImage` | Async loading |
-| `MediaFeedScroll` | Homepage Larry Chen-style scroll — `/api/media/feed` |
-
-Photos are streamed from Immich (or static URLs) via the backend proxy — not bundled in this crate.
-
-See [.agents/skills/yew-patterns](../.agents/skills/yew-patterns/SKILL.md) and [docs/frontend.md](../docs/frontend.md).
+- Input: `styles/input.css`
+- Output: `static/app.css` (gitignored — built by Trunk hook / `build-css.sh`)
+- UI kit: `src/components/ui/` (local Yew components; rust-ui is inspiration only)
