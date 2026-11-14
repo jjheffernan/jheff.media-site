@@ -19,7 +19,7 @@ Landing page to showcase automotive socials — built with **Yew** (WASM fronten
 ## Quick start
 
 ```bash
-scripts/dev.sh setup              # once: secret, trunk, npm, wasm target
+scripts/dev.sh setup              # once: secret, trunk, tailwind, wasm target
 scripts/dev.sh build              # local compile check (fast)
 scripts/dev.sh start              # local dev — returns while Trunk compiles in background
 scripts/dev.sh logs trunk         # watch compilation progress
@@ -66,7 +66,7 @@ Guide: [docs/deployment.md](docs/deployment.md) · registry: [install/registry.j
 
 | Command | Purpose |
 |---------|---------|
-| `scripts/dev.sh setup` | One-time setup (secret, wasm, trunk, npm) |
+| `scripts/dev.sh setup` | One-time setup (secret, wasm, trunk, cargo tailwind) |
 | `scripts/dev.sh build` | Local compile check + CSS (fast) |
 | `scripts/dev.sh build --docker` | Build dev Docker images (verbose, slow) |
 | `scripts/dev.sh start` | Local dev — Trunk + backend in background |

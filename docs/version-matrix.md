@@ -9,8 +9,7 @@ See also: [deployment-dev.md](./deployment-dev.md), [architecture.md](./architec
 | Tool | Minimum | Notes |
 |------|---------|-------|
 | Rust | 1.89+ (stable) | `rustup update stable` |
-| Node.js | 18+ | Tailwind CLI via npm |
-| npm | 9+ | `npm install` in `frontend/` |
+| `tailwind` (crates.io) | 0.3.0 | Pure Rust Tailwind CSS 4.3.x CLI — `cargo install --locked tailwind --version 0.3.0` |
 | Docker or Podman | Compose v2 (`docker compose` or `podman compose`) | `CONTAINER_RUNTIME` picks one |
 | MongoDB (image) | 7.0 | Pinned in compose files |
 
@@ -48,20 +47,20 @@ Shared workspace deps (`Cargo.toml` `[workspace.dependencies]`): `serde`, `serde
 
 **Removed / incompatible:** `css-in-rust`, `web_logger`, Yew 0.16 agents / `FetchService`.
 
-## JavaScript (`frontend/package.json`)
+## CSS tooling (no Node)
 
-| Package | Range | Notes |
-|---------|-------|-------|
-| tailwindcss | ^4.3 | Utility CSS framework |
-| @tailwindcss/cli | ^4.3 | `npm run css:build` / `css:watch` |
+| Tool | Pin | Notes |
+|------|-----|-------|
+| `tailwind` (crates.io) | 0.3.0 | Compiles Tailwind CSS **4.3.5**; install via Cargo |
+| Official standalone `tailwindcss` | 4.3.5 | Optional fallback (Docker images); same CLI flags |
 
-Bundling: [Trunk](https://trunk-rs.github.io/trunk/) (`frontend/Trunk.toml`), not webpack. Trunk runs `npm run css:build` as a pre-build hook.
+Bundling: [Trunk](https://trunk-rs.github.io/trunk/) (`frontend/Trunk.toml`). Trunk `pre_build` runs `frontend/build-css.sh`.
 
 ## Docker images
 
 | Image | File | Pin | Issue fixed |
 |-------|------|-----|-------------|
-| Frontend dev | `frontend/Dockerfile` | `node:20-bookworm` | Was `node:latest` |
+| Frontend dev | `frontend/Dockerfile` | `rust:1.89-bookworm` + standalone Tailwind | No Node image |
 | Backend dev | `backend/Dockerfile` | `rust:latest` | Prefer pin matching prod |
 | Prod app | `Dockerfile` | `rust:1.89-bookworm` + `debian:bookworm-slim` | Binary `jheffmedia-site-backend` |
 | MongoDB | compose files | `mongo:7.0` | Was unpinned `mongo` |
@@ -100,7 +99,7 @@ Still present in scripts/images; safe to rename in a dedicated cleanup:
 
 ## When you change versions
 
-1. Update pin in `Cargo.toml` / `package.json`
-2. Run `cargo build` / `npm install` and fix compile errors
+1. Update pin in `Cargo.toml` / Tailwind CLI version in docs + Dockerfiles
+2. Run `cargo build` / `bash frontend/build-css.sh` and fix compile errors
 3. Update this file and [TODO.md](./TODO.md) if constraints change
 4. Run full test suite: `cargo test --workspace`

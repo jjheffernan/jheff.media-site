@@ -43,6 +43,6 @@ Update the relevant guide when you change:
 - Auth or session logic → `authentication.md`, `backend.md`
 - Yew routes or client auth → `frontend.md`, `authentication.md`
 - Docker, scripts, or env vars → `deployment-dev.md`, `development.md`, `version-matrix.md`
-- Dependency pins → `version-matrix.md`, `Cargo.toml` / `package.json`
+- Dependency pins → `version-matrix.md`, `Cargo.toml`
 
 Keep this index in sync when adding new `docs/*.md` files.

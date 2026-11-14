@@ -25,10 +25,9 @@ Install before first run:
 | Requirement | Verify |
 |-------------|--------|
 | Docker Desktop (Compose v2) | `docker compose version` |
-| Node.js ≥ 18 | `node --version` |
-| npm | 9+ | `npm --version` |
-| Trunk | latest | `trunk --version` (installed by setup) |
-| Rust (optional for local builds) | `rustc --version` |
+| Rust (stable) | `rustc --version` |
+| Trunk | `trunk --version` (installed by setup) |
+| `tailwind` (Cargo) | `tailwind --version` — `cargo install --locked tailwind --version 0.3.0` |
 | OpenSSL CLI | `openssl version` |
 
 Version pins: [version-matrix.md](./version-matrix.md).
@@ -45,16 +44,17 @@ This script:
 
 1. Creates `backend/src/secret.key` (32 bytes, gitignored) if missing
 2. Adds `wasm32-unknown-unknown` Rust target when `rustup` is available
-3. Installs Trunk and `cargo-watch` when missing
-4. Runs `npm install` + `npm run css:build` in `frontend/`
+3. Installs Trunk, `cargo-watch`, and Cargo `tailwind` when missing
+4. Runs `frontend/build-css.sh`
 
 Manual equivalent:
 
 ```bash
 openssl rand -out backend/src/secret.key 32
 rustup target add wasm32-unknown-unknown
-cargo install --locked trunk
-cd frontend && npm install && npm run css:build && cd ..
+cargo install --locked trunk --version 0.21.14
+cargo install --locked tailwind --version 0.3.0
+bash frontend/build-css.sh
 ```
 
 ## Deploy dev stack (Docker)
@@ -68,7 +68,7 @@ scripts/dev.sh start --docker
 
 What `scripts/dev.sh start --docker` does:
 
-1. `npm install` in `frontend/` (via Docker build)
+1. Docker build installs standalone Tailwind + Trunk (no Node)
 2. `docker compose` via `scripts/docker-compose.sh` with `scripts/docker-compose.dev.yml`
 3. Builds/starts `frontend`, `backend`, `db` containers
 4. Detaches — use `scripts/dev.sh logs docker` to tail
@@ -125,14 +125,14 @@ scripts/dev.sh start --docker --build   # rebuild after dependency/docker issues
 
 ## Local deployment (no Docker)
 
-Use when debugging Rust/Node directly. Requires MongoDB on `localhost:27017`.
+Use when debugging Rust directly. Requires MongoDB on `localhost:27017`.
 
 Preferred: `scripts/dev.sh start` (from repo root).
 
 **Manual — Terminal 1 — CSS watch**
 
 ```bash
-cd frontend && npm run css:watch
+cd frontend && bash build-css.sh --watch
 ```
 
 **Terminal 2 — Trunk**

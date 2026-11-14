@@ -6,7 +6,7 @@ Actix Web crate (`jheffmedia-site-backend`).
 
 ## Modes
 
-- **Dev:** `--features forward-frontend` — proxies UI to webpack
+- **Dev:** `--features forward-frontend` — proxies UI to Trunk (`localhost:8000`)
 - **Prod:** default — serves static files from `YEW_FULLSTACK_STATIC`
 
 ## Quick commands

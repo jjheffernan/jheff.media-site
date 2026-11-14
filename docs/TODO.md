@@ -11,7 +11,7 @@ scripts/dev.sh logs trunk     # watch WASM compile
 ```
 
 - [ ] **Rust** — `stable` + `wasm32-unknown-unknown` + `trunk`
-- [ ] **Node.js** ≥ 18 — Tailwind CLI only (`frontend/npm install`)
+- [x] **Tailwind CLI** — Cargo `tailwind` 0.3.0 (no Node/npm)
 - [ ] **Docker** — MongoDB (local dev via `dev.sh` or Compose)
 - [x] **JWT secret** — runtime via env/file mount; dev: `openssl rand -out backend/src/secret.key 32`
 

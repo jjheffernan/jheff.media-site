@@ -56,7 +56,7 @@ Manual (separate terminals):
 
 ```bash
 # Frontend + CSS
-cd frontend && npm install && npm run css:watch   # terminal 1
+cd frontend && bash build-css.sh --watch   # terminal 1
 cd frontend && trunk serve --port 8000 --address 0.0.0.0   # terminal 2
 
 # Backend

@@ -152,7 +152,7 @@ cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 | Factor | Status | Notes |
 |--------|--------|-------|
 | I Codebase | ✅ | Single repo, Cargo workspace |
-| II Dependencies | ✅ | Root `Cargo.lock` + `package-lock.json` committed (`frontend/Cargo.lock` gitignored) |
+| II Dependencies | ✅ | Root `Cargo.lock` committed; CSS via Cargo `tailwind` (`frontend/Cargo.lock` gitignored) |
 | III Config | ✅ | `YEW_FULLSTACK_*` env vars; runtime JWT secret |
 | IV Backing services | ✅ | MongoDB as attachable service in Compose |
 | V Build/release | ✅ | Multi-stage `Dockerfile`, optional `YEW_FULLSTACK_BUILD_ID`, `scripts/prod.sh` |
