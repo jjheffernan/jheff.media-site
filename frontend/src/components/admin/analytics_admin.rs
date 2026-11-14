@@ -1,4 +1,8 @@
-use crate::{context::AuthContext, services::auth_header};
+use crate::{
+    components::ui::{Empty, Progress, Table},
+    context::AuthContext,
+    services::auth_header,
+};
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
@@ -72,9 +76,10 @@ pub fn analytics_admin() -> Html {
         None => html! { <p class="muted">{ "Loading page views…" }</p> },
         Some(report) if report.days.is_empty() && report.paths.is_empty() => {
             html! {
-                <section class="card">
-                    <p class="muted">{ "No page views yet." }</p>
-                </section>
+                <Empty
+                    title={"No page views yet"}
+                    description={"Telemetry fills this once visitors hit public routes."}
+                />
             }
         }
         Some(report) => {
@@ -136,37 +141,57 @@ pub fn analytics_admin() -> Html {
                         </section>
                         <section class="card space-y-3">
                             <h3 class="title-sm">{ "Paths" }</h3>
-                            { for report.paths.iter().map(|row| {
-                                let pct = share(row.n, total);
-                                let bar = pct.max(4);
-                                html! {
-                                    <div class="bar-row" key={row.path.clone()}>
-                                        <span class="muted" title={row.path.clone()}>{ row.path.clone() }</span>
-                                        <span class="bar-track"><span class="bar" style={format!("width: {bar}%")}></span></span>
-                                        <span class="muted">{ format!("{pct}%") }</span>
-                                    </div>
-                                }
-                            }) }
+                            <Table>
+                                <thead>
+                                    <tr>
+                                        <th>{ "Path" }</th>
+                                        <th>{ "Share" }</th>
+                                        <th>{ "Views" }</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    { for report.paths.iter().map(|row| {
+                                        let pct = share(row.n, total);
+                                        html! {
+                                            <tr key={row.path.clone()}>
+                                                <td title={row.path.clone()}>{ row.path.clone() }</td>
+                                                <td><Progress value={(pct as f32) / 100.0} /></td>
+                                                <td>{ row.n.to_string() }</td>
+                                            </tr>
+                                        }
+                                    }) }
+                                </tbody>
+                            </Table>
                         </section>
                     </div>
                     <section class="card space-y-3">
                         <h3 class="title-sm">{ "Link clicks" }</h3>
                         <p class="muted">{ "Clicks from /links (path /links/out/…)." }</p>
                         if link_rows.is_empty() {
-                            <p class="muted">{ "No link clicks yet." }</p>
+                            <Empty description={"No link clicks yet."} />
                         } else {
-                            { for link_rows.iter().map(|row| {
-                                let slug = row.path.trim_start_matches("/links/out/");
-                                let pct = share(row.n, link_total.max(1));
-                                let bar = pct.max(4);
-                                html! {
-                                    <div class="bar-row" key={row.path.clone()}>
-                                        <span class="muted" title={row.path.clone()}>{ slug.to_string() }</span>
-                                        <span class="bar-track"><span class="bar" style={format!("width: {bar}%")}></span></span>
-                                        <span class="muted">{ format!("{} · {pct}%", row.n) }</span>
-                                    </div>
-                                }
-                            }) }
+                            <Table>
+                                <thead>
+                                    <tr>
+                                        <th>{ "Slug" }</th>
+                                        <th>{ "Share" }</th>
+                                        <th>{ "Clicks" }</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    { for link_rows.iter().map(|row| {
+                                        let slug = row.path.trim_start_matches("/links/out/").to_string();
+                                        let pct = share(row.n, link_total.max(1));
+                                        html! {
+                                            <tr key={row.path.clone()}>
+                                                <td title={row.path.clone()}>{ slug }</td>
+                                                <td><Progress value={(pct as f32) / 100.0} /></td>
+                                                <td>{ row.n.to_string() }</td>
+                                            </tr>
+                                        }
+                                    }) }
+                                </tbody>
+                            </Table>
                         }
                     </section>
                 </div>

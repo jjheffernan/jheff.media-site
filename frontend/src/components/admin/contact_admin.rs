@@ -1,4 +1,8 @@
-use crate::{context::AuthContext, services::auth_header};
+use crate::{
+    components::ui::{Badge, BadgeVariant, ConfirmDialog, Empty, Table},
+    context::AuthContext,
+    services::auth_header,
+};
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
@@ -84,6 +88,7 @@ pub fn contact_admin() -> Html {
     let message = use_state(|| None::<String>);
     let loaded = use_state(|| false);
     let tick = use_state(|| 0u32);
+    let pending_delete = use_state(|| None::<String>);
     let jwt = auth_ctx
         .auth
         .as_ref()
@@ -119,6 +124,32 @@ pub fn contact_admin() -> Html {
         return html! {};
     };
 
+    let on_cancel_delete = {
+        let pending_delete = pending_delete.clone();
+        Callback::from(move |_: ()| pending_delete.set(None))
+    };
+    let on_confirm_delete = {
+        let jwt = jwt.clone();
+        let tick = tick.clone();
+        let message = message.clone();
+        let pending_delete = pending_delete.clone();
+        Callback::from(move |_: ()| {
+            let Some(id) = (*pending_delete).clone() else {
+                return;
+            };
+            pending_delete.set(None);
+            let jwt = jwt.clone();
+            let tick = tick.clone();
+            let message = message.clone();
+            spawn_local(async move {
+                match delete_contact(&jwt, &id).await {
+                    Ok(()) => tick.set(*tick + 1),
+                    Err(err) => message.set(Some(err)),
+                }
+            });
+        })
+    };
+
     let rows = items.iter().map(|item| {
         let on_status = {
             let jwt = jwt.clone();
@@ -139,64 +170,92 @@ pub fn contact_admin() -> Html {
                 });
             })
         };
-        let on_delete = {
-            let jwt = jwt.clone();
+        let on_ask_delete = {
+            let pending_delete = pending_delete.clone();
             let id = item.id.clone();
-            let tick = tick.clone();
-            let message = message.clone();
-            Callback::from(move |_| {
-                let jwt = jwt.clone();
-                let id = id.clone();
-                let tick = tick.clone();
-                let message = message.clone();
-                spawn_local(async move {
-                    match delete_contact(&jwt, &id).await {
-                        Ok(()) => tick.set(*tick + 1),
-                        Err(err) => message.set(Some(err)),
-                    }
-                });
-            })
+            Callback::from(move |_| pending_delete.set(Some(id.clone())))
         };
         let known = item.status == "new" || item.status == "read" || item.status == "archived";
+        let badge = match item.status.as_str() {
+            "new" => BadgeVariant::Default,
+            "archived" => BadgeVariant::Outline,
+            _ => BadgeVariant::Secondary,
+        };
         html! {
-            <div key={item.id.clone()} class="space-y-2">
-                <p>
-                    <strong>{ item.name.clone() }</strong>
-                    { " " }
-                    <span class="muted">{ item.email.clone() }</span>
-                </p>
-                <p class="muted">{ format!("{} · {} · {}", item.kind, item.status, item.created_at) }</p>
-                if !item.subject.is_empty() {
-                    <p>{ item.subject.clone() }</p>
-                }
-                <p>{ item.message.clone() }</p>
-                if !item.preferred_at.is_empty() {
-                    <p class="muted">{ format!("Preferred time: {}", item.preferred_at) }</p>
-                }
-                <select class="field" value={item.status.clone()} onchange={on_status}>
-                    <option value="new">{ "new" }</option>
-                    <option value="read">{ "read" }</option>
-                    <option value="archived">{ "archived" }</option>
-                    if !known {
-                        <option value={item.status.clone()}>{ item.status.clone() }</option>
-                    }
-                </select>
-                <button type="button" class="btn btn-quiet" onclick={on_delete}>{ "Delete" }</button>
-            </div>
+            <tr key={item.id.clone()}>
+                <td>
+                    <div class="stack-gap-xs">
+                        <strong>{ item.name.clone() }</strong>
+                        <span class="muted">{ item.email.clone() }</span>
+                        <Badge variant={badge}>{ html! { { item.status.clone() } } }</Badge>
+                    </div>
+                </td>
+                <td>
+                    <div class="stack-gap-xs">
+                        <span class="muted">{ format!("{} · {}", item.kind, item.created_at) }</span>
+                        if !item.subject.is_empty() {
+                            <p>{ item.subject.clone() }</p>
+                        }
+                        <p>{ item.message.clone() }</p>
+                        if !item.preferred_at.is_empty() {
+                            <p class="muted">{ format!("Preferred: {}", item.preferred_at) }</p>
+                        }
+                    </div>
+                </td>
+                <td>
+                    <div class="row-actions">
+                        <select class="field select" value={item.status.clone()} onchange={on_status}>
+                            <option value="new">{ "new" }</option>
+                            <option value="read">{ "read" }</option>
+                            <option value="archived">{ "archived" }</option>
+                            if !known {
+                                <option value={item.status.clone()}>{ item.status.clone() }</option>
+                            }
+                        </select>
+                        <button type="button" class="btn btn-destructive btn-sm" onclick={on_ask_delete}>
+                            { "Delete" }
+                        </button>
+                    </div>
+                </td>
+            </tr>
         }
     });
 
     html! {
         <section class="card space-y-4">
+            <ConfirmDialog
+                open={pending_delete.is_some()}
+                title={"Delete message"}
+                message={"Remove this inbox message permanently?"}
+                confirm_label={"Delete"}
+                destructive=true
+                on_confirm={on_confirm_delete}
+                on_cancel={on_cancel_delete}
+            />
             <h2 class="title-sm">{ "Inbox" }</h2>
             <p class="muted">{ "Contact and booking messages, newest first." }</p>
             if let Some(msg) = &*message {
                 <p class="muted">{ msg }</p>
             }
             if *loaded && items.is_empty() && message.is_none() {
-                <p class="muted">{ "No messages." }</p>
+                <Empty
+                    title={"No messages"}
+                    description={"Contact and booking forms land here."}
+                />
+            } else if !items.is_empty() {
+                <Table>
+                    <thead>
+                        <tr>
+                            <th>{ "From" }</th>
+                            <th>{ "Message" }</th>
+                            <th>{ "Actions" }</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        { for rows }
+                    </tbody>
+                </Table>
             }
-            { for rows }
         </section>
     }
 }
