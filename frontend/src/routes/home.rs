@@ -1,7 +1,9 @@
-use crate::components::{Hero, InstagramFeaturedCard, LinkCard, MediaFeedScroll, Stack, StackGap};
+use crate::components::{
+    ui::{Badge, Separator},
+    Hero, InstagramFeaturedCard, LinkCard, MediaFeedScroll, Stack, StackGap,
+};
 use crate::routes::AppRoutes;
 use yew::prelude::*;
-use yew_router::prelude::*;
 
 /// Public homepage — media-first hub for @jheffmedia.
 pub struct Home {}
@@ -17,14 +19,18 @@ impl Component for Home {
     fn view(&self, _ctx: &Context<Self>) -> Html {
         html! {
             <Stack gap={StackGap::Sm}>
-                <MediaFeedScroll title="Feed" limit={24} />
+                <Hero />
 
                 <div class="home-intro">
-                    <Hero />
-                    <Link<AppRoutes> to={AppRoutes::Content} classes="btn btn-primary">
-                        { "Content hub" }
-                    </Link<AppRoutes>>
+                    <div class="stack-gap-xs">
+                        <Badge>{ html! { "Feed" } }</Badge>
+                        <p class="muted">{ "Latest stills and social from the road." }</p>
+                    </div>
                 </div>
+
+                <MediaFeedScroll limit={24} />
+
+                <Separator />
 
                 <InstagramFeaturedCard />
 

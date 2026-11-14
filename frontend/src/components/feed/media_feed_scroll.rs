@@ -1,6 +1,6 @@
 use super::feed_card::FeedCard;
 use crate::{
-    components::ui::{Section, Spinner, Text, TextTone},
+    components::ui::{Empty, Section, Spinner},
     context::AuthContext,
     model::{MediaFeedResponse, PrintSelection, PrintSelectionInput},
     services::auth_header,
@@ -161,9 +161,10 @@ pub fn media_feed_scroll(props: &Props) -> Html {
             <p class="text-sm text-muted">{ format!("Feed unavailable: {}", message) }</p>
         },
         FeedState::Ready(feed) if feed.items.is_empty() => html! {
-            <Text tone={TextTone::Muted}>
-                { "No media yet. Configure Instagram, YouTube, galleries, or shoots on the backend." }
-            </Text>
+            <Empty
+                title={"No media yet"}
+                description={"Configure Instagram, YouTube, galleries, or shoots to fill the feed."}
+            />
         },
         FeedState::Ready(feed) => {
             let sources = feed.sources.join(", ");
