@@ -1,3 +1,4 @@
+use crate::components::ui::{Alert, AlertVariant, ConfirmDialog};
 use crate::context::{AuthContext, DevModeContext, ThemeContext};
 use crate::routes::AppRoutes;
 use crate::services::{api_errors, auth_header};
@@ -147,6 +148,7 @@ pub fn dev_admin() -> Html {
     let deploy_job = use_state(|| None::<DeployJob>);
     let deploy_note = use_state(|| None::<String>);
     let deploy_busy = use_state(|| false);
+    let pending_channel = use_state(|| None::<&'static str>);
 
     let origin = web_sys::window()
         .and_then(|w| w.location().origin().ok())
@@ -268,23 +270,12 @@ pub fn dev_admin() -> Html {
         );
     }
 
-    let start_deploy = {
+    let run_deploy = {
         let deploy_busy = deploy_busy.clone();
         let deploy_job = deploy_job.clone();
         let deploy_note = deploy_note.clone();
         let jwt = jwt.clone();
         Callback::from(move |channel: &'static str| {
-            let msg = if channel == "testing" {
-                "Update from testing branch? Rebuilds containers; site may briefly restart."
-            } else {
-                "Update production (main)? Rebuilds containers; site may briefly restart."
-            };
-            let ok = web_sys::window()
-                .and_then(|w| w.confirm_with_message(msg).ok())
-                .unwrap_or(false);
-            if !ok {
-                return;
-            }
             let deploy_busy = deploy_busy.clone();
             let deploy_job = deploy_job.clone();
             let deploy_note = deploy_note.clone();
@@ -529,12 +520,37 @@ pub fn dev_admin() -> Html {
     let snapshot_text = serde_json::to_string_pretty(&snapshot).unwrap_or_else(|_| "{}".into());
 
     let on_update_main = {
-        let start_deploy = start_deploy.clone();
-        Callback::from(move |_: MouseEvent| start_deploy.emit("main"))
+        let pending_channel = pending_channel.clone();
+        Callback::from(move |_: MouseEvent| pending_channel.set(Some("main")))
     };
     let on_update_testing = {
-        let start_deploy = start_deploy.clone();
-        Callback::from(move |_: MouseEvent| start_deploy.emit("testing"))
+        let pending_channel = pending_channel.clone();
+        Callback::from(move |_: MouseEvent| pending_channel.set(Some("testing")))
+    };
+    let on_cancel_deploy = {
+        let pending_channel = pending_channel.clone();
+        Callback::from(move |_: ()| pending_channel.set(None))
+    };
+    let on_confirm_deploy = {
+        let pending_channel = pending_channel.clone();
+        let run_deploy = run_deploy.clone();
+        Callback::from(move |_: ()| {
+            if let Some(channel) = *pending_channel {
+                pending_channel.set(None);
+                run_deploy.emit(channel);
+            }
+        })
+    };
+    let confirm_open = pending_channel.is_some();
+    let confirm_title = if *pending_channel == Some("testing") {
+        "Update testing"
+    } else {
+        "Update production"
+    };
+    let confirm_msg = if *pending_channel == Some("testing") {
+        "Pull the testing branch and rebuild containers. The site may briefly restart."
+    } else {
+        "Pull main and rebuild containers. The site may briefly restart."
     };
     let on_refresh_deploy = {
         let refresh_deploy = refresh_deploy.clone();
@@ -545,6 +561,14 @@ pub fn dev_admin() -> Html {
 
     html! {
         <div class="space-y-4">
+            <ConfirmDialog
+                open={confirm_open}
+                title={confirm_title}
+                message={confirm_msg}
+                confirm_label={"Update"}
+                on_confirm={on_confirm_deploy}
+                on_cancel={on_cancel_deploy}
+            />
             <div>
                 <h2 class="title-sm">{ "Dev mode" }</h2>
                 <p class="muted">
@@ -555,7 +579,7 @@ pub fn dev_admin() -> Html {
             <section class="card space-y-3">
                 <div class="row-actions" style="align-items:center;justify-content:space-between;">
                     <p class="label-xs">{ "Deploy" }</p>
-                    <button type="button" class="btn" onclick={on_refresh_deploy}>{ "Refresh" }</button>
+                    <button type="button" class="btn btn-outline" onclick={on_refresh_deploy}>{ "Refresh" }</button>
                 </div>
                 <dl class="dev-kv">
                     <dt>{ "Build id" }</dt>
@@ -586,19 +610,19 @@ pub fn dev_admin() -> Html {
                 <div class="row-actions">
                     <button
                         type="button"
-                        class="btn"
+                        class="btn btn-primary"
                         disabled={!can_deploy}
                         onclick={on_update_main}
                     >{ "Update" }</button>
                     <button
                         type="button"
-                        class="btn"
+                        class="btn btn-secondary"
                         disabled={!can_deploy}
                         onclick={on_update_testing}
                     >{ "Update testing (-d)" }</button>
                 </div>
                 if let Some(msg) = &*deploy_note {
-                    <p class="muted" role="status">{ msg }</p>
+                    <Alert variant={AlertVariant::Info}>{ html! { { msg.clone() } } }</Alert>
                 }
                 if let Some(job) = &*deploy_job {
                     <div class="space-y-2">
@@ -615,13 +639,7 @@ pub fn dev_admin() -> Html {
                                 )
                             }
                         }</p>
-                        <textarea
-                            class="field"
-                            readonly=true
-                            rows="8"
-                            value={job.log_tail.clone()}
-                            aria-label="Deploy job log"
-                        />
+                        <pre class="deploy-log" aria-label="Deploy job log">{ &job.log_tail }</pre>
                         <p class="muted label-xs">
                             { "Site may briefly restart mid-update; keep this tab open and wait for state ok/failed." }
                         </p>

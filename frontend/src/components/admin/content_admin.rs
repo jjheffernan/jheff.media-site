@@ -1,7 +1,9 @@
 use crate::{
     components::admin::collection_browser::CollectionBrowser,
     components::admin::library_import::LibraryImport,
-    components::ui::{DatePicker, Heading, HeadingLevel, Text, TextTone},
+    components::ui::{
+        ConfirmDialog, DatePicker, Field, Heading, HeadingLevel, TabItem, Tabs, Text, TextTone,
+    },
     context::AuthContext,
     model::AdminPrintOrder,
     services::auth_header,
@@ -224,11 +226,6 @@ enum ContentTab {
     Orders,
 }
 
-fn tab_class(active: bool) -> &'static str {
-    if active { "btn btn-primary" } else { "btn btn-quiet" }
-}
-
-
 #[function_component(ContentAdmin)]
 pub fn content_admin() -> Html {
     let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
@@ -240,6 +237,7 @@ pub fn content_admin() -> Html {
     let date_id = use_state(String::new);
     let date_id_touched = use_state(|| false);
     let content_tab = use_state(|| ContentTab::Galleries);
+    let confirm_delete = use_state(|| false);
 
     let (starts_day, starts_time) = split_starts(&date_starts);
 
@@ -388,11 +386,21 @@ pub fn content_admin() -> Html {
         })
     };
 
+    let on_ask_delete_date = {
+        let confirm_delete = confirm_delete.clone();
+        Callback::from(move |_| confirm_delete.set(true))
+    };
+    let on_cancel_delete = {
+        let confirm_delete = confirm_delete.clone();
+        Callback::from(move |_: ()| confirm_delete.set(false))
+    };
     let on_delete_date = {
         let auth_ctx = auth_ctx.clone();
         let date_id = date_id.clone();
         let message = message.clone();
-        Callback::from(move |_| {
+        let confirm_delete = confirm_delete.clone();
+        Callback::from(move |_: ()| {
+            confirm_delete.set(false);
             let id = (*date_id).clone();
             let Some(auth) = &auth_ctx.auth else {
                 return;
@@ -413,23 +421,50 @@ pub fn content_admin() -> Html {
     };
 
     let tab = *content_tab;
-    let pick = |next: ContentTab| {
+    let tab_items = vec![
+        TabItem { id: "galleries".into(), label: "Galleries".into() },
+        TabItem { id: "shoots".into(), label: "Shoots".into() },
+        TabItem { id: "schedule".into(), label: "Schedule".into() },
+        TabItem { id: "library".into(), label: "Library".into() },
+        TabItem { id: "orders".into(), label: "Orders".into() },
+    ];
+    let active_tab = match tab {
+        ContentTab::Galleries => "galleries",
+        ContentTab::Shoots => "shoots",
+        ContentTab::Schedule => "schedule",
+        ContentTab::Library => "library",
+        ContentTab::Orders => "orders",
+    }
+    .to_string();
+    let on_tab = {
         let content_tab = content_tab.clone();
-        Callback::from(move |_| content_tab.set(next))
+        Callback::from(move |id: String| {
+            let next = match id.as_str() {
+                "shoots" => ContentTab::Shoots,
+                "schedule" => ContentTab::Schedule,
+                "library" => ContentTab::Library,
+                "orders" => ContentTab::Orders,
+                _ => ContentTab::Galleries,
+            };
+            content_tab.set(next);
+        })
     };
 
     html! {
         <section class="card space-y-6">
+            <ConfirmDialog
+                open={*confirm_delete}
+                title={"Delete date"}
+                message={"Remove this schedule date? This cannot be undone."}
+                confirm_label={"Delete"}
+                destructive=true
+                on_confirm={on_delete_date}
+                on_cancel={on_cancel_delete}
+            />
             <Heading level={HeadingLevel::H2} subtitle="One tool at a time.">
                 { "Content" }
             </Heading>
-            <div class="flex flex-wrap gap-2" role="tablist" aria-label="Content">
-                <button type="button" class={tab_class(tab == ContentTab::Galleries)} role="tab" aria-selected={(tab == ContentTab::Galleries).to_string()} onclick={pick(ContentTab::Galleries)}>{ "Galleries" }</button>
-                <button type="button" class={tab_class(tab == ContentTab::Shoots)} role="tab" aria-selected={(tab == ContentTab::Shoots).to_string()} onclick={pick(ContentTab::Shoots)}>{ "Shoots" }</button>
-                <button type="button" class={tab_class(tab == ContentTab::Schedule)} role="tab" aria-selected={(tab == ContentTab::Schedule).to_string()} onclick={pick(ContentTab::Schedule)}>{ "Schedule" }</button>
-                <button type="button" class={tab_class(tab == ContentTab::Library)} role="tab" aria-selected={(tab == ContentTab::Library).to_string()} onclick={pick(ContentTab::Library)}>{ "Library" }</button>
-                <button type="button" class={tab_class(tab == ContentTab::Orders)} role="tab" aria-selected={(tab == ContentTab::Orders).to_string()} onclick={pick(ContentTab::Orders)}>{ "Orders" }</button>
-            </div>
+            <Tabs items={tab_items} active={active_tab} on_change={on_tab} />
 
             if let Some(msg) = &*message {
                 <p class="text-sm text-accent">{ msg }</p>
@@ -446,16 +481,16 @@ pub fn content_admin() -> Html {
             }
             if tab == ContentTab::Schedule {
             <div class="schedule-editor">
-                <Text tone={TextTone::Muted}>{ "Add date" }</Text>
-                <input
-                    type="text"
-                    placeholder="Title"
-                    class="field"
-                    value={(*date_title).clone()}
-                    oninput={on_title_input}
-                />
-                <label class="block space-y-1">
-                    <Text tone={TextTone::Muted}>{ "Starts" }</Text>
+                <Field label={"Add date"}>
+                    <input
+                        type="text"
+                        placeholder="Title"
+                        class="field"
+                        value={(*date_title).clone()}
+                        oninput={on_title_input}
+                    />
+                </Field>
+                <Field label={"Starts"}>
                     <div class="starts-picker">
                         <DatePicker
                             value={starts_day}
@@ -469,18 +504,19 @@ pub fn content_admin() -> Html {
                             oninput={on_starts_time}
                         />
                     </div>
-                </label>
-                <input
-                    type="text"
-                    placeholder="Location"
-                    class="field"
-                    value={(*date_location).clone()}
-                    oninput={bind_input(date_location.clone())}
-                />
-                <label class="block space-y-1">
-                    <Text tone={TextTone::Muted}>{ "Kind" }</Text>
-                    <select
+                </Field>
+                <Field label={"Location"}>
+                    <input
+                        type="text"
+                        placeholder="Location"
                         class="field"
+                        value={(*date_location).clone()}
+                        oninput={bind_input(date_location.clone())}
+                    />
+                </Field>
+                <Field label={"Kind"}>
+                    <select
+                        class="field select"
                         value={(*date_kind).clone()}
                         onchange={on_kind}
                     >
@@ -488,7 +524,7 @@ pub fn content_admin() -> Html {
                         <option value="instruction">{ "Instruction" }</option>
                         <option value="other">{ "Other" }</option>
                     </select>
-                </label>
+                </Field>
                 <div class="schedule-editor-actions">
                     <button type="button" class="btn btn-primary" onclick={on_add_date}>
                         { "Add date" }
@@ -526,7 +562,7 @@ pub fn content_admin() -> Html {
                             <button type="button" class="btn btn-primary" onclick={on_save_date}>
                                 { "Save" }
                             </button>
-                            <button type="button" class="btn btn-quiet" onclick={on_delete_date}>
+                            <button type="button" class="btn btn-destructive" onclick={on_ask_delete_date}>
                                 { "Delete" }
                             </button>
                         </div>
