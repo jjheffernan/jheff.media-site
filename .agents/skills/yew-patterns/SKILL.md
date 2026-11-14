@@ -37,9 +37,13 @@ frontend/
     app.rs            # BrowserRouter → AuthProvider → Layout → Router
     context/auth.rs   # session + login/logout callbacks
     routes/           # Home (hero + feed), Shoots, Galleries, Profile
-    components/       # layout, auth, ui toolbox, feed
+    components/       # layout, auth, ui kit (local), feed
   static/             # app.css (generated)
 ```
+
+## UI kit
+
+Local Yew kit under `frontend/src/components/ui/` — shadcn-style tokens/variants inspired by [rust-ui/ui](https://github.com/rust-ui/ui). **Not** Dioxus/Leptos/Axum; copy patterns only. Add a kit module in the same vertical slice that first consumes it.
 
 ## Trunk dev
 
