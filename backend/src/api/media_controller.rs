@@ -25,6 +25,20 @@ pub async fn instagram_featured(db: web::Data<mongodb::Database>) -> Result<Http
     }
 }
 
+pub async fn thumbnail(
+    client: web::Data<Client>,
+    db: web::Data<mongodb::Database>,
+    path: web::Path<String>,
+) -> Result<HttpResponse> {
+    let asset_id = path.into_inner();
+    match media_feed_service::proxy_thumbnail(&client, &db, &asset_id).await {
+        Ok((bytes, content_type)) => Ok(HttpResponse::Ok()
+            .content_type(content_type)
+            .body(bytes)),
+        Err(err) => Ok(err.response()),
+    }
+}
+
 #[derive(serde::Deserialize)]
 pub struct FeedQuery {
     pub limit: Option<usize>,

@@ -30,6 +30,7 @@ struct YouTubeVideoId {
 #[derive(Debug, Deserialize)]
 struct YouTubeSnippet {
     title: String,
+    #[allow(dead_code)]
     description: Option<String>,
     published_at: Option<String>,
     thumbnails: YouTubeThumbnails,

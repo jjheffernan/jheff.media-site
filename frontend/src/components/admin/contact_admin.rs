@@ -1,9 +1,8 @@
 use crate::{
     components::ui::{Badge, BadgeVariant, ConfirmDialog, Empty, Table},
     context::AuthContext,
-    services::auth_header,
+    services::{delete_ok_auth, get_json_auth, patch_ok_auth},
 };
-use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
@@ -24,61 +23,21 @@ struct ContactItem {
     status: String,
 }
 
-async fn api_error(resp: gloo_net::http::Response, fallback: &str) -> String {
-    if let Ok(body) = resp.json::<serde_json::Value>().await {
-        body.get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or(fallback)
-            .to_string()
-    } else {
-        fallback.to_string()
-    }
-}
-
 async fn load_contacts(jwt: &str) -> Result<Vec<ContactItem>, String> {
-    let auth_val = auth_header(jwt);
-    let resp = Request::get("/api/admin/contacts")
-        .header("Authorization", auth_val.as_str())
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if resp.ok() {
-        resp.json().await.map_err(|e| e.to_string())
-    } else {
-        Err(api_error(resp, "Could not load inbox.").await)
-    }
+    get_json_auth("/api/admin/contacts", jwt).await
 }
 
 async fn patch_status(jwt: &str, id: &str, status: &str) -> Result<(), String> {
-    let auth_val = auth_header(jwt);
-    let body = serde_json::json!({ "status": status }).to_string();
-    let resp = Request::patch(&format!("/api/admin/contacts/{id}"))
-        .header("Authorization", auth_val.as_str())
-        .header("Content-Type", "application/json")
-        .body(body)
-        .map_err(|e| e.to_string())?
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if resp.ok() {
-        Ok(())
-    } else {
-        Err(api_error(resp, "Could not update status.").await)
-    }
+    patch_ok_auth(
+        &format!("/api/admin/contacts/{id}"),
+        jwt,
+        &serde_json::json!({ "status": status }),
+    )
+    .await
 }
 
 async fn delete_contact(jwt: &str, id: &str) -> Result<(), String> {
-    let auth_val = auth_header(jwt);
-    let resp = Request::delete(&format!("/api/admin/contacts/{id}"))
-        .header("Authorization", auth_val.as_str())
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if resp.ok() {
-        Ok(())
-    } else {
-        Err(api_error(resp, "Could not delete message.").await)
-    }
+    delete_ok_auth(&format!("/api/admin/contacts/{id}"), jwt).await
 }
 
 #[function_component(ContactAdmin)]

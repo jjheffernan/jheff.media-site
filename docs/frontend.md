@@ -12,7 +12,8 @@ Yew 0.23 WASM client for **automotive photography** workflows: `jheffmedia-site-
 | yew-router 0.20 | `Routable`, `BrowserRouter`, `Switch` |
 | Trunk | Official Yew bundler — `index.html` + `Trunk.toml` |
 | gloo-net | HTTP from WASM |
-| CSS | [design.md](./design.md). Edit `frontend/styles/input.css`. Pages use `card`, `btn`, `field`, `hero`. Tokens (`--accent`, `--radius-card`, `--page-width`) are at the top of that file. |
+| UI kit | `frontend/src/components/ui/` — Field, Alert, Dialog, ConfirmDialog, Tabs, etc. |
+| CSS | Tailwind v4 via Cargo `tailwind` (no Node). [design.md](./design.md). Edit `frontend/styles/input.css`; `bash build-css.sh`. |
 
 ## Routes (`frontend/src/routes/mod.rs`)
 

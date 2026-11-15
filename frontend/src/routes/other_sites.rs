@@ -1,8 +1,8 @@
 use crate::{
     components::ui::{Heading, HeadingLevel, Spinner, Text, TextTone},
     model::{OtherSite, OtherSitesResponse},
+    services::get_json,
 };
-use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 
@@ -21,17 +21,9 @@ pub fn other_sites() -> Html {
         let state = state.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let result = Request::get("/api/sites/other").send().await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(data) = resp.json::<OtherSitesResponse>().await {
-                            state.set(LoadState::Ready(data));
-                        } else {
-                            state.set(LoadState::Error("Could not load other sites.".into()));
-                        }
-                    }
-                    Ok(_) => state.set(LoadState::Error("Other sites request failed.".into())),
-                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                match get_json::<OtherSitesResponse>("/api/sites/other").await {
+                    Ok(data) => state.set(LoadState::Ready(data)),
+                    Err(err) => state.set(LoadState::Error(err)),
                 }
             });
             || ()

@@ -2,7 +2,7 @@ use crate::{
     components::ui::DatePicker,
     context::AuthContext,
     model::MediaItem,
-    services::auth_header,
+    services::{auth_header, get_json_auth, ok, HttpMethod},
 };
 use gloo_net::http::Request;
 use serde::Deserialize;
@@ -67,37 +67,14 @@ fn status_of(item: &BrowserCollection) -> String {
 }
 
 async fn api(method: &str, url: &str, jwt: &str, body: Option<String>) -> Result<(), String> {
-    let auth_val = auth_header(jwt);
-    let builder = match method {
-        "PATCH" => Request::patch(url),
-        "PUT" => Request::put(url),
-        "DELETE" => Request::delete(url),
-        "POST" => Request::post(url),
+    let method = match method {
+        "PATCH" => HttpMethod::PATCH,
+        "PUT" => HttpMethod::PUT,
+        "DELETE" => HttpMethod::DELETE,
+        "POST" => HttpMethod::POST,
         _ => return Err("Unsupported method.".into()),
-    }
-    .header("Authorization", auth_val.as_str());
-    let resp = if let Some(body) = body {
-        builder
-            .header("Content-Type", "application/json")
-            .body(body)
-            .map_err(|err| err.to_string())?
-            .send()
-            .await
-            .map_err(|err| err.to_string())?
-    } else {
-        builder.send().await.map_err(|err| err.to_string())?
     };
-    if resp.ok() {
-        Ok(())
-    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
-        Err(body
-            .get("message")
-            .and_then(|message| message.as_str())
-            .unwrap_or("Request failed.")
-            .to_string())
-    } else {
-        Err("Request failed.".into())
-    }
+    ok(method, url, Some(jwt), body).await
 }
 
 #[function_component(CollectionBrowser)]
@@ -131,20 +108,9 @@ pub fn collection_browser(props: &Props) -> Html {
             let items = items.clone();
             let message = message.clone();
             spawn_local(async move {
-                let result = Request::get(&format!("/api/admin/{kind}"))
-                    .header("Authorization", &auth_header(&jwt))
-                    .send()
-                    .await;
-                match result {
-                    Ok(resp) if resp.ok() => match resp.json::<ListBody>().await {
-                        Ok(body) => items.set(body.items),
-                        Err(_) => message.set(Some("Could not read collections.".into())),
-                    },
-                    Ok(resp) => {
-                        let text = resp.text().await.unwrap_or_else(|_| "Request failed.".into());
-                        message.set(Some(text));
-                    }
-                    Err(err) => message.set(Some(err.to_string())),
+                match get_json_auth::<ListBody>(&format!("/api/admin/{kind}"), &jwt).await {
+                    Ok(body) => items.set(body.items),
+                    Err(err) => message.set(Some(err)),
                 }
             });
             }

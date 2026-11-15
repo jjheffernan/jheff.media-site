@@ -5,7 +5,7 @@ use crate::{
     },
     utils::{format_event_local, timezone_caption},
 };
-use gloo_net::http::Request;
+use crate::services::get_json;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -67,13 +67,8 @@ pub fn booking() -> Html {
         let loading_avail = loading_avail.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                match Request::get("/api/schedule").send().await {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(payload) = resp.json::<SchedulePayload>().await {
-                            events.set(payload.events);
-                        }
-                    }
-                    _ => {}
+                if let Ok(payload) = get_json::<SchedulePayload>("/api/schedule").await {
+                    events.set(payload.events);
                 }
                 loading_avail.set(false);
             });

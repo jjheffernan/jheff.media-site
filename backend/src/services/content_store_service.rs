@@ -96,9 +96,7 @@ pub async fn remove_media(
     asset_id: &str,
     db: &Database,
 ) -> Option<MediaItem> {
-    let Some(mut collection) = find_by_kind_and_id(kind, id, db).await else {
-        return None;
-    };
+    let mut collection = find_by_kind_and_id(kind, id, db).await?;
     let idx = collection.media.iter().position(|m| m.id == asset_id)?;
     let removed = collection.media.remove(idx);
     let cover_cleared = collection

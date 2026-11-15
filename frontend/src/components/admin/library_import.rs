@@ -1,5 +1,10 @@
-use crate::{components::ui::Text, components::ui::TextTone, context::AuthContext, services::auth_header};
-use gloo_net::http::Request;
+use crate::{
+    components::ui::Text,
+    components::ui::TextTone,
+    context::AuthContext,
+    model::ServerResponse,
+    services::{get_json_auth, post_json_auth},
+};
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -20,6 +25,22 @@ struct ImportResult {
     copied: usize,
 }
 
+fn map_library_error(msg: String) -> String {
+    match msg.as_str() {
+        "NOT_DRAFT" => {
+            "That collection is not a draft. Set its status to draft before copying.".into()
+        }
+        "NOT_CONFIGURED" => "That library is not configured on the server.".into(),
+        "TOO_MANY" => "Choose at most 6 files.".into(),
+        "COLLECTION_NOT_FOUND" => "No Mongo collection with that id.".into(),
+        "UPSTREAM" => "The library refused the request.".into(),
+        "FILE_TOO_LARGE" => "A file is over the upload size limit.".into(),
+        "UNSUPPORTED_MEDIA_TYPE" => "A file is not a JPEG, PNG, WebP, or GIF.".into(),
+        "Request failed." | "Could not parse response." => "Library request failed.".into(),
+        other => other.to_string(),
+    }
+}
+
 #[function_component(LibraryImport)]
 pub fn library_import() -> Html {
     let auth_ctx = use_context::<AuthContext>().expect("AuthProvider required");
@@ -33,39 +54,30 @@ pub fn library_import() -> Html {
     let ready = use_state(|| false);
 
     {
-        let auth_ctx = auth_ctx.clone();
         let sources = sources.clone();
         let source = source.clone();
         let message = message.clone();
         let ready = ready.clone();
         use_effect_with(auth_ctx.auth.as_ref().map(|auth| auth.jwt.clone()), move |jwt| {
             if let Some(jwt) = jwt.clone() {
-            let sources = sources.clone();
-            let source = source.clone();
-            let message = message.clone();
-            let ready = ready.clone();
-            spawn_local(async move {
-                let result = Request::get("/api/admin/library")
-                    .header("Authorization", &auth_header(&jwt))
-                    .send()
-                    .await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(body) = resp.json::<crate::model::ServerResponse<SourceList>>().await {
+                let sources = sources.clone();
+                let source = source.clone();
+                let message = message.clone();
+                let ready = ready.clone();
+                spawn_local(async move {
+                    match get_json_auth::<ServerResponse<SourceList>>("/api/admin/library", &jwt)
+                        .await
+                    {
+                        Ok(body) => {
                             if let Some(first) = body.data.sources.first() {
                                 source.set(first.clone());
                             }
                             sources.set(body.data.sources);
                             ready.set(true);
                         }
+                        Err(err) => message.set(Some(map_library_error(err))),
                     }
-                    Ok(resp) => {
-                        let text = resp.text().await.unwrap_or_default();
-                        message.set(Some(text));
-                    }
-                    Err(err) => message.set(Some(err.to_string())),
-                }
-            });
+                });
             }
             || ()
         });
@@ -114,22 +126,17 @@ pub fn library_import() -> Html {
             let message = message.clone();
             spawn_local(async move {
                 selected.set(Vec::new());
-                let result = Request::get(&format!("/api/admin/library/{source}"))
-                    .header("Authorization", &auth_header(&jwt))
-                    .send()
-                    .await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        match resp.json::<crate::model::ServerResponse<Vec<LibraryCandidate>>>().await {
-                            Ok(body) => {
-                                message.set(Some(format!("{} files ready to choose.", body.data.len())));
-                                items.set(body.data);
-                            }
-                            Err(_) => message.set(Some("Could not read the library list.".into())),
-                        }
+                match get_json_auth::<ServerResponse<Vec<LibraryCandidate>>>(
+                    &format!("/api/admin/library/{source}"),
+                    &jwt,
+                )
+                .await
+                {
+                    Ok(body) => {
+                        message.set(Some(format!("{} files ready to choose.", body.data.len())));
+                        items.set(body.data);
                     }
-                    Ok(resp) => message.set(Some(error_message(resp).await)),
-                    Err(err) => message.set(Some(err.to_string())),
+                    Err(err) => message.set(Some(map_library_error(err))),
                 }
             });
         })
@@ -158,25 +165,18 @@ pub fn library_import() -> Html {
                     "collectionId": collection_id.trim(),
                     "assetIds": ids,
                 });
-                let result = Request::post(&format!("/api/admin/library/{source}"))
-                    .header("Authorization", &auth_header(&jwt))
-                    .header("Content-Type", "application/json")
-                    .body(body.to_string())
-                    .expect("json body")
-                    .send()
-                    .await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        match resp.json::<crate::model::ServerResponse<ImportResult>>().await {
-                            Ok(body) => message.set(Some(format!(
-                                "Copied {} file(s) into the draft. Change its status when it should be public.",
-                                body.data.copied
-                            ))),
-                            Err(_) => message.set(Some("Import finished, but the reply could not be read.".into())),
-                        }
-                    }
-                    Ok(resp) => message.set(Some(error_message(resp).await)),
-                    Err(err) => message.set(Some(err.to_string())),
+                match post_json_auth::<_, ServerResponse<ImportResult>>(
+                    &format!("/api/admin/library/{source}"),
+                    &jwt,
+                    &body,
+                )
+                .await
+                {
+                    Ok(body) => message.set(Some(format!(
+                        "Copied {} file(s) into the draft. Change its status when it should be public.",
+                        body.data.copied
+                    ))),
+                    Err(err) => message.set(Some(map_library_error(err))),
                 }
             });
         })
@@ -255,20 +255,4 @@ pub fn library_import() -> Html {
             }
         </div>
     }
-}
-
-async fn error_message(resp: gloo_net::http::Response) -> String {
-    if let Ok(body) = resp.json::<crate::model::ServerResponse<String>>().await {
-        return match body.message.as_str() {
-            "NOT_DRAFT" => "That collection is not a draft. Set its status to draft before copying.".into(),
-            "NOT_CONFIGURED" => "That library is not configured on the server.".into(),
-            "TOO_MANY" => "Choose at most 6 files.".into(),
-            "COLLECTION_NOT_FOUND" => "No Mongo collection with that id.".into(),
-            "UPSTREAM" => "The library refused the request.".into(),
-            "FILE_TOO_LARGE" => "A file is over the upload size limit.".into(),
-            "UNSUPPORTED_MEDIA_TYPE" => "A file is not a JPEG, PNG, WebP, or GIF.".into(),
-            other => other.to_string(),
-        };
-    }
-    "Library request failed.".into()
 }

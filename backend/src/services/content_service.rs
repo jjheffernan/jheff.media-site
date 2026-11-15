@@ -219,6 +219,7 @@ pub async fn reorder_media(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn upload_media(
     kind: &str,
     collection_id: &str,

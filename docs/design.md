@@ -2,7 +2,7 @@
 
 What the site is today. Visual rules live in `frontend/styles/input.css`. Implementation work lives in [TODO.md](./TODO.md).
 
-**Updated:** 2026-10-30
+**Updated:** 2026-11-15
 
 ## Visual system
 
@@ -49,5 +49,6 @@ Header: Home, Content (hub, galleries, shoots, social), Booking, Schedule, and a
 - Print payment is shelved. Invoices or another service will collect payment later. The site keeps the unpaid request.
 - 2FA enrollment with the otpauth URL and secret is enough. No QR image.
 - Email change is skipped. Do not offer it in the account UI.
-- Admins edit the social link list, triage contact and booking messages, manage gallery and shoot media, and update print order status from the admin dashboard. Payment status is recorded only; the app does not charge cards.
+- Admins edit the social link list (paste keys/tokens; no OAuth), triage contact and booking messages, manage gallery and shoot media (including reorder/featured under Content), and update print order status from the admin dashboard. Payment status is recorded only; the app does not charge cards.
 - Immich and Nextcloud copies are admin-only, at most 6 files, and only into a draft gallery or shoot. Draft collections stay off the public site. Library credentials stay on the server.
+- Deploy channels are `main` (prod) and `testing`. Day-2: `jheffmedia --update` / `--update -d`. Admin → Dev can trigger update and shows autoupdate status; enable/disable stays CLI.

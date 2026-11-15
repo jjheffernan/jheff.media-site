@@ -48,8 +48,8 @@ Production image builds the frontend into the static directory inside the contai
 
 Registered in `backend/src/config/app.rs`:
 
-1. **`/api/auth/*`** — signup, login, logout ([api.md](./api.md))
-2. **Everything else** — either reverse proxy (dev) or static file server (prod)
+1. **`/api/*`** — auth, media feed, content, admin, contact, schedule, deploy, etc. ([api.md](./api.md))
+2. **Non-API paths** — reverse proxy to Trunk (dev, `forward-frontend`) or static files from `YEW_FULLSTACK_STATIC` (prod, `serve_frontend.rs`)
 
 CORS allows only origins listed in `YEW_FULLSTACK_CORS_ORIGINS` (comma-separated), defaulting to `YEW_FULLSTACK_FORWARD_FRONTEND_URL` or `http://localhost:8000` — not wildcard.
 

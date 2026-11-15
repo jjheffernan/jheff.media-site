@@ -44,6 +44,8 @@ frontend/pkg/
 # Local dev runtime (scripts/dev.sh)
 .dev/
 uploads/
+# Immich / secrets overrides (sourced after scripts/config/dev.env)
+scripts/config/dev.env.local
 
 # Host deploy control drop-files (keep directory via .gitkeep)
 var/deploy/*

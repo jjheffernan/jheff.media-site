@@ -1,9 +1,8 @@
 use crate::{
     components::ui::{Empty, Progress, Table},
     context::AuthContext,
-    services::auth_header,
+    services::get_json_auth,
 };
-use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -53,18 +52,9 @@ pub fn analytics_admin() -> Html {
             if !jwt.is_empty() {
                 let jwt = jwt.clone();
                 spawn_local(async move {
-                    let auth_val = auth_header(&jwt);
-                    match Request::get("/api/admin/analytics")
-                        .header("Authorization", auth_val.as_str())
-                        .send()
-                        .await
-                    {
-                        Ok(resp) if resp.ok() => match resp.json::<Analytics>().await {
-                            Ok(body) => data.set(Some(body)),
-                            Err(_) => note.set(Some("Could not read analytics.".into())),
-                        },
-                        Ok(_) => note.set(Some("Could not load analytics.".into())),
-                        Err(err) => note.set(Some(err.to_string())),
+                    match get_json_auth::<Analytics>("/api/admin/analytics", &jwt).await {
+                        Ok(body) => data.set(Some(body)),
+                        Err(err) => note.set(Some(err)),
                     }
                 });
             }

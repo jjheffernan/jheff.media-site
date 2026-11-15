@@ -6,7 +6,7 @@ use crate::{
         TotpEnrollResponse, TotpVerify, User,
     },
     routes::AppRoutes,
-    services::auth_header,
+    services::{auth_header, get_json_auth},
 };
 use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
@@ -74,17 +74,8 @@ pub fn account() -> Html {
         use_effect_with(jwt.clone(), move |jwt| {
             let jwt = jwt.clone();
             spawn_local(async move {
-                let auth_val = auth_header(&jwt);
-                if let Ok(resp) = Request::get("/api/auth/me")
-                    .header("Authorization", auth_val.as_str())
-                    .send()
-                    .await
-                {
-                    if resp.ok() {
-                        if let Ok(me) = resp.json::<User>().await {
-                            user.set(Some(me));
-                        }
-                    }
+                if let Ok(me) = get_json_auth::<User>("/api/auth/me", &jwt).await {
+                    user.set(Some(me));
                 }
             });
             || ()
@@ -97,23 +88,9 @@ pub fn account() -> Html {
         use_effect_with(jwt.clone(), move |jwt| {
             let jwt = jwt.clone();
             spawn_local(async move {
-                let auth_val = auth_header(&jwt);
-                match Request::get("/api/account/prints")
-                    .header("Authorization", auth_val.as_str())
-                    .send()
-                    .await
-                {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(items) = resp.json::<Vec<PrintSelection>>().await {
-                            prints.set(PrintsState::Ready(items));
-                            return;
-                        }
-                        prints.set(PrintsState::Error(
-                            "Could not load print selections.".into(),
-                        ));
-                    }
-                    Ok(_) => prints.set(PrintsState::Error("Print selections unavailable.".into())),
-                    Err(err) => prints.set(PrintsState::Error(err.to_string())),
+                match get_json_auth::<Vec<PrintSelection>>("/api/account/prints", &jwt).await {
+                    Ok(items) => prints.set(PrintsState::Ready(items)),
+                    Err(err) => prints.set(PrintsState::Error(err)),
                 }
             });
             || ()
@@ -126,17 +103,10 @@ pub fn account() -> Html {
         use_effect_with(jwt.clone(), move |jwt| {
             let jwt = jwt.clone();
             spawn_local(async move {
-                let auth_val = auth_header(&jwt);
-                if let Ok(resp) = Request::get("/api/account/prints/orders")
-                    .header("Authorization", auth_val.as_str())
-                    .send()
-                    .await
+                if let Ok(items) =
+                    get_json_auth::<Vec<PrintOrder>>("/api/account/prints/orders", &jwt).await
                 {
-                    if resp.ok() {
-                        if let Ok(items) = resp.json::<Vec<PrintOrder>>().await {
-                            orders.set(items);
-                        }
-                    }
+                    orders.set(items);
                 }
             });
             || ()

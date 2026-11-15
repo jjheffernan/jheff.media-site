@@ -396,7 +396,7 @@ pub fn dev_admin() -> Html {
                     }
                 }
 
-                for path in ["/healthz", "/api/feed", "/api/schedule", "/metrics"] {
+                for path in ["/healthz", "/api/media/feed", "/api/schedule", "/metrics"] {
                     match Request::get(path)
                         .header("Accept-Encoding", "gzip, deflate, br")
                         .send()
@@ -709,7 +709,7 @@ pub fn dev_admin() -> Html {
                     <p class="row-actions">
                         <a class="btn" href="/healthz" target="_blank" rel="noopener">{ "/healthz" }</a>
                         <a class="btn" href="/metrics" target="_blank" rel="noopener">{ "/metrics" }</a>
-                        <a class="btn" href="/api/feed" target="_blank" rel="noopener">{ "/api/feed" }</a>
+                        <a class="btn" href="/api/media/feed" target="_blank" rel="noopener">{ "/api/media/feed" }</a>
                         <a class="btn" href="/api/schedule" target="_blank" rel="noopener">{ "/api/schedule" }</a>
                     </p>
                 </section>

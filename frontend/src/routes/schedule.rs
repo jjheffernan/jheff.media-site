@@ -1,10 +1,9 @@
 use crate::{
     components::ui::{Heading, HeadingLevel, Spinner},
-    model::ServerResponse,
     routes::AppRoutes,
+    services::get_json,
     utils::{event_local_day, event_local_time, timezone_caption},
 };
-use gloo_net::http::Request;
 use js_sys::Date;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
@@ -600,35 +599,21 @@ pub fn schedule() -> Html {
         use_effect_with((), move |_| {
             spawn_local(async move {
                 // ponytail: fetch full schedule once; later defer to visible month/range if payload grows.
-                match Request::get("/api/schedule").send().await {
-                    Ok(resp) if resp.ok() => {
-                        match resp.json::<ScheduleConfig>().await {
-                            Ok(next) => {
-                                if let Some(day) = next
-                                    .events
-                                    .iter()
-                                    .find_map(|event| event_local_day(&event.starts_at))
-                                {
-                                    if let Some((year, month, d)) = parse_day_key(&day) {
-                                        focus.set((year, month, d));
-                                    }
-                                    selected.set(Some(day));
-                                }
-                                config.set(next);
+                match get_json::<ScheduleConfig>("/api/schedule").await {
+                    Ok(next) => {
+                        if let Some(day) = next
+                            .events
+                            .iter()
+                            .find_map(|event| event_local_day(&event.starts_at))
+                        {
+                            if let Some((year, month, d)) = parse_day_key(&day) {
+                                focus.set((year, month, d));
                             }
-                            Err(_) => {
-                                notice.set(Some("Could not parse schedule config.".into()));
-                            }
+                            selected.set(Some(day));
                         }
+                        config.set(next);
                     }
-                    Ok(resp) => {
-                        if let Ok(body) = resp.json::<ServerResponse<String>>().await {
-                            notice.set(Some(body.message));
-                        } else {
-                            notice.set(Some("Schedule request failed.".into()));
-                        }
-                    }
-                    Err(err) => notice.set(Some(err.to_string())),
+                    Err(err) => notice.set(Some(err)),
                 }
                 loading.set(false);
             });

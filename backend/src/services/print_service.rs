@@ -121,7 +121,7 @@ pub async fn list_orders(auth: &AuthUser, db: &Database) -> Vec<PrintOrderView> 
             }
         }
     }
-    orders.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    orders.sort_by_key(|b| std::cmp::Reverse(b.created_at));
     orders.into_iter().map(order_view).collect()
 }
 
@@ -185,7 +185,7 @@ pub async fn list_admin_orders(db: &Database) -> Vec<AdminPrintOrderView> {
             }
         }
     }
-    orders.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    orders.sort_by_key(|b| std::cmp::Reverse(b.created_at));
     let mut names: std::collections::HashMap<
         bson::oid::ObjectId,
         (Option<String>, Option<String>),

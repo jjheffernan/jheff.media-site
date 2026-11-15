@@ -1,5 +1,7 @@
-use crate::{context::AuthContext, services::auth_header};
-use gloo_net::http::Request;
+use crate::{
+    context::AuthContext,
+    services::{get_json, get_json_auth, put_json_auth},
+};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
@@ -173,27 +175,14 @@ pub fn links_admin() -> Html {
                 let note = note.clone();
                 let social_note = social_note.clone();
                 spawn_local(async move {
-                    match Request::get("/api/links").send().await {
-                        Ok(resp) if resp.ok() => match resp.json::<LinksResponse>().await {
-                            Ok(body) => links.set(body.links),
-                            Err(_) => note.set(Some("Could not read links.".into())),
-                        },
-                        Ok(_) => note.set(Some("Could not load links.".into())),
-                        Err(err) => note.set(Some(err.to_string())),
+                    match get_json::<LinksResponse>("/api/links").await {
+                        Ok(body) => links.set(body.links),
+                        Err(err) => note.set(Some(err)),
                     }
 
-                    let auth_val = auth_header(&jwt);
-                    match Request::get("/api/admin/social")
-                        .header("Authorization", auth_val.as_str())
-                        .send()
-                        .await
-                    {
-                        Ok(resp) if resp.ok() => match resp.json::<SocialAdminResponse>().await {
-                            Ok(body) => integrations.set(IntegrationForm::from_config(&body.config)),
-                            Err(_) => social_note.set(Some("Could not read integrations.".into())),
-                        },
-                        Ok(_) => social_note.set(Some("Could not load integrations.".into())),
-                        Err(err) => social_note.set(Some(err.to_string())),
+                    match get_json_auth::<SocialAdminResponse>("/api/admin/social", &jwt).await {
+                        Ok(body) => integrations.set(IntegrationForm::from_config(&body.config)),
+                        Err(err) => social_note.set(Some(err)),
                     }
                 });
             }
@@ -252,44 +241,15 @@ pub fn links_admin() -> Html {
                     other_profile_url: f.other_profile_url,
                     other_api_key: f.other_api_key,
                 };
-                let Ok(payload) = serde_json::to_string(&body) else {
-                    return;
-                };
-                let auth_val = auth_header(&jwt);
-                let sent = Request::put("/api/admin/social")
-                    .header("Authorization", auth_val.as_str())
-                    .header("Content-Type", "application/json")
-                    .body(payload);
-                match sent {
-                    Ok(req) => match req.send().await {
-                        Ok(resp) if resp.ok() => match resp.json::<SocialConfig>().await {
-                            Ok(cfg) => {
-                                integrations.set(IntegrationForm::from_config(&cfg));
-                                social_note.set(Some(
-                                    "Integrations saved. Feeds read Mongo on each request — no restart."
-                                        .into(),
-                                ));
-                            }
-                            Err(_) => {
-                                social_note.set(Some("Saved, but the reply could not be read.".into()))
-                            }
-                        },
-                        Ok(resp) => {
-                            let message = resp
-                                .json::<serde_json::Value>()
-                                .await
-                                .ok()
-                                .and_then(|body| {
-                                    body.get("message")
-                                        .and_then(|m| m.as_str())
-                                        .map(str::to_string)
-                                })
-                                .unwrap_or_else(|| "Could not save integrations.".into());
-                            social_note.set(Some(message));
-                        }
-                        Err(err) => social_note.set(Some(err.to_string())),
-                    },
-                    Err(err) => social_note.set(Some(err.to_string())),
+                match put_json_auth::<_, SocialConfig>("/api/admin/social", &jwt, &body).await {
+                    Ok(cfg) => {
+                        integrations.set(IntegrationForm::from_config(&cfg));
+                        social_note.set(Some(
+                            "Integrations saved. Feeds read Mongo on each request — no restart."
+                                .into(),
+                        ));
+                    }
+                    Err(err) => social_note.set(Some(err)),
                 }
             });
         })
@@ -326,43 +286,18 @@ pub fn links_admin() -> Html {
             let note = note.clone();
             let links = links.clone();
             spawn_local(async move {
-                let Ok(body) = serde_json::to_string(&SaveBody { links: payload }) else {
-                    return;
-                };
-                let auth_val = auth_header(&jwt);
-                let sent = Request::put("/api/admin/links")
-                    .header("Authorization", auth_val.as_str())
-                    .header("Content-Type", "application/json")
-                    .body(body);
-                let resp = match sent {
-                    Ok(req) => req.send().await,
-                    Err(err) => {
-                        note.set(Some(err.to_string()));
-                        return;
+                match put_json_auth::<_, LinksResponse>(
+                    "/api/admin/links",
+                    &jwt,
+                    &SaveBody { links: payload },
+                )
+                .await
+                {
+                    Ok(body) => {
+                        links.set(body.links);
+                        note.set(Some("Saved.".into()));
                     }
-                };
-                match resp {
-                    Ok(resp) if resp.ok() => match resp.json::<LinksResponse>().await {
-                        Ok(body) => {
-                            links.set(body.links);
-                            note.set(Some("Saved.".into()));
-                        }
-                        Err(_) => note.set(Some("Saved, but the reply could not be read.".into())),
-                    },
-                    Ok(resp) => {
-                        let message = resp
-                            .json::<serde_json::Value>()
-                            .await
-                            .ok()
-                            .and_then(|body| {
-                                body.get("message")
-                                    .and_then(|m| m.as_str())
-                                    .map(str::to_string)
-                            })
-                            .unwrap_or_else(|| "Could not save links.".into());
-                        note.set(Some(message));
-                    }
-                    Err(err) => note.set(Some(err.to_string())),
+                    Err(err) => note.set(Some(err)),
                 }
             });
         })

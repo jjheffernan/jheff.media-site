@@ -58,7 +58,7 @@ pub async fn forward(
     let mut res = forward_req
         .send_body(body.clone())
         .await
-        .map_err(|e| Error::from(actix_web::error::ErrorBadGateway(e)))?;
+        .map_err(actix_web::error::ErrorBadGateway)?;
 
     if res.status() == StatusCode::NOT_FOUND {
         info!("Alternatively requesting index.html because of 404");
@@ -73,7 +73,7 @@ pub async fn forward(
         res = forward_req
             .send_body(body)
             .await
-            .map_err(|e| Error::from(actix_web::error::ErrorBadGateway(e)))?;
+            .map_err(actix_web::error::ErrorBadGateway)?;
     }
 
     let mut client_resp = HttpResponse::build(res.status());

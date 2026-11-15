@@ -185,11 +185,13 @@ cmd_start_local() {
     log "WARN: cargo-watch not installed — using cargo run (install: scripts/dev.sh setup)"
     backend_cmd="cargo run -p jheffmedia-site-backend --features forward-frontend"
   fi
+  local env_snippet
+  env_snippet=$(dev_env_source_snippet)
   start_background backend bash -lc "
     cd '$ROOT' &&
     export RUST_LOG='${RUST_LOG:-info}' &&
     unset NO_COLOR &&
-    set -a && source '$CONFIG_DEV' && set +a &&
+    $env_snippet &&
     $backend_cmd
   "
 

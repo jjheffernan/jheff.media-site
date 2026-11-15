@@ -1,6 +1,6 @@
 use crate::components::ui::{Heading, HeadingLevel, Spinner, Text, TextTone};
 use crate::routes::AppRoutes;
-use gloo_net::http::Request;
+use crate::services::get_json;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
@@ -71,14 +71,9 @@ pub fn search() -> Html {
                 state.set(LoadState::Loading);
                 spawn_local(async move {
                     let url = format!("/api/search?q={}", js_sys::encode_uri_component(&query));
-                    let result = Request::get(&url).send().await;
-                    match result {
-                        Ok(resp) if resp.ok() => match resp.json::<SearchResponse>().await {
-                            Ok(body) => state.set(LoadState::Ready(body)),
-                            Err(_) => state.set(LoadState::Error("Could not read search results.".into())),
-                        },
-                        Ok(_) => state.set(LoadState::Error("Search failed.".into())),
-                        Err(err) => state.set(LoadState::Error(err.to_string())),
+                    match get_json::<SearchResponse>(&url).await {
+                        Ok(body) => state.set(LoadState::Ready(body)),
+                        Err(err) => state.set(LoadState::Error(err)),
                     }
                 });
             }

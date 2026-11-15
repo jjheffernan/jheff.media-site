@@ -22,7 +22,7 @@ INSTALL_DIR=/srv/site bash -c "$(curl -fsSL .../install/baremetal/install.sh)"
 
 ```bash
 systemctl status site
-curl -s "http://127.0.0.1:8080/api/feed" | head
+curl -s "http://127.0.0.1:8080/api/media/feed" | head
 ```
 
 Put Caddy/Nginx in front for TLS — [docs/deployment-proxmox.md](../../docs/deployment-proxmox.md) § reverse proxy applies to any Docker host.

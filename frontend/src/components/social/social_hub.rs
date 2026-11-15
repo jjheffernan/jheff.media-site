@@ -6,8 +6,8 @@ use crate::{
     },
     model::SocialHubResponse,
     routes::AppRoutes,
+    services::get_json,
 };
-use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -27,17 +27,9 @@ pub fn social_hub() -> Html {
         let state = state.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let result = Request::get("/api/social/hub").send().await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(hub) = resp.json::<SocialHubResponse>().await {
-                            state.set(LoadState::Ready(hub));
-                            return;
-                        }
-                        state.set(LoadState::Error("Could not parse social feed.".into()));
-                    }
-                    Ok(_) => state.set(LoadState::Error("Social feed request failed.".into())),
-                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                match get_json::<SocialHubResponse>("/api/social/hub").await {
+                    Ok(hub) => state.set(LoadState::Ready(hub)),
+                    Err(err) => state.set(LoadState::Error(err)),
                 }
             });
             || ()

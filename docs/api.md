@@ -131,57 +131,18 @@ Bearer JWT. Account settings used by the account page. See [authentication.md](.
 
 Bearer JWT. Backend still accepts email-change requests; the account UI no longer exposes the form.
 
-### `GET /api/feed`
-
-Legacy Immich or static grid. The homepage uses `GET /api/media/feed`. This route remains for the old feed provider.
-
-Public photo feed metadata. Images are **not** stored in the site repo — thumbnails are proxied from Immich (or static URLs).
-
-**Query**
-
-| Param | Type | Default | Purpose |
-|-------|------|---------|---------|
-| `limit` | integer | `24` | Max items (1–48) |
-
-**Success** `200` — direct JSON (not the auth `{ message, data }` envelope):
-
-```json
-{
-  "items": [
-    {
-      "id": "asset-uuid",
-      "title": "optional filename",
-      "thumbnailUrl": "/api/feed/thumbnail/asset-uuid",
-      "width": 4032,
-      "height": 3024
-    }
-  ],
-  "source": "immich"
-}
-```
-
-`source` is `immich`, `nextcloud`, `static`, or `none` when unconfigured. Provider settings come from Mongo `site_config` when present, otherwise env.
-
-**Errors** use the standard envelope with HTTP 4xx/5xx.
-
-Backend env: [backend.md](./backend.md#photo-feed).
-
-### `GET /api/feed/thumbnail/{asset_id}`
-
-Proxies a preview thumbnail from Immich or Nextcloud for use in `<img src="...">`. Public, but `asset_id` must pass ID validation and stay inside the configured Immich album (or recent-search window when no album is set) / Nextcloud folder. Arbitrary Immich UUIDs outside that set return `404`.
-
-**Success** `200` — image bytes (`image/jpeg` or `image/webp`).
-
 ### `GET /api/media/feed`
 
-Homepage feed. Merges Instagram, YouTube, galleries, and shoots. Direct JSON, not the auth envelope.
+Homepage feed. Merges Instagram, YouTube, galleries, shoots, and (when configured) the Immich / Nextcloud / static library provider. Direct JSON, not the auth envelope. Images from Immich/Nextcloud are **not** stored in the site repo — thumbnails are proxied via `GET /api/media/thumbnail/{asset_id}`.
+
+Provider settings come from Mongo `site_config` when present, otherwise env. Backend env: [backend.md](./backend.md).
 
 **Query**
 
 | Param | Type | Default | Purpose |
 |-------|------|---------|---------|
 | `limit` | integer | `24` | Max items (1–48) |
-| `source` | string | empty | `instagram`, `youtube`, `gallery`, or `shoot`. Empty returns every source |
+| `source` | string | empty | `instagram`, `youtube`, `gallery`, `shoot`, `immich`, `static`, or `nextcloud`. Empty returns every source |
 
 **Success** `200`
 
@@ -202,11 +163,19 @@ Homepage feed. Merges Instagram, YouTube, galleries, and shoots. Direct JSON, no
       "featured": false
     }
   ],
-  "sources": ["instagram", "gallery"]
+  "sources": ["instagram", "gallery", "immich"]
 }
 ```
 
+Immich/Nextcloud items use `thumbnailUrl` like `/api/media/thumbnail/<asset-uuid>`.
+
 **Errors** `400` `UNKNOWN_SOURCE` for any other `source`.
+
+### `GET /api/media/thumbnail/{asset_id}`
+
+Proxies a preview thumbnail from Immich or Nextcloud for use in `<img src="...">`. Public, but `asset_id` must pass ID validation and stay inside the configured Immich album (or recent-search window when no album is set) / Nextcloud folder. Arbitrary Immich UUIDs outside that set return `404`.
+
+**Success** `200` — image bytes (`image/jpeg` or `image/webp`).
 
 ### `GET /api/media/instagram/featured`
 
