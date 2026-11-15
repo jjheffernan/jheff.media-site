@@ -116,6 +116,29 @@ Open http://localhost:8080. Sign in from the account menu. `admin` opens `/admin
 
 Full API reference: [api.md](./api.md).
 
+## Immich feed (local)
+
+Point the app at your Immich without committing secrets.
+
+**Primary — Admin → Setup**
+
+1. Sign in as admin → **Admin → Setup**
+2. Photo feed provider → **Immich**
+3. Paste base URL (`https://photos.example.com`, trailing slash stripped on save), API key, album UUID
+4. **Save setup** (Mongo `site_config`; feed reads it each request)
+5. **Test Immich** — checks `/api/media/feed?source=immich` and a thumbnail proxy
+
+**Alt — gitignored env** (bootstrap before Setup, or to make `scripts/smoke.sh` demand Immich):
+
+```bash
+cp scripts/config/dev.env.local.example scripts/config/dev.env.local
+# edit URL / API key / album — file is gitignored
+scripts/dev.sh stop && scripts/dev.sh start
+scripts/smoke.sh
+```
+
+`dev.sh` sources `scripts/config/dev.env` then `dev.env.local`. After the first Admin Setup save, Mongo overrides env for the live feed.
+
 ## Stop and reset
 
 ```bash

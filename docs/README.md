@@ -33,7 +33,7 @@ cargo test -p jheffmedia-site-frontend   # unit tests (client JSON shapes)
 scripts/smoke.sh                         # post-deploy: homepage, auth, media/feed; Immich thumbs when configured
 ```
 
-Production env template: `install/common/.env.production.example` (Immich feed vars). Immich E2E: set `YEW_FULLSTACK_FEED_PROVIDER=immich` + Immich URL/key/album, then `scripts/smoke.sh` (skips Immich when unset).
+Production env template: `install/common/.env.production.example` (Immich feed vars). Immich E2E: Admin → Setup (paste URL/key/album) or gitignored `scripts/config/dev.env.local` from the example; then `scripts/smoke.sh` (skips Immich when unset). See [deployment-dev.md](./deployment-dev.md#immich-feed-local).
 
 ## When to update docs
 

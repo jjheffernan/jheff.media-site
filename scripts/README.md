@@ -28,7 +28,7 @@ scripts/dev.sh logs trunk     # watch first compile
 scripts/dev.sh status
 ```
 
-Runtime: `.dev/logs/`, `.dev/pids/`. Env: `scripts/config/dev.env`.
+Runtime: `.dev/logs/`, `.dev/pids/`. Env: `scripts/config/dev.env`, optional gitignored `dev.env.local` (Immich overrides — see `dev.env.local.example`).
 
 ## Prod (`scripts/prod.sh`)
 

@@ -100,7 +100,7 @@ check_immich_feed() {
     if immich_env_configured; then
       die "immich feed: YEW_FULLSTACK_FEED_PROVIDER=immich (+ URL/key) set, but /api/media/feed?source=immich returned no Immich items/thumbs (sources=${sources:-none}; check album id, reachability, rebuilt backend)"
     fi
-    echo "smoke: SKIP Immich feed (not configured — set YEW_FULLSTACK_FEED_PROVIDER=immich + YEW_FULLSTACK_IMMICH_URL/API_KEY[/ALBUM_ID] against a live Immich, then re-run)"
+    echo "smoke: SKIP Immich feed (not configured — Admin → Setup paste Immich URL/key/album, or copy scripts/config/dev.env.local.example → dev.env.local, then re-run)"
     return 0
   fi
 

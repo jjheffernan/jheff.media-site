@@ -34,7 +34,7 @@ Decisions: [design.md](./design.md#decided).
 - [x] **Cache-Control / ETag** — `serve_frontend.rs` (mtime/size ETag; fingerprinted assets immutable)
 - [x] **Clippy** — backend clean under `-D warnings` (default + `forward-frontend`); CI runs both; frontend WASM clippy deferred
 - [x] **Real browser tests** — `frontend/tests/web.rs` covers feed/login/contact serde, `AppRoutes`, theme prefs, `api_errors` scrubbing, DOM smoke (wasm32). Host CI runs the same via `cargo test`. `scripts/smoke.sh` still covers `/`, `/healthz`, login reachability
-- [ ] **Immich feed E2E** — **needs live Immich** (local `scripts/config/dev.env` is `static`; no Immich URL/key/album). Repro: set `YEW_FULLSTACK_FEED_PROVIDER=immich` + `YEW_FULLSTACK_IMMICH_URL` / `API_KEY` / `ALBUM_ID`, restart backend, run `scripts/smoke.sh` (Immich step skips when unset; fails if env demands Immich but feed/thumbs break). Checks `/api/media/feed?source=immich` + `/api/media/thumbnail/{id}` image bytes
+- [ ] **Immich feed E2E** — **needs live Immich** (do not commit host/key/album). **Primary:** Admin → Setup → provider Immich → paste URL / API key / album UUID → Save → **Test Immich** (hits `/api/media/feed?source=immich` + a thumbnail). **Alt (bootstrap/smoke):** `cp scripts/config/dev.env.local.example scripts/config/dev.env.local`, fill values (gitignored), `scripts/dev.sh start`, then `scripts/smoke.sh` (skips when unset; fails if env demands Immich but feed/thumbs break). Mongo `site_config` overrides env after first Setup save. See [deployment-dev.md](./deployment-dev.md#immich-feed-local)
 
 ## Deferred / out of scope
 
@@ -58,3 +58,4 @@ Decisions: [design.md](./design.md#decided).
 - 2026-06-22: Removed dead `PhotoFeed`/`PhotoCard` (home uses `MediaFeedScroll` + `/api/media/feed`)
 - 2026-11-15: Docs hygiene — TODO truth, readiness rubric galleries/CRUD, Proxmox/deploy stale claims
 - 2026-11-15: Engineering backlog — shared fetch helper, retire `/api/feed`, CSP+ETag, Clippy CI, real frontend tests; Immich E2E still needs live Immich
+- 2026-11-15: Immich ingest path — Admin Setup polish + Test Immich; gitignored `dev.env.local`; E2E still unchecked until live verify

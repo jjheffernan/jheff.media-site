@@ -1,7 +1,9 @@
 use crate::{
     context::AuthContext,
-    services::{get_json_auth, put_json_auth},
+    model::MediaFeedResponse,
+    services::{get_json, get_json_auth, put_json_auth},
 };
+use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
@@ -213,7 +215,11 @@ pub fn setup_admin() -> Html {
             let note = note.clone();
             let restart = restart.clone();
             let form = form.clone();
-            let f = (*form).clone();
+            let mut f = (*form).clone();
+            // Trailing slash stripped server-side too; normalize before send for clearer form state.
+            f.immich_url = f.immich_url.trim().trim_end_matches('/').to_string();
+            f.nextcloud_url = f.nextcloud_url.trim().trim_end_matches('/').to_string();
+            f.public_url = f.public_url.trim().trim_end_matches('/').to_string();
             spawn_local(async move {
                 let body = SetupUpdate {
                     feed_provider: f.feed_provider,
@@ -251,6 +257,49 @@ pub fn setup_admin() -> Html {
         })
     };
 
+    let on_test_immich = {
+        let note = note.clone();
+        Callback::from(move |_| {
+            let note = note.clone();
+            note.set(Some("Testing Immich feed…".into()));
+            spawn_local(async move {
+                match get_json::<MediaFeedResponse>("/api/media/feed?limit=3&source=immich").await
+                {
+                    Ok(feed) => {
+                        let immich: Vec<_> = feed
+                            .items
+                            .iter()
+                            .filter(|i| i.source == "immich")
+                            .collect();
+                        if immich.is_empty() {
+                            note.set(Some(
+                                "No Immich items. Save setup first (provider=Immich + URL/key/album), then retry."
+                                    .into(),
+                            ));
+                            return;
+                        }
+                        let thumb = immich[0].thumbnail_url.clone();
+                        match Request::get(&thumb).send().await {
+                            Ok(resp) if resp.ok() => note.set(Some(format!(
+                                "Immich OK — {} item(s); thumbnail reachable.",
+                                immich.len()
+                            ))),
+                            Ok(_) => note.set(Some(
+                                "Feed returned Immich items, but thumbnail request failed."
+                                    .into(),
+                            )),
+                            Err(_) => note.set(Some(
+                                "Feed returned Immich items, but thumbnail request failed."
+                                    .into(),
+                            )),
+                        }
+                    }
+                    Err(err) => note.set(Some(err)),
+                }
+            });
+        })
+    };
+
     let provider = form.feed_provider.clone();
 
     html! {
@@ -274,21 +323,24 @@ pub fn setup_admin() -> Html {
 
                 if provider == "immich" {
                     <div class="space-y-3">
+                        <p class="muted">
+                            { "Paste Immich base URL, API key, and album UUID — same pattern as social keys on Admin → Links. Secrets stay in Mongo; leave key blank to keep the stored value. Trailing slash is stripped on save." }
+                        </p>
                         <label class="stack-gap-xs">
                             <span class="label-xs">{ "Immich URL" }</span>
                             <input class="field" type="url" placeholder="https://photos.example.com" value={form.immich_url.clone()} oninput={set_input("immich_url")} />
                         </label>
                         <label class="stack-gap-xs">
                             <span class="label-xs">{ "API key" }</span>
-                            <input class="field" type="password" autocomplete="off" placeholder={if form.immich_hint.is_empty() { "API key".into() } else { format!("Stored {}", form.immich_hint) }} value={form.immich_api_key.clone()} oninput={set_input("immich_api_key")} />
+                            <input class="field" type="password" autocomplete="off" placeholder={if form.immich_hint.is_empty() { "Paste API key".into() } else { format!("Stored {}", form.immich_hint) }} value={form.immich_api_key.clone()} oninput={set_input("immich_api_key")} />
                         </label>
                         <label class="stack-gap-xs">
                             <span class="label-xs">{ "Album ID" }</span>
-                            <input class="field" type="text" value={form.immich_album_id.clone()} oninput={set_input("immich_album_id")} />
+                            <input class="field" type="text" placeholder="Album UUID for homepage feed" value={form.immich_album_id.clone()} oninput={set_input("immich_album_id")} />
                         </label>
                         <label class="stack-gap-xs">
                             <span class="label-xs">{ "Shared key (optional)" }</span>
-                            <input class="field" type="password" autocomplete="off" value={form.immich_shared_key.clone()} oninput={set_input("immich_shared_key")} />
+                            <input class="field" type="password" autocomplete="off" placeholder="Shared-link key if thumbnails need it" value={form.immich_shared_key.clone()} oninput={set_input("immich_shared_key")} />
                         </label>
                     </div>
                 }
@@ -343,6 +395,9 @@ pub fn setup_admin() -> Html {
 
                 <div class="row-actions">
                     <button type="button" class="btn btn-primary" onclick={on_save}>{ "Save setup" }</button>
+                    if provider == "immich" {
+                        <button type="button" class="btn" onclick={on_test_immich}>{ "Test Immich" }</button>
+                    }
                 </div>
             }
             if let Some(msg) = &*note {
