@@ -1,4 +1,3 @@
-pub mod feed;
 pub mod content;
 pub mod media;
 pub mod schedule;

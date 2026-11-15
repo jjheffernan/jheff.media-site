@@ -95,7 +95,7 @@ pub async fn login(
             "Too many attempts. Try again later.",
         ));
     }
-    let logged_user = User::login(&login, db).await?;
+    let logged_user = User::login(login, db).await?;
     let public_user: PublicUserDTO = logged_user.clone().into();
     match serde_json::from_value(
         json!({ "token": UserToken::generate_token(logged_user), "token_type": "bearer", "user": public_user }),
@@ -120,7 +120,7 @@ pub async fn logout(authen_header: &HeaderValue, db: &web::Data<Database>) -> Re
                 ));
             }
             if let Ok(token_data) = token_utils::decode_token(token.to_string()) {
-                if let Ok(username) = token_utils::verify_token(&token_data, &**db).await {
+                if let Ok(username) = token_utils::verify_token(&token_data, db).await {
                     if let Some(user) = User::find_by_email_or_username(&username, db).await {
                         User::logout(user.id.unwrap(), db).await;
                         return Ok(());

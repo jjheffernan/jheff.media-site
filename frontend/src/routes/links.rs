@@ -1,4 +1,5 @@
 use crate::components::ui::{Badge, Empty, Heading, HeadingLevel, Spinner};
+use crate::services::get_json;
 use gloo_net::http::Request;
 use serde::Deserialize;
 use wasm_bindgen_futures::spawn_local;
@@ -86,16 +87,12 @@ pub fn links() -> Html {
         let state = state.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                match Request::get("/api/links").send().await {
-                    Ok(resp) if resp.ok() => match resp.json::<LinksResponse>().await {
-                        Ok(body) => state.set(LoadState::Ready(PageData {
-                            integrations: body.integrations,
-                            links: body.links,
-                        })),
-                        Err(_) => state.set(LoadState::Error("Could not read links.".into())),
-                    },
-                    Ok(_) => state.set(LoadState::Error("Links request failed.".into())),
-                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                match get_json::<LinksResponse>("/api/links").await {
+                    Ok(body) => state.set(LoadState::Ready(PageData {
+                        integrations: body.integrations,
+                        links: body.links,
+                    })),
+                    Err(err) => state.set(LoadState::Error(err)),
                 }
             });
             || ()

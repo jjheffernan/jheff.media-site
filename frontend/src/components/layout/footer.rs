@@ -1,6 +1,6 @@
 use crate::model::OtherSitesResponse;
 use crate::routes::AppRoutes;
-use gloo_net::http::Request;
+use crate::services::get_json;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -39,14 +39,10 @@ impl Component for Footer {
     fn create(ctx: &Context<Self>) -> Self {
         let link = ctx.link().clone();
         spawn_local(async move {
-            let has = match Request::get("/api/sites/other").send().await {
-                Ok(resp) if resp.ok() => resp
-                    .json::<OtherSitesResponse>()
-                    .await
-                    .map(|data| !data.sites.is_empty())
-                    .unwrap_or(false),
-                _ => false,
-            };
+            let has = get_json::<OtherSitesResponse>("/api/sites/other")
+                .await
+                .map(|data| !data.sites.is_empty())
+                .unwrap_or(false);
             link.send_message(Msg::OtherSitesLoaded(has));
         });
 

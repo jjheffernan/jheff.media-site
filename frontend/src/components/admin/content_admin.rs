@@ -6,14 +6,22 @@ use crate::{
     },
     context::AuthContext,
     model::AdminPrintOrder,
-    services::auth_header,
+    services::{get_json_auth, ok, patch_json_auth, patch_ok_auth, post_json_auth, HttpMethod},
     utils::with_local_offset,
 };
-use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
+fn admin_method(method: &str) -> Result<HttpMethod, String> {
+    match method {
+        "PATCH" => Ok(HttpMethod::PATCH),
+        "PUT" => Ok(HttpMethod::PUT),
+        "DELETE" => Ok(HttpMethod::DELETE),
+        "POST" => Ok(HttpMethod::POST),
+        _ => Err("Unsupported method.".into()),
+    }
+}
 
 async fn admin_json(
     method: &str,
@@ -21,67 +29,17 @@ async fn admin_json(
     jwt: &str,
     body: Option<String>,
 ) -> Result<(), String> {
-    let auth_val = auth_header(jwt);
-    let builder = match method {
-        "PATCH" => Request::patch(url),
-        "PUT" => Request::put(url),
-        "DELETE" => Request::delete(url),
-        "POST" => Request::post(url),
-        _ => return Err("Unsupported method.".into()),
-    }
-    .header("Authorization", auth_val.as_str());
-    let resp = if let Some(body) = body {
-        builder
-            .header("Content-Type", "application/json")
-            .body(body)
-            .map_err(|e| e.to_string())?
-            .send()
-            .await
-            .map_err(|e| e.to_string())?
-    } else {
-        builder.send().await.map_err(|e| e.to_string())?
-    };
-    if resp.ok() {
-        Ok(())
-    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
-        Err(body
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Request failed.")
-            .to_string())
-    } else {
-        Err("Request failed.".into())
-    }
+    ok(admin_method(method)?, url, Some(jwt), body).await
 }
 
 async fn create_schedule_event(jwt: &str, payload: serde_json::Value) -> Result<String, String> {
-    let auth_val = auth_header(jwt);
-    let req = Request::post("/api/admin/schedule")
-        .header("Authorization", auth_val.as_str())
-        .header("Content-Type", "application/json")
-        .body(payload.to_string())
-        .map_err(|e| e.to_string())?;
-    let resp = req.send().await.map_err(|e| e.to_string())?;
-    if resp.ok() {
-        let body = resp
-            .json::<serde_json::Value>()
-            .await
-            .map_err(|_| "Could not read response.".to_string())?;
-        body.get("data")
-            .and_then(|data| data.get("id"))
-            .and_then(|id| id.as_str())
-            .filter(|id| !id.is_empty())
-            .map(str::to_string)
-            .ok_or_else(|| "Failed to add date.".to_string())
-    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
-        Err(body
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Failed to add date.")
-            .to_string())
-    } else {
-        Err("Failed to add date.".into())
-    }
+    let body = post_json_auth::<_, serde_json::Value>("/api/admin/schedule", jwt, &payload).await?;
+    body.get("data")
+        .and_then(|data| data.get("id"))
+        .and_then(|id| id.as_str())
+        .filter(|id| !id.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| "Failed to add date.".to_string())
 }
 
 fn schedule_payload(
@@ -121,25 +79,7 @@ async fn update_schedule_event(
     if id.is_empty() {
         return Err("Enter a date ID.".into());
     }
-    let url = format!("/api/admin/schedule/{id}");
-    let auth_val = auth_header(jwt);
-    let req = Request::patch(&url)
-        .header("Authorization", auth_val.as_str())
-        .header("Content-Type", "application/json")
-        .body(payload.to_string())
-        .map_err(|e| e.to_string())?;
-    let resp = req.send().await.map_err(|e| e.to_string())?;
-    if resp.ok() {
-        Ok(())
-    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
-        Err(body
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Failed to update date.")
-            .to_string())
-    } else {
-        Err("Failed to update date.".into())
-    }
+    patch_ok_auth(&format!("/api/admin/schedule/{id}"), jwt, &payload).await
 }
 
 async fn delete_schedule_event(jwt: &str, id: &str) -> Result<(), String> {
@@ -587,23 +527,7 @@ fn order_who(order: &AdminPrintOrder) -> String {
 }
 
 async fn load_print_orders(jwt: &str) -> Result<Vec<AdminPrintOrder>, String> {
-    let auth_val = auth_header(jwt);
-    let resp = Request::get("/api/admin/prints/orders")
-        .header("Authorization", auth_val.as_str())
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if resp.ok() {
-        resp.json().await.map_err(|_| "Could not read orders.".to_string())
-    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
-        Err(body
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Could not load orders.")
-            .to_string())
-    } else {
-        Err("Could not load orders.".into())
-    }
+    get_json_auth("/api/admin/prints/orders", jwt).await
 }
 
 async fn patch_print_order(
@@ -612,29 +536,15 @@ async fn patch_print_order(
     status: &str,
     payment_status: &str,
 ) -> Result<AdminPrintOrder, String> {
-    let url = format!("/api/admin/prints/orders/{id}");
-    let payload = serde_json::json!({
-        "status": status,
-        "paymentStatus": payment_status,
-    });
-    let auth_val = auth_header(jwt);
-    let req = Request::patch(&url)
-        .header("Authorization", auth_val.as_str())
-        .header("Content-Type", "application/json")
-        .body(payload.to_string())
-        .map_err(|e| e.to_string())?;
-    let resp = req.send().await.map_err(|e| e.to_string())?;
-    if resp.ok() {
-        resp.json().await.map_err(|_| "Could not read order.".to_string())
-    } else if let Ok(body) = resp.json::<serde_json::Value>().await {
-        Err(body
-            .get("message")
-            .and_then(|m| m.as_str())
-            .unwrap_or("Could not update order.")
-            .to_string())
-    } else {
-        Err("Could not update order.".into())
-    }
+    patch_json_auth(
+        &format!("/api/admin/prints/orders/{id}"),
+        jwt,
+        &serde_json::json!({
+            "status": status,
+            "paymentStatus": payment_status,
+        }),
+    )
+    .await
 }
 
 #[function_component(PrintOrdersAdmin)]

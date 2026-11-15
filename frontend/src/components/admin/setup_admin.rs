@@ -1,5 +1,7 @@
-use crate::{context::AuthContext, services::auth_header};
-use gloo_net::http::Request;
+use crate::{
+    context::AuthContext,
+    services::{get_json_auth, put_json_auth},
+};
 use serde::{Deserialize, Serialize};
 use wasm_bindgen_futures::spawn_local;
 use web_sys::HtmlInputElement;
@@ -134,26 +136,17 @@ pub fn setup_admin() -> Html {
             if !jwt.is_empty() {
                 let jwt = jwt.clone();
                 spawn_local(async move {
-                    let auth_val = auth_header(&jwt);
-                    match Request::get("/api/admin/setup")
-                        .header("Authorization", auth_val.as_str())
-                        .send()
-                        .await
-                    {
-                        Ok(resp) if resp.ok() => match resp.json::<SetupConfig>().await {
-                            Ok(cfg) => {
-                                form.set(from_config(&cfg));
-                                if cfg.needs_setup {
-                                    note.set(Some(
-                                        "First-run: save setup here so feed settings live in Mongo (env is the bootstrap default)."
-                                            .into(),
-                                    ));
-                                }
+                    match get_json_auth::<SetupConfig>("/api/admin/setup", &jwt).await {
+                        Ok(cfg) => {
+                            form.set(from_config(&cfg));
+                            if cfg.needs_setup {
+                                note.set(Some(
+                                    "First-run: save setup here so feed settings live in Mongo (env is the bootstrap default)."
+                                        .into(),
+                                ));
                             }
-                            Err(_) => note.set(Some("Could not read setup.".into())),
-                        },
-                        Ok(_) => note.set(Some("Could not load setup.".into())),
-                        Err(err) => note.set(Some(err.to_string())),
+                        }
+                        Err(err) => note.set(Some(err)),
                     }
                     loading.set(false);
                 });
@@ -236,51 +229,23 @@ pub fn setup_admin() -> Html {
                     contact_email: f.contact_email,
                     public_url: f.public_url,
                 };
-                let Ok(payload) = serde_json::to_string(&body) else {
-                    note.set(Some("Could not encode setup.".into()));
-                    return;
-                };
-                let auth_val = auth_header(&jwt);
-                let sent = Request::put("/api/admin/setup")
-                    .header("Authorization", auth_val.as_str())
-                    .header("Content-Type", "application/json")
-                    .body(payload);
-                match sent {
-                    Ok(req) => match req.send().await {
-                        Ok(resp) if resp.ok() => match resp.json::<SetupConfig>().await {
-                            Ok(cfg) => {
-                                form.set(from_config(&cfg));
-                                restart.set(cfg.restart_required);
-                                if cfg.restart_required {
-                                    note.set(Some(
-                                        "Saved. Provider changed — restart may be needed to repopulate images (`jheffmedia --restart`)."
-                                            .into(),
-                                    ));
-                                } else {
-                                    note.set(Some(
-                                        "Saved. Feed reads Mongo on each request; restart only if images look stale."
-                                            .into(),
-                                    ));
-                                }
-                            }
-                            Err(_) => note.set(Some("Saved, but reply could not be read.".into())),
-                        },
-                        Ok(resp) => {
-                            let message = resp
-                                .json::<serde_json::Value>()
-                                .await
-                                .ok()
-                                .and_then(|body| {
-                                    body.get("message")
-                                        .and_then(|m| m.as_str())
-                                        .map(str::to_string)
-                                })
-                                .unwrap_or_else(|| "Could not save setup.".into());
-                            note.set(Some(message));
+                match put_json_auth::<_, SetupConfig>("/api/admin/setup", &jwt, &body).await {
+                    Ok(cfg) => {
+                        form.set(from_config(&cfg));
+                        restart.set(cfg.restart_required);
+                        if cfg.restart_required {
+                            note.set(Some(
+                                "Saved. Provider changed — restart may be needed to repopulate images (`jheffmedia --restart`)."
+                                    .into(),
+                            ));
+                        } else {
+                            note.set(Some(
+                                "Saved. Feed reads Mongo on each request; restart only if images look stale."
+                                    .into(),
+                            ));
                         }
-                        Err(err) => note.set(Some(err.to_string())),
-                    },
-                    Err(err) => note.set(Some(err.to_string())),
+                    }
+                    Err(err) => note.set(Some(err)),
                 }
             });
         })

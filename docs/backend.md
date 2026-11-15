@@ -77,15 +77,15 @@ backend/src/
     db.rs                 # async MongoDB client
     server.rs             # static path config
   api/account_controller.rs
-  api/feed_controller.rs
-  models/feed.rs
+  api/media_controller.rs # /api/media/feed + Immich thumbnail proxy
   models/user.rs          # users collection, async CRUD
   models/user_token.rs    # JWT claims + signing
   models/response.rs      # { message, data } envelope
   services/
-    feed_service.rs         # Immich / static photo feed
+    media_feed_service.rs # unified feed + Immich/static/Nextcloud
     forward_frontend.rs   # awc proxy (dev)
-    serve_frontend.rs     # disk static (prod)
+    serve_frontend.rs     # disk static (prod); ETag + Cache-Control
+    security_headers.rs   # Content-Security-Policy builder
   utils/token.rs
 ```
 

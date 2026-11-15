@@ -50,3 +50,27 @@ pub fn recent() -> Vec<ApiFailure> {
 pub fn clear() {
     LOG.with(|log| log.borrow_mut().clear());
 }
+
+#[cfg(test)]
+mod tests {
+    use super::scrub_path;
+
+    #[test]
+    fn scrub_path_strips_query_string() {
+        assert_eq!(scrub_path("/api/media/feed?cursor=1"), "/api/media/feed");
+    }
+
+    #[test]
+    fn scrub_path_redacts_tokenish_segments() {
+        assert_eq!(scrub_path("/api/auth/token/refresh"), "[redacted]");
+        // Query is stripped first; `key=` only redacts when present in the path body.
+        assert_eq!(scrub_path("/api/links/key=secret"), "[redacted]");
+        assert_eq!(scrub_path("/api/setup?key=abc"), "/api/setup");
+    }
+
+    #[test]
+    fn scrub_path_truncates_long_paths() {
+        let long = format!("/{}", "a".repeat(200));
+        assert_eq!(scrub_path(&long).len(), 160);
+    }
+}

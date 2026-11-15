@@ -181,7 +181,7 @@ impl User {
             ..user
         };
         match coll.insert_one(user).await {
-            Ok(res) => Ok(res.inserted_id.as_object_id().unwrap().clone()),
+            Ok(res) => Ok(res.inserted_id.as_object_id().unwrap()),
             Err(err) => Err(classify_signup_insert_err(&err).to_string()),
         }
     }

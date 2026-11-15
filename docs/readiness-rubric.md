@@ -2,7 +2,7 @@
 
 Structured assessment for jheff.media-site. Re-score after major milestones.
 
-**Last assessed:** 2026-10-29
+**Last assessed:** 2026-11-15
 
 ## Scoring scale (1–5)
 
@@ -23,8 +23,8 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 | Category | Score | % | Summary |
 |----------|-------|---|---------|
 | **Security** | 3 | 60% | Solid JWT+bcrypt+session auth, in-memory auth and contact limits, and login-time 2FA. CSP is still missing |
-| **UX** | 3 | 60% | Feed, print select, and owned dates work. Galleries still lack edit/delete, and checkout does not charge a card |
-| **Tests** | 2 | 40% | Backend unit tests and both suites in CI. No HTTP tests against Mongo and no real browser test |
+| **UX** | 3 | 60% | Feed, print select, schedule CRUD, and gallery/shoot admin maintenance work. Checkout still does not charge a card |
+| **Tests** | 2 | 40% | Backend unit tests (~51) and frontend serde tests (3) in CI. No HTTP tests against Mongo and no real browser test |
 | **12 Factor** | 4 | 80% | Docker + env config; runtime JWT secret; pinned Rust images; `jheffmedia-*` docker tags |
 | **Performance** | 3 | 60% | Actix + async Mongo appropriate; WASM payload, no caching, thumbnail proxy untested under load |
 
@@ -81,9 +81,9 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 | Visual design | Medium | ✅ | Tailwind v4, shared UI components |
 | Homepage / feed | High | ✅ | `MediaFeedScroll` + `/api/media/feed` |
 | Auth UX | High | ✅ | Login, signup, logout, account settings |
-| Shoots / galleries | High | ⚠️ | Admin image upload and detail pages; still no edit/delete or batch upload |
+| Shoots / galleries | High | ✅ | Admin → Content: edit/delete collections, reorder, multi-file upload, covers, featured. Public detail: admin upload/cover/remove |
 | Client delivery | High | ⚠️ | Detail pages can select stills; checkout stores one size and an unpaid total. No card charge |
-| Social integrations | Medium | ⚠️ | Empty Instagram config returns 204 and the embed widget is gone. Live posts still need keys or static JSON |
+| Social integrations | Medium | ⚠️ | Admin → Links paste keys/tokens; empty Instagram returns 204. True OAuth out of scope |
 | Contact / booking | Medium | ⚠️ | Contact emails when SMTP is set; schedule lists future Mongo dates and can still embed a calendar |
 | Accessibility / mobile | Low | ⚠️ | Not formally assessed |
 | Error / loading states | Medium | ⚠️ | Spinners exist; inconsistent across pages |
@@ -91,21 +91,22 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 ### Evidence
 
 - `frontend/src/components/feed/media_feed_scroll.rs`
-- `docs/TODO.md` site functionality section
-- `frontend/src/routes/account.rs` (2FA UI)
+- `frontend/src/components/admin/collection_browser.rs` (gallery/shoot CRUD)
+- `docs/TODO.md` · `frontend/src/routes/account.rs` (2FA UI)
 
 ### To reach 4
 
 - [x] Real shoot/gallery media upload and detail pages with assets
-- [ ] Immich or static feed configured for production homepage
+- [x] Gallery/shoot edit, delete, reorder, and batch upload (Admin → Content)
+- [ ] Immich or static feed confirmed for production homepage
 - [x] Contact notification (email or webhook)
 - [x] Schedule page lists owned dates; external calendar embed stays optional
 
 ### To reach 5
 
-- [ ] Print checkout end-to-end (size and unpaid total exist; card payment does not)
+- [ ] Print checkout end-to-end (size and unpaid total exist; card payment shelved)
 - [x] Search/filter unified feed
-- [ ] Polish 2FA enrollment UX (QR display)
+- [ ] Polish 2FA enrollment UX (QR display) — otpauth URL + secret is enough for now
 
 ---
 
@@ -118,15 +119,15 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 | Unit tests | High | ⚠️ | Backend suite covers contact, auth, print prices, and schedule filtering. No HTTP tests against Mongo |
 | CI | High | ✅ | Trunk build, backend build, both test suites in `.github/workflows/rust.yml` |
 | Integration tests | High | ❌ | No HTTP handler tests against test MongoDB |
-| E2E / browser | Medium | ❌ | `frontend/tests/web.rs` is placeholder (`1+1==2`) |
-| Lint / static analysis | Medium | ⚠️ | 12 clippy warnings (TODO); no clippy in CI |
+| E2E / browser | Medium | ⚠️ | `frontend/tests/web.rs` has real wasm-bindgen/host contract tests; not full login+feed E2E |
+| Lint / static analysis | Medium | ⚠️ | Clippy not in CI (`.github/workflows/rust.yml` is build + test only) |
 | Regression safety | Medium | ❌ | No API contract tests for 20+ endpoints |
 
 ### Evidence
 
 ```bash
-cargo test -p jheffmedia-site-backend   # binary crate; last green run was 21 passed
-cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
+cargo test -p jheffmedia-site-backend   # ~51 unit tests (count via #[test] in tree)
+cargo test -p jheffmedia-site-frontend  # model serde + tests/web.rs contract suite
 ```
 
 ### To reach 3
@@ -138,7 +139,7 @@ cargo test -p jheffmedia-site-frontend  # 3 passed (+ 0 browser tests)
 ### To reach 4
 
 - [ ] Integration tests with `testcontainers` or embedded Mongo
-- [ ] Replace `web.rs` with at least one route render or API contract test
+- [x] Replace `web.rs` with route + API contract tests (DOM smoke on wasm32; full E2E still open)
 
 ### To reach 5
 

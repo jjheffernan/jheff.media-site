@@ -20,6 +20,7 @@ struct InstagramMediaList {
 struct InstagramMedia {
     id: String,
     caption: Option<String>,
+    #[allow(dead_code)]
     media_type: Option<String>,
     media_url: Option<String>,
     thumbnail_url: Option<String>,

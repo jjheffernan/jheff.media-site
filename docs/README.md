@@ -17,7 +17,7 @@ Human-readable guides for jheff.media-site. Start here or from [README](../READM
 | [frontend.md](./frontend.md) | Yew app, routing, auth bus, Trunk build |
 | [design.md](./design.md) | Current page behavior, visual system, and open design questions |
 | [development.md](./development.md) | Local setup, troubleshooting |
-| [TODO.md](./TODO.md) | Setup checklist and open work |
+| [TODO.md](./TODO.md) | Open engineering, deferred product, doc verification |
 | [readiness-rubric.md](./readiness-rubric.md) | Release readiness scores (security, UX, tests, 12 factor, performance) |
 
 ## For agents
@@ -30,10 +30,10 @@ Human-readable guides for jheff.media-site. Start here or from [README](../READM
 ```bash
 cargo test -p jheffmedia-site-backend    # unit tests (JWT, serde, API envelope)
 cargo test -p jheffmedia-site-frontend   # unit tests (client JSON shapes)
-scripts/smoke.sh                         # post-deploy: homepage + auth API reachability
+scripts/smoke.sh                         # post-deploy: homepage, auth, media/feed; Immich thumbs when configured
 ```
 
-Production env template: `install/common/.env.production.example` (Immich feed vars).
+Production env template: `install/common/.env.production.example` (Immich feed vars). Immich E2E: set `YEW_FULLSTACK_FEED_PROVIDER=immich` + Immich URL/key/album, then `scripts/smoke.sh` (skips Immich when unset).
 
 ## When to update docs
 

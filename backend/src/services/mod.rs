@@ -6,7 +6,6 @@ pub mod content_store_service;
 pub mod content_upload_service;
 pub mod deploy_service;
 pub mod diagnostics_service;
-pub mod feed_service;
 #[cfg(feature = "forward-frontend")]
 pub mod forward_frontend;
 pub mod instagram_service;
@@ -17,6 +16,7 @@ pub mod metrics;
 pub mod media_feed_service;
 pub mod print_service;
 pub mod schedule_service;
+pub mod security_headers;
 #[cfg(not(feature = "forward-frontend"))]
 pub mod serve_frontend;
 pub mod site_config_service;

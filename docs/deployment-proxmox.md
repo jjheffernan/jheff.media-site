@@ -37,36 +37,25 @@ Guided whiptail sections cover repository branch (`main` by default; `testing` f
 | **Immich** (recommended) | Photo library; API key never exposed to browsers |
 | **Reverse proxy** | TLS, optional auth, route `jheff.media` → app |
 
-## 1. Proxmox prerequisites
+## 1. Manual path (optional)
 
-1. Create an **LXC** (Debian 12/Ubuntu 24.04) or **VM** with 2+ GB RAM, 20+ GB disk.
-2. Install Docker (Compose v2):
+Prefer the [one-line install](#one-line-install-recommended). For a hand-rolled LXC/VM:
 
-```bash
-curl -fsSL https://get.docker.com | sh
-```
-
-3. Clone the repo (or pull release image after CI):
+1. Debian/Ubuntu guest with 2+ GB RAM, 20+ GB disk, Docker (Compose v2), nesting if LXC.
+2. Clone the repo and generate a JWT secret once:
 
 ```bash
 git clone https://github.com/jjheffernan/jheff.media-site.git
 cd jheff.media-site
-```
-
-## 2. Build production image
-
-From repo root:
-
-```bash
-openssl rand -out backend/src/secret.key 32   # once per environment (runtime mount, not baked in image)
-scripts/build.sh                                # or: docker build -t jheffmedia/application .
+openssl rand -out backend/src/secret.key 32   # runtime mount, not baked into the image
+scripts/build.sh                               # or: docker build -t jheffmedia/application .
 ```
 
 The multi-stage `Dockerfile` runs `trunk build --release` and embeds `frontend/dist/` in the Actix image. JWT secret is loaded at container start via `YEW_FULLSTACK_JWT_SECRET_FILE` (see `install/common/docker-compose.yml`).
 
-## 3. Configure environment
+## 2. Configure environment
 
-Create `scripts/.env.production` from `install/common/.env.production.example` (do not commit):
+Create `install/common/.env.production` from `install/common/.env.production.example` (do not commit). `scripts/prod.sh` still accepts `scripts/.env.production` if you keep a copy there:
 
 ```bash
 # App
@@ -96,21 +85,19 @@ YEW_FULLSTACK_IMMICH_ALBUM_ID=album-uuid-for-homepage-feed
 3. Create a public **Album** for the homepage feed; copy its UUID to `YEW_FULLSTACK_IMMICH_ALBUM_ID`.
 4. Ensure the site container can reach `YEW_FULLSTACK_IMMICH_URL` (DNS or `/etc/hosts` on the LXC).
 
-The backend proxies `/api/feed` and `/api/feed/thumbnail/{id}` so the browser never needs the Immich API key.
+Homepage feed is `GET /api/media/feed` (Immich/static/Nextcloud items merge in when configured). Immich/Nextcloud thumbnails are `/api/media/thumbnail/{id}` so the browser never needs the API key.
 
-## 4. Run with Docker Compose
+## 3. Run with Docker Compose
 
 Production compose for install targets lives at `install/common/docker-compose.yml` (no public Mongo port). After guided install, env is at `install/common/.env.production`.
-
-Manual equivalent using legacy scripts path:
 
 ```bash
 docker compose -f install/common/docker-compose.yml --env-file install/common/.env.production up -d
 ```
 
-Default compose exposes **8080**. MongoDB is not published. `scripts/prod.sh` reads `MONGO_PASSWORD` from `scripts/.env.production`.
+Default compose exposes **8080**. MongoDB is not published.
 
-## 5. Reverse proxy (TLS)
+## 4. Reverse proxy (TLS)
 
 Example **Caddy** on the same LXC or a dedicated proxy VM:
 
@@ -139,33 +126,43 @@ server {
 
 Use **http://localhost:8080** only behind the proxy; users hit `https://jheff.media`.
 
-## 6. Verify
+## 5. Verify
 
 ```bash
 scripts/smoke.sh
 # or against public URL:
 BASE_URL=https://jheff.media scripts/smoke.sh
+# Immich step runs when FEED_PROVIDER=immich (+ URL/key); otherwise skips.
 
-curl -s https://jheff.media/api/feed | jq .
+curl -s https://jheff.media/api/media/feed | jq .
+# Immich (when configured):
+# curl -s 'https://jheff.media/api/media/feed?source=immich&limit=3' | jq .
+# curl -sI https://jheff.media/api/media/thumbnail/<asset-id>
 ```
 
 Homepage should show the photo grid when feed env vars are set.
 
-## 7. Updates (main branch)
+## 6. Updates
 
-Production deploys should track **`main`**:
+On an installed host, prefer the CLI:
+
+```bash
+jheffmedia --update                   # production: pull main
+jheffmedia --update -d                # non-prod: pull testing
+```
+
+Manual rebuild fallback (keep existing `backend/src/secret.key` — changing it invalidates sessions):
 
 ```bash
 git checkout main && git pull
-# Keep existing backend/src/secret.key — changing it invalidates sessions
 scripts/build.sh
 docker compose -f install/common/docker-compose.yml --env-file install/common/.env.production up -d --build
 scripts/smoke.sh
 ```
 
-Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship.
+Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship. Staging channel is **`testing`**.
 
-## 8. Backups
+## 7. Backups
 
 | Data | Backup |
 |------|--------|
@@ -173,7 +170,7 @@ Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship
 | JWT secret | `backend/src/secret.key` — mounted at container start; store in secrets manager; **changing it invalidates sessions** |
 | Photos | Immich backup (not in this repo) |
 
-## 9. Troubleshooting
+## 8. Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
@@ -189,5 +186,5 @@ Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship
 - [ ] MongoDB credentials rotated from dev defaults
 - [ ] Immich album + API key configured
 - [ ] TLS reverse proxy in front of :8080
-- [ ] `curl /api/feed` returns items
+- [ ] `curl /api/media/feed` returns items (Immich path confirmed when not using static demo)
 - [ ] Homepage loads styled UI + photo grid

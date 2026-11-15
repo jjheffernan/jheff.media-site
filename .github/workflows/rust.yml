@@ -42,6 +42,11 @@ jobs:
     - name: Build backend
       run: cargo build --verbose -p jheffmedia-site-backend --features forward-frontend
 
+    - name: Clippy backend
+      run: |
+        cargo clippy -p jheffmedia-site-backend -- -D warnings
+        cargo clippy -p jheffmedia-site-backend --features forward-frontend -- -D warnings
+
     - name: Run backend tests
       run: cargo test --verbose -p jheffmedia-site-backend
 

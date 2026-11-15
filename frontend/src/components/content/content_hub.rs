@@ -6,8 +6,8 @@ use crate::{
     },
     model::{ContentHubResponse, ContentListResponse, SocialHubResponse},
     routes::AppRoutes,
+    services::get_json,
 };
-use gloo_net::http::Request;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -35,28 +35,13 @@ pub fn content_hub() -> Html {
         let galleries = galleries.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                let result = Request::get("/api/content/hub").send().await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(hub) = resp.json::<ContentHubResponse>().await {
-                            social.set(SliceState::Ready(hub.social));
-                            shoots.set(SliceState::Ready(hub.shoots));
-                            galleries.set(SliceState::Ready(hub.galleries));
-                        } else {
-                            social.set(SliceState::Error("Could not parse social feed.".into()));
-                            shoots.set(SliceState::Error("Could not parse shoots.".into()));
-                            galleries.set(SliceState::Error(
-                                "Could not parse galleries.".into(),
-                            ));
-                        }
+                match get_json::<ContentHubResponse>("/api/content/hub").await {
+                    Ok(hub) => {
+                        social.set(SliceState::Ready(hub.social));
+                        shoots.set(SliceState::Ready(hub.shoots));
+                        galleries.set(SliceState::Ready(hub.galleries));
                     }
-                    Ok(_) => {
-                        social.set(SliceState::Error("Social feed unavailable.".into()));
-                        shoots.set(SliceState::Error("Shoots unavailable.".into()));
-                        galleries.set(SliceState::Error("Galleries unavailable.".into()));
-                    }
-                    Err(err) => {
-                        let msg = err.to_string();
+                    Err(msg) => {
                         social.set(SliceState::Error(msg.clone()));
                         shoots.set(SliceState::Error(msg.clone()));
                         galleries.set(SliceState::Error(msg));

@@ -80,7 +80,7 @@ Signup does **not** log the user in automatically—the header still shows login
 - Replace JWT secret per deployment (`YEW_FULLSTACK_JWT_SECRET_FILE` or hex env); never commit `secret.key` (gitignored).
 - JWT expiry is one week; `exp` is validated on every decode; session invalidation on logout is server-side.
 - CORS allows only origins listed in `YEW_FULLSTACK_CORS_ORIGINS` (comma-separated), defaulting to `YEW_FULLSTACK_FORWARD_FRONTEND_URL` or `http://localhost:8000` — not wildcard.
-- Response headers include `X-Content-Type-Options`, `X-Frame-Options`, and `Referrer-Policy`.
+- Response headers include `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Content-Security-Policy` (see `services/security_headers.rs`). CSP allows `'wasm-unsafe-eval'` for Yew/Trunk WASM, a sha256 of the theme bootstrap script, Google Fonts, same-origin `connect-src`, and calendar/social `frame-src` (plus `YEW_FULLSTACK_SCHEDULE_EMBED_URL` origin when set).
 - Passwords never returned in API responses (`PublicUserDTO` only has email, username, role, totpEnabled).
 - Signup and password change require at least 8 characters; passwords stored as bcrypt hashes.
 - Protected routes use `Authorization: bearer <jwt>` with server-side session validation.
@@ -92,7 +92,6 @@ Signup does **not** log the user in automatically—the header still shows login
 
 ### Hardening backlog
 
-- Content-Security-Policy header tuned for WASM + any embeds (Instagram/YouTube).
 - HTTPS termination and HSTS at the reverse proxy (Caddy/nginx).
 
 ## Code map

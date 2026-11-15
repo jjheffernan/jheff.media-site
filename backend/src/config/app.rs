@@ -1,7 +1,6 @@
 use crate::api::{
-    admin_controller, account_controller, contact_controller, content_controller,
-    feed_controller, media_controller, print_controller, schedule_controller, social_controller,
-    telemetry_controller,
+    admin_controller, account_controller, contact_controller, content_controller, media_controller,
+    print_controller, schedule_controller, social_controller, telemetry_controller,
 };
 #[cfg(feature = "forward-frontend")]
 use crate::services::forward_frontend::forward;
@@ -19,11 +18,6 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
             .route("/search", web::get().to(content_controller::search))
             .route("/links", web::get().to(content_controller::social_links))
             .route("/telemetry", web::post().to(telemetry_controller::ingest))
-            .service(
-                web::scope("/feed")
-                    .route("", web::get().to(feed_controller::list))
-                    .route("/thumbnail/{asset_id}", web::get().to(feed_controller::thumbnail)),
-            )
             .service(
                 web::scope("/schedule")
                     .route("", web::get().to(schedule_controller::config)),
@@ -61,6 +55,10 @@ pub fn config_services(cfg: &mut web::ServiceConfig) {
                     .route(
                         "/instagram/featured",
                         web::get().to(media_controller::instagram_featured),
+                    )
+                    .route(
+                        "/thumbnail/{asset_id}",
+                        web::get().to(media_controller::thumbnail),
                     ),
             )
             .service(

@@ -3,7 +3,7 @@ use crate::{
     model::InstagramFeatured,
     routes::AppRoutes,
 };
-use gloo_net::http::Request;
+use crate::services::get_json;
 use wasm_bindgen_futures::spawn_local;
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -23,15 +23,9 @@ pub fn instagram_featured_card() -> Html {
         let state = state.clone();
         use_effect_with((), move |_| {
             spawn_local(async move {
-                match Request::get("/api/media/instagram/featured").send().await {
-                    Ok(resp) if resp.status() == 200 => {
-                        if let Ok(featured) = resp.json::<InstagramFeatured>().await {
-                            state.set(LoadState::Ready(featured));
-                            return;
-                        }
-                        state.set(LoadState::Hidden);
-                    }
-                    _ => state.set(LoadState::Hidden),
+                match get_json::<InstagramFeatured>("/api/media/instagram/featured").await {
+                    Ok(featured) => state.set(LoadState::Ready(featured)),
+                    Err(_) => state.set(LoadState::Hidden),
                 }
             });
             || ()

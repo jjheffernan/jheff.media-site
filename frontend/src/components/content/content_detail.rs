@@ -4,8 +4,8 @@ use crate::{
         ui::{Heading, HeadingLevel, Spinner, Text, TextTone},
     },
     context::AuthContext,
-    model::{ContentCollection, FeedItem, MediaItem, ServerResponse},
-    services::auth_header,
+    model::{ContentCollection, FeedItem, MediaItem},
+    services::{auth_header, get_json},
 };
 use gloo_net::http::Request;
 use wasm_bindgen::JsValue;
@@ -53,23 +53,9 @@ pub fn content_detail(props: &Props) -> Html {
         let api_url = api_url.clone();
         use_effect_with((api_url.clone(), props.id.clone(), *tick), move |_| {
             spawn_local(async move {
-                let result = Request::get(&api_url).send().await;
-                match result {
-                    Ok(resp) if resp.ok() => {
-                        if let Ok(collection) = resp.json::<ContentCollection>().await {
-                            state.set(LoadState::Ready(collection));
-                            return;
-                        }
-                        state.set(LoadState::Error("Could not parse content.".into()));
-                    }
-                    Ok(resp) => {
-                        if let Ok(body) = resp.json::<ServerResponse<String>>().await {
-                            state.set(LoadState::Error(body.message));
-                        } else {
-                            state.set(LoadState::Error("Content not found.".into()));
-                        }
-                    }
-                    Err(err) => state.set(LoadState::Error(err.to_string())),
+                match get_json::<ContentCollection>(&api_url).await {
+                    Ok(collection) => state.set(LoadState::Ready(collection)),
+                    Err(err) => state.set(LoadState::Error(err)),
                 }
             });
             || ()

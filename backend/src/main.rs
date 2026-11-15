@@ -2,7 +2,6 @@ use actix_cors::Cors;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use actix_web::http::header;
 
-#[macro_use()]
 extern crate actix_rt;
 extern crate actix_cors;
 extern crate actix_web;
@@ -17,7 +16,6 @@ extern crate mime;
 #[cfg(not(feature = "forward-frontend"))]
 extern crate mime_guess;
 extern crate mongodb;
-#[macro_use()]
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -79,6 +77,7 @@ async fn main() -> io::Result<()> {
 
     let db_name = env::var("YEW_FULLSTACK_DB_NAME").unwrap_or(String::from("yew-fullstack"));
     let db_client = config_db().await;
+    let csp = services::security_headers::content_security_policy();
 
     HttpServer::new(move || {
         App::new()
@@ -90,7 +89,8 @@ async fn main() -> io::Result<()> {
                 actix_web::middleware::DefaultHeaders::new()
                     .add((header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
                     .add((header::X_FRAME_OPTIONS, "DENY"))
-                    .add((header::REFERRER_POLICY, "strict-origin-when-cross-origin")),
+                    .add((header::REFERRER_POLICY, "strict-origin-when-cross-origin"))
+                    .add((header::CONTENT_SECURITY_POLICY, csp.clone())),
             )
             .wrap(cors_from_env())
             .app_data(web::Data::new(Client::default()))
