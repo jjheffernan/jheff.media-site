@@ -78,6 +78,111 @@ fn combine_preferred(date: &str, time: &str) -> String {
     with_local_offset(&naive)
 }
 
+fn split_preferred(value: &str) -> (String, String) {
+    if value.is_empty() {
+        return (String::new(), String::new());
+    }
+    // Stored as RFC3339 or local `YYYY-MM-DDTHH:MM…`
+    let date = value.get(..10).filter(|d| d.as_bytes().get(4) == Some(&b'-')).unwrap_or("").to_string();
+    let time = value
+        .split(['T', ' '])
+        .nth(1)
+        .map(|t| t.chars().take(5).collect::<String>())
+        .filter(|t| t.len() == 5)
+        .unwrap_or_default();
+    (date, time)
+}
+
+fn display_line(date: &str, time: &str) -> String {
+    match (date.is_empty(), time.is_empty()) {
+        (true, true) => String::new(),
+        (false, true) => date.to_string(),
+        (true, false) => time.to_string(),
+        (false, false) => format!("{date} {time}"),
+    }
+}
+
+fn badge_date_label(date: &str) -> String {
+    if date.len() == 10 {
+        if let (Ok(y), Ok(m), Ok(d)) = (
+            date[0..4].parse::<i32>(),
+            date[5..7].parse::<usize>(),
+            date[8..10].parse::<u32>(),
+        ) {
+            if (1..=12).contains(&m) {
+                return format!(
+                    "{} {d}",
+                    MONTHS.get(m - 1).map(|n| &n[..3.min(n.len())]).unwrap_or("—")
+                );
+            }
+            let _ = y;
+        }
+    }
+    "Date".into()
+}
+
+/// Parse a typed line into (date, time). Accepts `YYYY-MM-DD[ T]HH:MM`, date-only, time-only.
+fn parse_line(raw: &str) -> Option<(String, String)> {
+    let s = raw.trim();
+    if s.is_empty() {
+        return Some((String::new(), String::new()));
+    }
+    let parts: Vec<&str> = s.split(|c: char| c.is_whitespace() || c == 'T').filter(|p| !p.is_empty()).collect();
+    if parts.is_empty() {
+        return Some((String::new(), String::new()));
+    }
+    let mut date = String::new();
+    let mut time = String::new();
+    for part in parts {
+        if part.contains(':') && time.is_empty() {
+            let hhmm: String = part.chars().take(5).collect();
+            if hhmm.len() == 5 && hhmm.as_bytes().get(2) == Some(&b':') {
+                time = hhmm;
+                continue;
+            }
+        }
+        if date.is_empty() {
+            // YYYY-MM-DD
+            if part.len() == 10 && part.as_bytes().get(4) == Some(&b'-') {
+                date = part.to_string();
+                continue;
+            }
+            // M/D/YYYY or YYYY/M/D
+            let segs: Vec<&str> = part.split(['/', '-', '.']).filter(|p| !p.is_empty()).collect();
+            if segs.len() == 3 {
+                let (y, m, d) = if segs[0].len() == 4 {
+                    (
+                        segs[0].parse::<i32>().ok()?,
+                        segs[1].parse::<u32>().ok()?,
+                        segs[2].parse::<u32>().ok()?,
+                    )
+                } else if segs[2].len() == 4 {
+                    (
+                        segs[2].parse::<i32>().ok()?,
+                        segs[0].parse::<u32>().ok()?,
+                        segs[1].parse::<u32>().ok()?,
+                    )
+                } else {
+                    return None;
+                };
+                if (1..=12).contains(&m) && d >= 1 && d <= days_in_month(y, (m - 1) as i32) {
+                    date = format!("{y:04}-{m:02}-{d:02}");
+                    continue;
+                }
+            }
+            return None;
+        }
+    }
+    Some((date, time))
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Panel {
+    Closed,
+    Date,
+    Time,
+}
+
 #[derive(Properties, PartialEq)]
 struct PreferredTimeProps {
     value: String,
@@ -85,27 +190,96 @@ struct PreferredTimeProps {
     on_change: Callback<String>,
 }
 
+/// One-line preferred datetime: type freely, or open Date / Time badges to pick.
 #[function_component(PreferredTimePicker)]
 fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
+    let (init_day, init_time) = split_preferred(&props.value);
+    let selected_day = use_state(|| init_day);
+    let selected_time = use_state(|| init_time);
+    let draft = use_state(|| display_line(&*selected_day, &*selected_time));
+    let panel = use_state(|| Panel::Closed);
     let (start_y, start_m, _) = today();
-    let cursor = use_state(|| (start_y, start_m));
-    let selected_day = use_state(|| {
-        props
-            .value
-            .split('T')
-            .next()
-            .filter(|day| day.len() == 10)
-            .unwrap_or("")
-            .to_string()
+    let cursor = use_state(|| {
+        let d = (*selected_day).clone();
+        if d.len() >= 10 {
+            if let (Ok(y), Ok(m)) = (d[0..4].parse::<i32>(), d[5..7].parse::<i32>()) {
+                return (y, m - 1);
+            }
+        }
+        (start_y, start_m)
     });
-    let selected_time = use_state(|| {
-        props
-            .value
-            .split('T')
-            .nth(1)
-            .map(|time| time.chars().take(5).collect::<String>())
-            .unwrap_or_else(|| "12:30".into())
-    });
+
+    {
+        let selected_day = selected_day.clone();
+        let selected_time = selected_time.clone();
+        let draft = draft.clone();
+        let value = props.value.clone();
+        use_effect_with(value, move |value| {
+            let (day, time) = split_preferred(value);
+            selected_day.set(day.clone());
+            selected_time.set(time.clone());
+            draft.set(display_line(&day, &time));
+            || ()
+        });
+    }
+
+    let emit = {
+        let on_change = props.on_change.clone();
+        Callback::from(move |(day, time): (String, String)| {
+            on_change.emit(combine_preferred(&day, &time));
+        })
+    };
+
+    let on_input = {
+        let draft = draft.clone();
+        let selected_day = selected_day.clone();
+        let selected_time = selected_time.clone();
+        let emit = emit.clone();
+        Callback::from(move |e: InputEvent| {
+            let raw = e
+                .target_unchecked_into::<web_sys::HtmlInputElement>()
+                .value();
+            draft.set(raw.clone());
+            if let Some((day, time)) = parse_line(&raw) {
+                selected_day.set(day.clone());
+                selected_time.set(time.clone());
+                emit.emit((day, time));
+            }
+        })
+    };
+
+    let on_blur = {
+        let draft = draft.clone();
+        let selected_day = selected_day.clone();
+        let selected_time = selected_time.clone();
+        let emit = emit.clone();
+        Callback::from(move |_| {
+            let line = display_line(&selected_day, &selected_time);
+            draft.set(line);
+            emit.emit(((*selected_day).clone(), (*selected_time).clone()));
+        })
+    };
+
+    let toggle_date = {
+        let panel = panel.clone();
+        Callback::from(move |_| {
+            panel.set(if *panel == Panel::Date {
+                Panel::Closed
+            } else {
+                Panel::Date
+            });
+        })
+    };
+    let toggle_time = {
+        let panel = panel.clone();
+        Callback::from(move |_| {
+            panel.set(if *panel == Panel::Time {
+                Panel::Closed
+            } else {
+                Panel::Time
+            });
+        })
+    };
 
     let on_prev = {
         let cursor = cursor.clone();
@@ -125,22 +299,29 @@ fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
     let on_time = {
         let selected_time = selected_time.clone();
         let selected_day = selected_day.clone();
-        let on_change = props.on_change.clone();
+        let draft = draft.clone();
+        let emit = emit.clone();
         Callback::from(move |e: InputEvent| {
-            let input = e.target_unchecked_into::<web_sys::HtmlInputElement>();
-            let time = input.value();
+            let time = e
+                .target_unchecked_into::<web_sys::HtmlInputElement>()
+                .value();
             selected_time.set(time.clone());
-            on_change.emit(combine_preferred(&selected_day, &time));
+            draft.set(display_line(&selected_day, &time));
+            emit.emit(((*selected_day).clone(), time));
         })
     };
 
     let on_clear = {
         let selected_day = selected_day.clone();
         let selected_time = selected_time.clone();
+        let draft = draft.clone();
+        let panel = panel.clone();
         let on_change = props.on_change.clone();
         Callback::from(move |_| {
             selected_day.set(String::new());
-            selected_time.set("12:30".into());
+            selected_time.set(String::new());
+            draft.set(String::new());
+            panel.set(Panel::Closed);
             on_change.emit(String::new());
         })
     };
@@ -154,10 +335,13 @@ fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
         year
     );
     let (today_y, today_m, today_d) = today();
+    let day_set = (*selected_day).clone();
+    let time_set = (*selected_time).clone();
+    let has_value = !day_set.is_empty() || !time_set.is_empty();
 
     let days = (1..=count).map(|day| {
         let key = day_key(year, month, day);
-        let selected = (*selected_day).as_str() == key;
+        let selected = day_set.as_str() == key;
         let is_today = year == today_y && month == today_m && day == today_d;
         let mut class = String::from("calendar-day");
         if is_today {
@@ -168,8 +352,10 @@ fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
         }
         let selected_day = selected_day.clone();
         let selected_time = selected_time.clone();
-        let on_change = props.on_change.clone();
-        let key_for_click = key.clone();
+        let draft = draft.clone();
+        let emit = emit.clone();
+        let panel = panel.clone();
+        let key_click = key.clone();
         let disabled = props.disabled;
         html! {
             <button
@@ -179,8 +365,16 @@ fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
                 aria-pressed={selected.to_string()}
                 aria-label={format!("{} {day}", MONTHS.get(month as usize).copied().unwrap_or(""))}
                 onclick={Callback::from(move |_| {
-                    selected_day.set(key_for_click.clone());
-                    on_change.emit(combine_preferred(&key_for_click, &selected_time));
+                    let time = if (*selected_time).is_empty() {
+                        "12:30".into()
+                    } else {
+                        (*selected_time).clone()
+                    };
+                    selected_day.set(key_click.clone());
+                    selected_time.set(time.clone());
+                    draft.set(display_line(&key_click, &time));
+                    emit.emit((key_click.clone(), time));
+                    panel.set(Panel::Closed);
                 })}
             >
                 <span>{ day.to_string() }</span>
@@ -188,39 +382,99 @@ fn preferred_time_picker(props: &PreferredTimeProps) -> Html {
         }
     });
 
+    let date_badge_class = if *panel == Panel::Date {
+        "datetime-badge is-active"
+    } else if !day_set.is_empty() {
+        "datetime-badge is-set"
+    } else {
+        "datetime-badge"
+    };
+    let time_badge_class = if *panel == Panel::Time {
+        "datetime-badge is-active"
+    } else if !time_set.is_empty() {
+        "datetime-badge is-set"
+    } else {
+        "datetime-badge"
+    };
+
     html! {
         <div class="preferred-time">
             <span class="label">{ "Preferred time" }</span>
-            <section class="calendar" aria-label="Preferred date">
-                <div class="calendar-bar">
-                    <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_prev}>{ "Prev" }</button>
-                    <p class="calendar-label">{ label }</p>
-                    <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_next}>{ "Next" }</button>
-                </div>
-                <div class="calendar-week">
-                    { for WEEKDAYS.iter().map(|name| html! { <span class="calendar-dow">{ *name }</span> }) }
-                </div>
-                <div class="calendar-grid">
-                    { for (0..blanks).map(|_| html! { <span /> }) }
-                    { for days }
-                </div>
-            </section>
-            <label class="label">
-                { "Time" }
-                <input
-                    type="time"
-                    class="field"
-                    value={(*selected_time).clone()}
-                    oninput={on_time}
+            <div class="datetime-line">
+                <button
+                    type="button"
+                    class={date_badge_class}
                     disabled={props.disabled}
-                />
-            </label>
-            <p class="muted">{ timezone_caption() }</p>
-            if !(*selected_day).is_empty() {
-                <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_clear}>
-                    { "Clear" }
+                    aria-expanded={(*panel == Panel::Date).to_string()}
+                    aria-label="Pick date"
+                    onclick={toggle_date}
+                >
+                    { badge_date_label(&day_set) }
                 </button>
+                <button
+                    type="button"
+                    class={time_badge_class}
+                    disabled={props.disabled}
+                    aria-expanded={(*panel == Panel::Time).to_string()}
+                    aria-label="Pick time"
+                    onclick={toggle_time}
+                >
+                    { if time_set.is_empty() { "Time".into() } else { time_set.clone() } }
+                </button>
+                <input
+                    type="text"
+                    class="field datetime-input"
+                    placeholder="Type date and time…"
+                    value={(*draft).clone()}
+                    oninput={on_input}
+                    onblur={on_blur}
+                    disabled={props.disabled}
+                    autocomplete="off"
+                    aria-label="Preferred date and time"
+                />
+                if has_value {
+                    <button
+                        type="button"
+                        class="btn btn-ghost btn-sm"
+                        disabled={props.disabled}
+                        aria-label="Clear preferred time"
+                        onclick={on_clear}
+                    >
+                        { "✕" }
+                    </button>
+                }
+            </div>
+            if *panel == Panel::Date {
+                <section class="calendar datetime-pop" aria-label="Pick a date">
+                    <div class="calendar-bar">
+                        <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_prev}>{ "Prev" }</button>
+                        <p class="calendar-label">{ label }</p>
+                        <button type="button" class="btn btn-quiet" disabled={props.disabled} onclick={on_next}>{ "Next" }</button>
+                    </div>
+                    <div class="calendar-week">
+                        { for WEEKDAYS.iter().map(|name| html! { <span class="calendar-dow">{ *name }</span> }) }
+                    </div>
+                    <div class="calendar-grid">
+                        { for (0..blanks).map(|_| html! { <span /> }) }
+                        { for days }
+                    </div>
+                </section>
             }
+            if *panel == Panel::Time {
+                <div class="datetime-pop datetime-time-pop">
+                    <label class="label-xs">
+                        { "Time" }
+                        <input
+                            type="time"
+                            class="field"
+                            value={if time_set.is_empty() { "12:30".into() } else { time_set.clone() }}
+                            oninput={on_time}
+                            disabled={props.disabled}
+                        />
+                    </label>
+                </div>
+            }
+            <p class="form-hint">{ format!("{} · type YYYY-MM-DD HH:MM or use the badges.", timezone_caption()) }</p>
         </div>
     }
 }
