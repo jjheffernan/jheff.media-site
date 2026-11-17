@@ -4,6 +4,8 @@ Structured assessment for jheff.media-site. Re-score after major milestones.
 
 **Last assessed:** 2026-11-15
 
+**Beta gate:** personal/staging exit criteria live in [beta-readiness.md](./beta-readiness.md). First public tag `v0.1.0-beta.1` is a **future** step after that checklist is green — not cut from this assessment alone.
+
 ## Scoring scale (1–5)
 
 | Score | Label | Meaning |
@@ -22,17 +24,17 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 
 | Category | Score | % | Summary |
 |----------|-------|---|---------|
-| **Security** | 3 | 60% | Solid JWT+bcrypt+session auth, in-memory auth and contact limits, and login-time 2FA. CSP is still missing |
+| **Security** | 4 | 80% | JWT+bcrypt+session, rate limits, login 2FA, admin UI gate, CSP for WASM/embeds. TLS still proxy-side; `/metrics` unauthenticated |
 | **UX** | 3 | 60% | Feed, print select, schedule CRUD, and gallery/shoot admin maintenance work. Checkout still does not charge a card |
-| **Tests** | 2 | 40% | Backend unit tests (~51) and frontend serde tests (3) in CI. No HTTP tests against Mongo and no real browser test |
+| **Tests** | 3 | 60% | Backend ~57 unit tests; frontend host ~15 (lib + `tests/web.rs`) in CI; Clippy backend `-D warnings`. No Mongo HTTP integration; Immich E2E operator-owned |
 | **12 Factor** | 4 | 80% | Docker + env config; runtime JWT secret; pinned Rust images; `jheffmedia-*` docker tags |
-| **Performance** | 3 | 60% | Actix + async Mongo appropriate; WASM payload, no caching, thumbnail proxy untested under load |
+| **Performance** | 3 | 60% | Actix + async Mongo; static `Cache-Control`/ETag shipped; WASM size and thumbnail load still light on verification |
 
-**Overall weighted average:** 3.0 / 5 (60%) — **acceptable for personal/staging deploy; not client-production ready without prioritized hardening and feature completion.**
+**Overall weighted average:** 3.4 / 5 (68%) — **on track for personal/staging beta** per [beta-readiness.md](./beta-readiness.md); not client-production ready without further hardening and feature completion. First public beta tag remains future.
 
 ---
 
-## Security (3 / 5)
+## Security (4 / 5)
 
 ### Criteria
 
@@ -46,21 +48,23 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 | CORS | Medium | ✅ | Explicit origins via `YEW_FULLSTACK_CORS_ORIGINS` (not wildcard) |
 | 2FA | Medium | ✅ | Enroll/confirm/disable API; login requires a valid code before creating a session |
 | Abuse resistance | Medium | ⚠️ | In-memory limits: 8 auth attempts and 5 contact posts per IP per 10 minutes. Resets on process restart |
-| CSP / XSS | Medium | ❌ | JWT in session storage; no Content-Security-Policy |
+| CSP / XSS | Medium | ✅ | CSP shipped (`services/security_headers.rs`); JWT still in session storage |
 | Secrets management | High | ✅ | Runtime JWT via `YEW_FULLSTACK_JWT_SECRET_FILE` or hex env; dev `secret.key` fallback |
 
 ### Evidence
 
 - `backend/src/utils/auth.rs`, `backend/src/models/user_token.rs`
-- `docs/authentication.md` hardening backlog
+- `backend/src/services/security_headers.rs` — CSP for WASM + embeds
+- `docs/authentication.md` hardening notes
 - `backend/src/main.rs` middleware
+- Operator: `jheffmedia --postinstall --security` · [deployment-proxmox.md § Security](./deployment-proxmox.md#security-hardening-lxc)
 
 ### To reach 4
 
 - [x] Runtime JWT secret (env/volume mount, not compile-time embed)
 - [x] Rate limiting on auth + contact endpoints
 - [x] Enforce TOTP at login when `totp_enabled`
-- [ ] CSP tuned for WASM + embeds
+- [x] CSP tuned for WASM + embeds
 - [x] Hide admin UI unless `role == admin`
 
 ### To reach 5
@@ -68,6 +72,7 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 - [ ] Security audit / dependency scanning in CI
 - [ ] Email change mailer wired before production enable
 - [ ] Penetration-style auth tests
+- [ ] Authenticate or network-restrict `/metrics`
 
 ---
 
@@ -110,31 +115,34 @@ Percent equivalent: `(score / 5) × 100%` (e.g. 3 = 60%).
 
 ---
 
-## Tests (2 / 5)
+## Tests (3 / 5)
 
 ### Criteria
 
 | Criterion | Weight | Status | Notes |
 |-----------|--------|--------|-------|
-| Unit tests | High | ⚠️ | Backend suite covers contact, auth, print prices, and schedule filtering. No HTTP tests against Mongo |
-| CI | High | ✅ | Trunk build, backend build, both test suites in `.github/workflows/rust.yml` |
+| Unit tests | High | ✅ | Backend ~57 (`cargo test -p jheffmedia-site-backend`). Frontend host ~15 (model + `api_errors` + `tests/web.rs` contract suite) |
+| CI | High | ✅ | Trunk build, backend build, both test suites, backend Clippy in `.github/workflows/rust.yml` |
 | Integration tests | High | ❌ | No HTTP handler tests against test MongoDB |
-| E2E / browser | Medium | ⚠️ | `frontend/tests/web.rs` has real wasm-bindgen/host contract tests; not full login+feed E2E |
-| Lint / static analysis | Medium | ⚠️ | Clippy not in CI (`.github/workflows/rust.yml` is build + test only) |
+| E2E / browser | Medium | ⚠️ | `frontend/tests/web.rs` host + wasm-bindgen cases; `scripts/smoke.sh` for `/`, `/healthz`, login, feed. Immich E2E operator-owned |
+| Lint / static analysis | Medium | ✅ | Backend Clippy `-D warnings` (default + `forward-frontend`) in CI; frontend WASM clippy deferred |
 | Regression safety | Medium | ❌ | No API contract tests for 20+ endpoints |
 
 ### Evidence
 
 ```bash
-cargo test -p jheffmedia-site-backend   # ~51 unit tests (count via #[test] in tree)
-cargo test -p jheffmedia-site-frontend  # model serde + tests/web.rs contract suite
+cargo test -p jheffmedia-site-backend   # ~57 unit tests
+cargo test -p jheffmedia-site-frontend  # ~15 host tests (lib + tests/web.rs)
+# CI also: cargo clippy -p jheffmedia-site-backend -- -D warnings
+#          (+ --features forward-frontend)
+scripts/smoke.sh                        # /, /healthz, login, media/feed
 ```
 
 ### To reach 3
 
 - [x] Add frontend tests to CI (host `cargo test` in `.github/workflows/rust.yml`)
-- [ ] Fix clippy warnings; add `cargo clippy` to CI
-- [ ] One smoke test per critical API (`login`, `media/feed`) — `scripts/smoke.sh` covers homepage + login reachability
+- [x] Fix clippy warnings; add `cargo clippy` to CI (backend)
+- [x] One smoke test per critical path (`/`, login, `media/feed`) — `scripts/smoke.sh`
 
 ### To reach 4
 
@@ -145,6 +153,7 @@ cargo test -p jheffmedia-site-frontend  # model serde + tests/web.rs contract su
 
 - [ ] E2E smoke (headless) for login + homepage feed
 - [ ] Coverage threshold or critical-path checklist in CI
+- [ ] Immich feed E2E in a controlled CI or documented operator gate ([beta-readiness.md](./beta-readiness.md))
 
 ---
 
@@ -192,7 +201,7 @@ cargo test -p jheffmedia-site-frontend  # model serde + tests/web.rs contract su
 | Server framework | High | ✅ | Actix 4 — top-tier throughput in Rust ecosystem |
 | Database access | High | ✅ | MongoDB 3.x async throughout |
 | Frontend delivery | Medium | ⚠️ | WASM bundle size; no code-splitting documented |
-| Caching | Medium | ❌ | No CDN/cache headers strategy for static or thumbnails |
+| Caching | Medium | ⚠️ | Static assets: mtime/size **ETag** + **Cache-Control** in `serve_frontend.rs` (fingerprinted immutable). Thumbnail proxy caching still open |
 | External APIs | Medium | ⚠️ | Immich/IG/YT proxy; load not tested |
 | Asset pipeline | Medium | ✅ | Thumbnails proxied server-side (keys not exposed) |
 
@@ -202,7 +211,8 @@ Per [rust-web-framework-comparison](https://github.com/flosse/rust-web-framework
 
 ### To reach 4
 
-- [ ] Cache-Control for static assets and thumbnail proxy
+- [x] Cache-Control / ETag for static frontend assets (`serve_frontend.rs`)
+- [ ] Cache-Control for thumbnail proxy
 - [ ] Verify Immich thumbnail proxy under expected traffic
 - [ ] `trunk build --release` size budget documented
 
@@ -218,12 +228,13 @@ Per [rust-web-framework-comparison](https://github.com/flosse/rust-web-framework
 1. Score each category after a release milestone or quarterly review.
 2. Record evidence links (commits, test output, deploy logs).
 3. Track "To reach N" checklists in `docs/TODO.md` or link issues.
-4. **Release gate suggestion:** average ≥ 3.5 with no category below 3 for public production; average ≥ 3 acceptable for personal/staging deploy.
+4. **Release gate suggestion:** average ≥ 3.5 with no category below 3 for public production; average ≥ 3 acceptable for personal/staging. Prefer the operator+maintainer checklist in [beta-readiness.md](./beta-readiness.md) before tagging `v0.1.0-beta.1`.
 
 ## Related docs
 
+- [beta-readiness.md](./beta-readiness.md) — beta definition and exit checklist
 - [TODO.md](./TODO.md) — actionable backlog
 - [design.md](./design.md) — page behavior and open questions
 - [architecture.md](./architecture.md) — system layout
-- [deployment-proxmox.md](./deployment-proxmox.md) — production deploy
+- [deployment-proxmox.md](./deployment-proxmox.md) — production deploy · security hardening
 - [authentication.md](./authentication.md) — auth security notes

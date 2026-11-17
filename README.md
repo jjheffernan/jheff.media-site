@@ -1,116 +1,57 @@
-# jheff.media-site
+# jheff.media
 
-Landing page to showcase automotive socials — built with **Yew** (WASM frontend) and **Actix Web** (Rust backend).
+Self-hosted **automotive photography** management — shoots, galleries, and client delivery. Rust fullstack (Yew WASM + Actix + MongoDB); photos stay in your Immich (or Nextcloud / static demo).
 
-## Stack
+**Beta / personal-staging.** Built for a Proxmox LXC you operate yourself — not client-production-ready yet. Checklist: [docs/beta-readiness.md](docs/beta-readiness.md).
 
-| Layer | Tech |
-|-------|------|
-| Frontend | [Yew](https://yew.rs/) 0.23 + [Trunk](https://trunk-rs.github.io/trunk/), automotive photography UI |
-| Backend | [Actix Web](https://actix.rs/) 4, JWT auth |
-| Database | MongoDB |
+## Install
 
-## Prerequisites
-
-- [Rust](https://rustup.rs/) (`stable` + `wasm32-unknown-unknown`)
-- [Trunk](https://trunk-rs.github.io/trunk/) (`cargo install --locked trunk`)
-- [Docker](https://www.docker.com/) or [Podman](https://podman.io/) with Compose (`docker compose` or `podman compose`). Set `CONTAINER_RUNTIME=podman` to force Podman when both are installed.
-
-## Quick start
+On a **Proxmox host** (creates an LXC) or inside an existing CT/VM as root:
 
 ```bash
-scripts/dev.sh setup              # once: secret, trunk, tailwind, wasm target
-scripts/dev.sh build              # local compile check (fast)
-scripts/dev.sh start              # local dev — returns while Trunk compiles in background
-scripts/dev.sh logs trunk         # watch compilation progress
-scripts/dev.sh status             # ports, PIDs, containers
-```
-
-| Service | URL |
-|---------|-----|
-| App (via backend proxy) | http://localhost:8080 |
-| Frontend dev server | http://localhost:8000 |
-| MongoDB | localhost:27017 |
-
-Docker dev (slow first build): `scripts/dev.sh build --docker && scripts/dev.sh start --docker`
-
-Stop: `scripts/dev.sh stop`
-
-Full setup, env vars, and troubleshooting: [docs/README.md](docs/README.md) · [docs/development.md](docs/development.md) · [docs/TODO.md](docs/TODO.md)
-
-## Deploy
-
-Production uses Docker on Proxmox, bare metal, or TrueNAS — not Cloudflare Workers. One-liners and a community-scripts-style catalog live under [`install/`](install/README.md).
-
-```bash
-# Proxmox host (creates LXC) — track main for production
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/proxmox/install.sh)"
 ```
 
-Guide: [docs/deployment.md](docs/deployment.md) · registry: [install/registry.json](install/registry.json)
+Then on the CT:
 
-## Documentation
-
-| Guide | Topics |
-|-------|--------|
-| [docs/README.md](docs/README.md) | Index of all docs |
-| [docs/deployment.md](docs/deployment.md) | **Production deploy** — hosts, one-liners, checklist |
-| [docs/architecture.md](docs/architecture.md) | Request routing, dev vs prod, Docker layout |
-| [docs/authentication.md](docs/authentication.md) | JWT, sessions, login/logout behavior |
-| [docs/api.md](docs/api.md) | REST endpoints and examples |
-| [docs/backend.md](docs/backend.md) | Actix, env vars, MongoDB |
-| [docs/deployment-dev.md](docs/deployment-dev.md) | **Dev deployment** — first-time setup, Docker, verify |
-| [docs/version-matrix.md](docs/version-matrix.md) | Dependency pins and mismatch fixes |
-
-## Scripts
-
-| Command | Purpose |
-|---------|---------|
-| `scripts/dev.sh setup` | One-time setup (secret, wasm, trunk, cargo tailwind) |
-| `scripts/dev.sh build` | Local compile check + CSS (fast) |
-| `scripts/dev.sh build --docker` | Build dev Docker images (verbose, slow) |
-| `scripts/dev.sh start` | Local dev — Trunk + backend in background |
-| `scripts/dev.sh start --docker` | Full dev stack in Docker (detached) |
-| `scripts/dev.sh stop` | Stop local processes + dev containers |
-| `scripts/dev.sh logs [name]` | Tail logs: trunk, backend, tailwind, docker, all |
-| `scripts/prod.sh build` | Production Docker image |
-| `scripts/prod.sh start` | Run production stack |
-| `scripts/prod.sh stop` | Tear down production |
-
-Legacy wrappers (`setup-dev.sh`, `run-dev.sh`, `stop-dev.sh`, `build.sh`, etc.) forward to the commands above.
-| `scripts/stop.sh` | Stop production containers |
-
-## Project layout
-
-```
-backend/     Actix API, MongoDB models, JWT auth
-frontend/    Yew WASM app, Trunk bundler, automotive photography routes
-scripts/     Docker Compose + dev orchestration
-docs/        Human docs — start at docs/README.md
-.agents/     Agent rules and skills (see AGENTS.md)
+```bash
+jheffmedia --postinstall              # admin signup email
+jheffmedia --postinstall --security   # bind / CORS / TLS / firewall checklist
 ```
 
-## AI agent rules
+1. Open the site and **sign up** with the printed `ADMIN_EMAILS` address (any password ≥8 chars).
+2. **Admin → Setup** — Immich URL, API key, album (or keep the static demo feed).
 
-Cross-agent instructions: **[AGENTS.md](AGENTS.md)** and **[.agents/](.agents/)** (canonical). Cursor shim: **[.agents/cursor.md](.agents/cursor.md)**.
+Harden details: [docs/deployment-proxmox.md](docs/deployment-proxmox.md) (security / TLS). Other targets (bare metal, TrueNAS, Coolify): [install/README.md](install/README.md). Full deploy guide: [docs/deployment.md](docs/deployment.md).
 
-| Location | Purpose |
-|----------|---------|
-| `AGENTS.md` | Entry index — links to `.agents/`, not duplicate content |
-| `.agents/rules/` | Project, backend, frontend conventions |
-| `.agents/skills/` | Workflows + `/ponytail`, `/caveman` slash skills |
-| `.cursor/skills/` | Symlinks into `.agents/skills/` (Cursor requirement) |
+## Channels
 
-Community skills (adapted from upstream):
+| Branch | Use |
+|--------|-----|
+| `main` | Production installs and `jheffmedia --update` |
+| `testing` | Staging — `BRANCH=testing` at install, or `jheffmedia --update -d` |
+| `dev` | Day-to-day feature work (merge to `main` when shipping) |
 
-- [caveman](https://github.com/JuliusBrussee/caveman) — `.agents/skills/caveman/`
-- [ponytail](https://github.com/DietrichGebert/ponytail) — `.agents/skills/ponytail/`
+## Local development
 
-## About
+```bash
+scripts/dev.sh setup   # once
+scripts/dev.sh start   # http://localhost:8080
+```
 
-Forked from the Yew Fullstack boilerplate. Authentication uses JWT with session validation in MongoDB.
+Dev stack and troubleshooting: [docs/deployment-dev.md](docs/deployment-dev.md) · [docs/development.md](docs/development.md). Script reference: [scripts/README.md](scripts/README.md).
 
-Customize project naming: search/replace `yew-fullstack`, `YEW_FULLSTACK`, `Yew Fullstack Boilerplate`, and `Yew Fullstack`.
+## Docs
+
+| Doc | What |
+|-----|------|
+| [docs/README.md](docs/README.md) | Index of all guides |
+| [install/README.md](install/README.md) | Install targets and day-2 CLI |
+| [docs/beta-readiness.md](docs/beta-readiness.md) | Beta exit criteria |
+| [docs/TODO.md](docs/TODO.md) | Open backlog |
+| [docs/deployment-proxmox.md](docs/deployment-proxmox.md) | Proxmox layout, Immich, security |
+
+Stack in one line: Yew 0.23 + Trunk · Actix 4 + MongoDB 3. Agent rules: [AGENTS.md](AGENTS.md) → [.agents/](.agents/).
 
 ## License
 

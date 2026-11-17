@@ -19,6 +19,7 @@ Human-readable guides for jheff.media-site. Start here or from [README](../READM
 | [development.md](./development.md) | Local setup, troubleshooting |
 | [TODO.md](./TODO.md) | Open engineering, deferred product, doc verification |
 | [readiness-rubric.md](./readiness-rubric.md) | Release readiness scores (security, UX, tests, 12 factor, performance) |
+| [beta-readiness.md](./beta-readiness.md) | Beta definition + operator/maintainer exit checklist (pre-tag) |
 
 ## For agents
 

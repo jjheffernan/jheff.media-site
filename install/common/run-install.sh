@@ -60,5 +60,6 @@ print_install_done() {
   echo -e "${INFO}${YW}Update later:${CL} jheffmedia --update"
   echo -e "${INFO}${YW}Admin:${CL} sign up with ADMIN_EMAILS → Admin → Setup"
   echo -e "${INFO}${YW}Admin reminder:${CL} jheffmedia --postinstall"
+  echo -e "${INFO}${YW}Harden tips:${CL} jheffmedia --postinstall --security"
   echo -e "${INFO}${YW}Or:${CL} bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/jjheffernan/jheff.media-site/main/install/update.sh)\""
 }

@@ -74,11 +74,12 @@ curl -sS "http://127.0.0.1:8080/" | head
 BASE_URL="http://127.0.0.1:8080" scripts/smoke.sh
 jheffmedia --postinstall          # admin email reminder
 # jheffmedia --postinstall --show-creds   # admin email + secret paths (not values)
+# jheffmedia --postinstall --security     # harden report (bind/CORS/firewall; no secrets)
 ```
 
 Then:
 
-1. **TLS** — put Caddy/Nginx (or Cloudflare Tunnel) in front of `:8080`. See [deployment-proxmox.md](./deployment-proxmox.md) § reverse proxy. For a proxy on the same LXC, set `HTTP_BIND=127.0.0.1` in `.env.production` (host publish only). The app always binds `0.0.0.0` inside the container — do not set Compose `HOST` for that (shell `HOST` is often the hostname and breaks LAN access).
+1. **TLS** — put Caddy/Nginx (or Cloudflare Tunnel) in front of `:8080`. See [deployment-proxmox.md](./deployment-proxmox.md) § reverse proxy. For a proxy on the same LXC, set `HTTP_BIND=127.0.0.1` in `.env.production` (host publish only). The app always binds `0.0.0.0` inside the container — do not set Compose `HOST` for that (shell `HOST` is often the hostname and breaks LAN access). Harden checklist (firewall, SSH, `/metrics`, pin `INSTALL_REF`): [deployment-proxmox.md](./deployment-proxmox.md) § Security hardening (LXC) · `jheffmedia --postinstall --security`.
 2. **CORS** — install/`jheffmedia --update` write `YEW_FULLSTACK_CORS_ORIGINS` from guided `PUBLIC_URL` or `http://<host-ip>:HTTP_PORT` when unset (comma-separated for multiple). Override in `.env.production` for the real HTTPS hostname, then `systemctl restart site`.
 3. **Admin** — open the site, sign up with the printed `ADMIN_EMAILS` address (any password ≥8 chars). That account becomes `admin`. Change the email in `.env.production` later if you generated a bootstrap address.
 4. **Feed** — Admin → Setup: pick `none` / `static` / `immich` / `nextcloud` and save. Feed reads Mongo per request. If images look stale after a provider change, run `jheffmedia --restart`.

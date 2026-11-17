@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Host CLI for a deployed jheff.media install.
 #   jheffmedia --update [-d|--dev] | --status | --restart | --postinstall
+#   jheffmedia --postinstall [--show-creds] [--security]
 #   jheffmedia --cleanup | --reinstall | --autoupdate …
 #   jheffmedia -h | --help
 #
@@ -58,9 +59,10 @@ Usage:
       uploads + .env.production. Recreates DB with current MONGO_PASSWORD.
       -y, --yes still requires typing RESET unless JM_RESET_DB=yes.
   jheffmedia --restart
-  jheffmedia --postinstall [--show-creds]
+  jheffmedia --postinstall [--show-creds] [--security]
       Admin signup reminder (ADMIN_EMAILS → Admin → Setup).
       --show-creds prints admin email + secret *paths* (not Mongo/JWT values).
+      --security  advisory harden report (bind/CORS/firewall/SSH notes; no secrets).
   jheffmedia -h, --help
       This usage (also printed for bare `jheffmedia`).
 

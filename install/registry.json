@@ -5,7 +5,8 @@
   "notes": [
     "Catalog entry in the spirit of community-scripts.org — one app, several host targets.",
     "Not a Cloudflare Workers project. Deploy with Docker via the install targets below.",
-    "Production branch is main. Non-prod channel is testing (BRANCH=testing or jheffmedia --update -d)."
+    "Production branch is main. Non-prod channel is testing (BRANCH=testing or jheffmedia --update -d).",
+    "After install: jheffmedia --postinstall then --security for an advisory LXC harden report (bind/CORS/firewall; no auto-rewrite)."
   ],
   "apps": [
     {
@@ -84,8 +85,10 @@
         "reset_db": "jheffmedia --reset-db",
         "restart": "jheffmedia --restart",
         "postinstall": "jheffmedia --postinstall",
+        "security": "jheffmedia --postinstall --security",
         "healthz": "GET /healthz"
-      }
+      },
+      "security_notes": "GET /metrics is unauthenticated — restrict at proxy or HTTP_BIND=127.0.0.1. See docs/deployment-proxmox.md § Security hardening (LXC)."
     }
   ],
   "targets": [
