@@ -49,10 +49,13 @@ fn forbidden() -> HttpResponse {
     ServiceError::new(StatusCode::FORBIDDEN, "FORBIDDEN").response()
 }
 
+// HttpResponse as Err is large; Actix handlers unwrap these directly.
+#[allow(clippy::result_large_err)]
 pub async fn require_auth(req: &HttpRequest, db: &Database) -> Result<AuthUser, HttpResponse> {
     extract_auth_user(req, db).await.ok_or_else(unauthorized)
 }
 
+#[allow(clippy::result_large_err)]
 pub async fn require_admin(req: &HttpRequest, db: &Database) -> Result<AuthUser, HttpResponse> {
     let user = require_auth(req, db).await?;
     if is_admin(&user) {
