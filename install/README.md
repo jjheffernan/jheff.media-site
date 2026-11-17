@@ -46,7 +46,7 @@ Replace `...` with:
 - **Install dir**: `/opt/jheffmedia-site` owned by service user `jheffmedia` (uid 10001)
 - **Secrets**: `{INSTALL_DIR}/install/common/.env.production` (0600) + `backend/src/secret.key` (0400) — no `/root/*.creds`
 - **Service**: `site.service` runs as `jheffmedia` + `docker` group; app container is non-root
-- **Postinstall**: `jheffmedia --postinstall` · paths again: `jheffmedia --postinstall --show-creds`
+- **Postinstall**: `jheffmedia --postinstall` · paths again: `jheffmedia --postinstall --show-creds` · harden report: `jheffmedia --postinstall --security`
 
 Unattended:
 
@@ -92,6 +92,7 @@ jheffmedia --reinstall                # cleanup + rebuild (keeps Mongo volumes)
 jheffmedia --reinstall --purge        # also drop project containers/images; confirms volumes
 jheffmedia --postinstall              # admin email reminder
 jheffmedia --postinstall --show-creds # admin email + secret paths (not values)
+jheffmedia --postinstall --security   # advisory harden report (no secrets)
 ```
 
 Use `--cleanup` for leftover `/root/site-install.creds` or root-owned trees; `--reinstall` for broken/partial installs; `--update` for day-2 deploys. Autoupdate writes `install/common/autoupdate.env` (`AUTOUPDATE_CHANNEL=main|testing`) and a systemd timer; logs via `journalctl -u jheffmedia-autoupdate.service`. Admin → Dev → Deploy can trigger `--update` / `--update -d` via `var/deploy` + `jheffmedia-gui-update.path` (no docker.sock in the app). See [docs/deployment.md](../docs/deployment.md).

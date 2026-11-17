@@ -2,8 +2,8 @@
 # Publish admin bootstrap info after install. Long-lived secrets stay only in
 # install/common/.env.production and backend/src/secret.key (chmod 600/400).
 #
-#   install/postinstall.sh [--fresh] [--show-creds]
-#   jheffmedia --postinstall [--show-creds]
+#   install/postinstall.sh [--fresh] [--show-creds] [--security]
+#   jheffmedia --postinstall [--show-creds] [--security]
 
 set -euo pipefail
 
@@ -16,17 +16,20 @@ SERVICE_USER="${SERVICE_USER:-jheffmedia}"
 
 FRESH=0
 SHOW_CREDS=0
+SECURITY=0
 for arg in "$@"; do
   case "$arg" in
     --fresh) FRESH=1 ;;
     --show-creds) SHOW_CREDS=1 ;;
+    --security) SECURITY=1 ;;
     --help | -h)
       cat <<'EOF'
-Usage: postinstall.sh [--fresh] [--show-creds]
+Usage: postinstall.sh [--fresh] [--show-creds] [--security]
 
   --fresh       First-run after deploy_stack (prints admin path once)
   --show-creds  Re-print admin bootstrap + secret file paths
                 (does not dump Mongo/JWT values — read .env.production)
+  --security    Print a security harden report (no secret values; advisory only)
 EOF
       exit 0
       ;;
@@ -41,10 +44,19 @@ fi
 ADMIN_EMAILS=""
 HTTP_PORT=8080
 HTTP_BIND="0.0.0.0"
+CORS_SET=0
+PUBLIC_URL_SET=0
 if [[ -f "$ENV_FILE" ]]; then
   ADMIN_EMAILS="$(grep -E '^ADMIN_EMAILS=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)"
   HTTP_PORT="$(grep -E '^HTTP_PORT=' "$ENV_FILE" | head -1 | cut -d= -f2- || echo 8080)"
   HTTP_BIND="$(grep -E '^HTTP_BIND=' "$ENV_FILE" | head -1 | cut -d= -f2- || echo 0.0.0.0)"
+  # Presence only — never print values.
+  if grep -qE '^YEW_FULLSTACK_CORS_ORIGINS=.+' "$ENV_FILE" 2>/dev/null; then
+    CORS_SET=1
+  fi
+  if grep -qE '^PUBLIC_URL=.+' "$ENV_FILE" 2>/dev/null; then
+    PUBLIC_URL_SET=1
+  fi
 fi
 
 print_admin_banner() {
@@ -86,7 +98,83 @@ print_secret_locations() {
   echo "--- end ---"
 }
 
+# Advisory only — does not rewrite firewall, SSH, or env.
+print_security_report() {
+  local cors_status public_status
+  if [[ "$CORS_SET" -eq 1 ]]; then
+    cors_status="set"
+  else
+    cors_status="unset"
+  fi
+  if [[ "$PUBLIC_URL_SET" -eq 1 ]]; then
+    public_status="set"
+  else
+    public_status="unset"
+  fi
+
+  echo "Postinstall — security harden report (advisory; no auto-changes)"
+  echo "  Env file: ${ENV_FILE}"
+  if [[ ! -f "$ENV_FILE" ]]; then
+    echo "  [!!] Missing .env.production — run install or copy .env.production.example first."
+  fi
+  echo "  HTTP_BIND=${HTTP_BIND}"
+  echo "  HTTP_PORT=${HTTP_PORT}"
+  echo "  YEW_FULLSTACK_CORS_ORIGINS: ${cors_status} (value not shown)"
+  echo "  PUBLIC_URL: ${public_status} (value not shown)"
+  if [[ "$HTTP_BIND" == "0.0.0.0" || "$HTTP_BIND" == "::" || "$HTTP_BIND" == "[::]" ]]; then
+    echo "  [!!] HTTP_BIND=${HTTP_BIND} — LAN-exposed on this host."
+    echo "       Prefer 127.0.0.1 when a TLS reverse proxy terminates on the same LXC."
+  elif [[ "$HTTP_BIND" == "127.0.0.1" || "$HTTP_BIND" == "localhost" ]]; then
+    echo "  [ok] HTTP_BIND is loopback — good behind a local reverse proxy."
+  else
+    echo "  [..] HTTP_BIND=${HTTP_BIND} — confirm this matches your proxy/firewall plan."
+  fi
+  echo
+  echo "--- recommendations (copy/paste; edit as needed) ---"
+  echo "  # Bind loopback when Caddy/Nginx/Tunnel is on this LXC"
+  echo "  # edit ${ENV_FILE}:"
+  echo "  HTTP_BIND=127.0.0.1"
+  echo "  # then: systemctl restart site"
+  echo
+  echo "  # CORS — use the real HTTPS origin (comma-separated for multiple)"
+  echo "  YEW_FULLSTACK_CORS_ORIGINS=https://jheff.media"
+  echo "  # or set PUBLIC_URL=https://jheff.media before install/update"
+  echo
+  echo "  # Host firewall (Debian/Ubuntu ufw examples — review before apply)"
+  echo "  # ufw default deny incoming"
+  echo "  # ufw allow OpenSSH"
+  echo "  # ufw allow 80/tcp"
+  echo "  # ufw allow 443/tcp"
+  echo "  # ufw enable"
+  echo
+  echo "  # SSH: prefer key-only (PasswordAuthentication no) in /etc/ssh/sshd_config"
+  echo "  # Unattended security updates: apt install unattended-upgrades && dpkg-reconfigure -plow unattended-upgrades"
+  echo
+  echo "  # Threat notes"
+  echo "  # - LXC nesting + docker group ≈ root on the host — intentional for day-2 CLI;"
+  echo "    treat anyone in docker as fully trusted on this CT."
+  echo "  # - GET /metrics is unauthenticated Prometheus text on the app port."
+  echo "    Restrict at the reverse proxy (allowlist) or keep HTTP_BIND=127.0.0.1."
+  echo "  # - Prefer: jheffmedia --update   over re-running curl|bash install scripts."
+  echo "  # - Pin first install: INSTALL_REF=<commit-sha> (or BRANCH=) when curling install.sh"
+  echo "--- end security report ---"
+  echo "  Docs: docs/deployment-proxmox.md § Security hardening (LXC)"
+}
+
+if [[ "$SECURITY" -eq 1 ]]; then
+  print_security_report
+  # Dedicated mode when only --security was requested.
+  if [[ "$FRESH" -eq 0 && "$SHOW_CREDS" -eq 0 ]]; then
+    exit 0
+  fi
+  echo
+fi
+
 print_admin_banner
+
+if [[ "$FRESH" -eq 1 ]]; then
+  echo "  Harden tips: jheffmedia --postinstall --security"
+fi
 
 # Drop leftover dump from older installs (duplicate secret store).
 for legacy in /root/site-install.creds "${HOME}/site-install.creds" \

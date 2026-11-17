@@ -96,6 +96,8 @@ guided_config() {
   msg_ok "Repository settings saved"
 
   msg_info "Guided setup — site"
+  msg_custom "ℹ️" "${YW:-}" "Behind a reverse proxy on this host, prefer HTTP_BIND=127.0.0.1 (default stays 0.0.0.0 for LAN)."
+  HTTP_BIND="$(prompt_input "HTTP bind" "Host bind address (0.0.0.0 = LAN; 127.0.0.1 behind local TLS proxy):" "${HTTP_BIND:-0.0.0.0}")"
   HTTP_PORT="$(prompt_input "HTTP port" "Port published on this host (reverse-proxy target):" "$HTTP_PORT")"
   PUBLIC_URL="$(prompt_input "Public URL" "Public site URL for CORS (https://…; Enter = http://IP:port):" "$PUBLIC_URL")"
   CONTACT_EMAIL="$(prompt_input "Contact email" "Contact email shown on site:" "$CONTACT_EMAIL")"

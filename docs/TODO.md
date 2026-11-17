@@ -1,6 +1,6 @@
 # Project TODO
 
-Track quality and feature work. **Docs:** [README.md](./README.md) · [deployment-dev.md](./deployment-dev.md) · [readiness-rubric.md](./readiness-rubric.md)
+Track quality and feature work. **Docs:** [README.md](./README.md) · [deployment-dev.md](./deployment-dev.md) · [readiness-rubric.md](./readiness-rubric.md) · [beta-readiness.md](./beta-readiness.md)
 
 Local stack: `scripts/dev.sh setup && scripts/dev.sh start` → http://localhost:8080. Setup installs Rust target, Trunk, and Cargo `tailwind` when missing — no separate checklist noise.
 
@@ -50,6 +50,7 @@ Decisions: [design.md](./design.md#decided).
 - [x] **Deploy starting guide** — [deployment.md](./deployment.md) + [install/registry.json](../install/registry.json)
 - [x] **Proxmox path** — reviewed 2026-11-15: one-liner + `install/proxmox/*` match Core/`var_version=13`; `deployment-proxmox.md` aligned (env path, day-2 `jheffmedia --update`, feed verify notes). Manual compose via `install/common/` remains valid fallback
 - [x] **Setup hygiene** — demoted local Rust/Trunk/Docker checkbox noise; `dev.sh setup` is the path
+- [ ] **Beta readiness** — operator+maintainer checklist in [beta-readiness.md](./beta-readiness.md); after install run `jheffmedia --postinstall` and `jheffmedia --postinstall --security` ([Security hardening](./deployment-proxmox.md#security-hardening-lxc)). Public tag `v0.1.0-beta.1` only after checklist green
 
 ## Fixes applied (historical)
 
@@ -59,3 +60,4 @@ Decisions: [design.md](./design.md#decided).
 - 2026-11-15: Docs hygiene — TODO truth, readiness rubric galleries/CRUD, Proxmox/deploy stale claims
 - 2026-11-15: Engineering backlog — shared fetch helper, retire `/api/feed`, CSP+ETag, Clippy CI, real frontend tests; Immich E2E still needs live Immich
 - 2026-11-15: Immich ingest path — Admin Setup polish + Test Immich; gitignored `dev.env.local`; E2E still unchecked until live verify
+- 2026-11-15: Beta readiness doc + rubric bump (CSP/Clippy/tests); security postinstall pointer under Operator

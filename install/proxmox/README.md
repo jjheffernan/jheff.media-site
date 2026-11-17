@@ -74,4 +74,6 @@ jheffmedia --update -d           # testing channel (--dev / --testing)
 
 Default install: `/opt/jheffmedia-site` owned by `jheffmedia` (uid 10001). Secrets in `install/common/.env.production` (0600). App container is non-root; Mongo is not published. See [docs/deployment.md](../../docs/deployment.md) § secrets & privilege.
 
+After install: `jheffmedia --postinstall` (admin signup reminder), then `jheffmedia --postinstall --security` for an advisory harden report (bind/CORS/firewall; no secret values). Full notes: [docs/deployment-proxmox.md](../../docs/deployment-proxmox.md) § Security hardening (LXC).
+
 See also [docs/deployment-proxmox.md](../../docs/deployment-proxmox.md).

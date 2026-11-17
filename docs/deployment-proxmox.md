@@ -179,6 +179,49 @@ Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship
 | Blank UI after deploy | Rebuild image after frontend changes (`trunk build` in Dockerfile stage) |
 | WASM won't load | Ensure proxy passes `*.wasm` with correct MIME; use single origin via reverse proxy |
 
+## Security hardening (LXC)
+
+Advisory checklist for a single-node LXC. Nothing here is applied automatically — run `jheffmedia --postinstall --security` on the CT for a live report (no secret values printed).
+
+### Bind and CORS
+
+Default `HTTP_BIND=0.0.0.0` publishes the app to the LAN (convenient before a proxy exists). When Caddy/Nginx/Tunnel terminates TLS **on the same LXC**, prefer loopback:
+
+```bash
+# in install/common/.env.production
+HTTP_BIND=127.0.0.1
+YEW_FULLSTACK_CORS_ORIGINS=https://jheff.media   # real HTTPS origin(s), comma-separated
+# then:
+systemctl restart site
+```
+
+`PUBLIC_URL` / guided install seeds CORS when unset; override for the public hostname.
+
+### Firewall and SSH (host / CT)
+
+Example **ufw** on Debian/Ubuntu (review before enable — do not lock yourself out):
+
+```bash
+ufw default deny incoming
+ufw allow OpenSSH
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+```
+
+Prefer SSH **key-only** (`PasswordAuthentication no`). Keep the CT patched with `unattended-upgrades`.
+
+### Threat notes
+
+| Topic | Note |
+|-------|------|
+| Nesting + docker group | Docker nesting on an LXC and membership in `docker` ≈ root on that CT — intentional for `jheffmedia` day-2 ops. Treat docker-group users as fully trusted. |
+| `GET /metrics` | Unauthenticated Prometheus text on the app port. Restrict at the reverse proxy (allowlist) or keep `HTTP_BIND=127.0.0.1`. |
+| Updates | Prefer `jheffmedia --update` over re-running `curl \| bash` install scripts. |
+| Pin install | First install: set `INSTALL_REF=<commit-sha>` (or `BRANCH=`) when curling `install.sh`. |
+
+Full secrets / privilege model: [deployment.md](./deployment.md) § Secrets & privilege.
+
 ## Checklist
 
 - [ ] LXC/VM with Docker
@@ -186,5 +229,6 @@ Day-to-day feature work happens on **`dev`**; merge to `main` when ready to ship
 - [ ] MongoDB credentials rotated from dev defaults
 - [ ] Immich album + API key configured
 - [ ] TLS reverse proxy in front of :8080
+- [ ] Harden review: `jheffmedia --postinstall --security` (bind/CORS/firewall)
 - [ ] `curl /api/media/feed` returns items (Immich path confirmed when not using static demo)
 - [ ] Homepage loads styled UI + photo grid
