@@ -18,7 +18,7 @@ serde_json = { workspace = true }
 bson = "2.15"
 mongodb = "3.7"
 jsonwebtoken = "9.3"
-bcrypt = "0.15"
+bcrypt = "0.19"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { workspace = true }
 awc = "3.5"
